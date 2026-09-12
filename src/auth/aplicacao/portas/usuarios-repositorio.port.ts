@@ -33,6 +33,7 @@ export interface UsuariosRepositorioPort {
   ): Promise<void>;
   marcarBloqueio(id: string, bloqueado: boolean, motivo: string | null, executadoPorId: string): Promise<void>;
   buscarIdPapelPorNome(nomePapel: Papel): Promise<string>;
+  atualizarNome(id: string, nome: string): Promise<void>;
 }
 
 export const USUARIOS_REPOSITORIO = Symbol('USUARIOS_REPOSITORIO');

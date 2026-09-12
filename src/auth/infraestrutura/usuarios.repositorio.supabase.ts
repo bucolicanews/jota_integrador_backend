@@ -100,6 +100,14 @@ export class UsuariosRepositorioSupabase implements UsuariosRepositorioPort {
     }
   }
 
+  async atualizarNome(id: string, nome: string): Promise<void> {
+    const { error } = await this.supabase.admin.from('usuarios').update({ nome }).eq('id', id);
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao atualizar nome: ${error.message}`);
+    }
+  }
+
   async buscarIdPapelPorNome(nomePapel: Papel): Promise<string> {
     const { data, error } = await this.supabase.admin
       .from('papeis')

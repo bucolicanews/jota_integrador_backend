@@ -19,6 +19,19 @@ import { CaixaPostalModule } from './caixa-postal/caixa-postal.module';
 import { AuditoriaLogsModule } from './auditoria/auditoria.module';
 import { PlanoDeContasModule } from './plano-de-contas/plano-de-contas.module';
 import { LancamentosContabeisModule } from './lancamentos-contabeis/lancamentos-contabeis.module';
+import { ConciliacaoBancariaModule } from './conciliacao-bancaria/conciliacao-bancaria.module';
+import { ContasAPagarModule } from './contas-a-pagar/contas-a-pagar.module';
+import { ContasAReceberModule } from './contas-a-receber/contas-a-receber.module';
+import { ClientesModule } from './clientes/clientes.module';
+import { FornecedoresModule } from './fornecedores/fornecedores.module';
+import { HistoricosModule } from './historicos/historicos.module';
+import { RelatoriosModule } from './relatorios/relatorios.module';
+import { ProtocolosModule } from './protocolos/protocolos.module';
+import { BancosModule } from './bancos/bancos.module';
+import { DescricoesExtratoModule } from './descricoes-extrato/descricoes-extrato.module';
+import { IdentificadoresExtratoModule } from './identificadores-extrato/identificadores-extrato.module';
+import { ContratosModule } from './contratos/contratos.module';
+import { DocumentosSocietariosModule } from './documentos-societarios/documentos-societarios.module';
 
 @Module({
   imports: [
@@ -50,6 +63,19 @@ import { LancamentosContabeisModule } from './lancamentos-contabeis/lancamentos-
     AuditoriaLogsModule,
     PlanoDeContasModule,
     LancamentosContabeisModule,
+    ConciliacaoBancariaModule,
+    ContasAPagarModule,
+    ContasAReceberModule,
+    ClientesModule,
+    FornecedoresModule,
+    HistoricosModule,
+    RelatoriosModule,
+    ProtocolosModule,
+    BancosModule,
+    DescricoesExtratoModule,
+    IdentificadoresExtratoModule,
+    ContratosModule,
+    DocumentosSocietariosModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

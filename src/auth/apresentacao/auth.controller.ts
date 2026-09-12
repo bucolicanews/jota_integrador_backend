@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Inject,
@@ -8,6 +9,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -15,14 +17,19 @@ import {
   EmpresasRepositorioPort,
 } from '../../empresas/aplicacao/portas/empresas-repositorio.port';
 import { ESCOPO_POR_PAPEL, Papel } from '../dominio/papel';
+import { AtualizarNomeProprioUseCase } from '../aplicacao/casos-de-uso/atualizar-nome-proprio.usecase';
 import { AtualizarPapelUsuarioUseCase } from '../aplicacao/casos-de-uso/atualizar-papel-usuario.usecase';
 import { BloquearUsuarioUseCase } from '../aplicacao/casos-de-uso/bloquear-usuario.usecase';
+import { ConcederPermissaoUseCase } from '../aplicacao/casos-de-uso/conceder-permissao.usecase';
 import { CriarUsuarioUseCase } from '../aplicacao/casos-de-uso/criar-usuario.usecase';
 import { DesbloquearUsuarioUseCase } from '../aplicacao/casos-de-uso/desbloquear-usuario.usecase';
+import { ListarPermissoesUsuarioUseCase, PermissoesDoUsuario } from '../aplicacao/casos-de-uso/listar-permissoes-usuario.usecase';
 import { LogoutGlobalUseCase } from '../aplicacao/casos-de-uso/logout-global.usecase';
 import { ObterPerfilUseCase } from '../aplicacao/casos-de-uso/obter-perfil.usecase';
+import { RevogarPermissaoUseCase } from '../aplicacao/casos-de-uso/revogar-permissao.usecase';
 import { Usuario } from '../aplicacao/portas/usuarios-repositorio.port';
 import { AtualizarPapelUsuarioDto } from './dto/atualizar-papel-usuario.dto';
+import { AtualizarPerfilProprioDto } from './dto/atualizar-perfil-proprio.dto';
 import { BloquearUsuarioDto } from './dto/bloquear-usuario.dto';
 import { CriarUsuarioDto } from './dto/criar-usuario.dto';
 import { Papeis } from './decorators/papeis.decorator';
@@ -36,17 +43,30 @@ import { UsuarioAutenticado } from './tipos/requisicao-autenticada';
 export class AuthController {
   constructor(
     private readonly criarUsuario: CriarUsuarioUseCase,
+    private readonly atualizarNomeProprio: AtualizarNomeProprioUseCase,
     private readonly atualizarPapelUsuario: AtualizarPapelUsuarioUseCase,
     private readonly bloquearUsuario: BloquearUsuarioUseCase,
     private readonly desbloquearUsuario: DesbloquearUsuarioUseCase,
     private readonly obterPerfil: ObterPerfilUseCase,
     private readonly logoutGlobal: LogoutGlobalUseCase,
+    private readonly listarPermissoesUsuario: ListarPermissoesUsuarioUseCase,
+    private readonly concederPermissao: ConcederPermissaoUseCase,
+    private readonly revogarPermissao: RevogarPermissaoUseCase,
     @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,
   ) {}
 
   @Get('me')
   async me(@UsuarioAtual() usuarioAtual: UsuarioAutenticado): Promise<Usuario> {
     return this.obterPerfil.executar(usuarioAtual.id);
+  }
+
+  /** Auto-serviço: qualquer papel autenticado edita o próprio nome. Sem `@Papeis(...)` de propósito -- diferente das rotas administrativas abaixo, aqui não há vínculo alheio a proteger. */
+  @Patch('me')
+  async atualizarMeuPerfil(
+    @Body() dto: AtualizarPerfilProprioDto,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<Usuario> {
+    return this.atualizarNomeProprio.executar(usuarioAtual.id, dto.nome);
   }
 
   @Post('logout-global')
@@ -116,6 +136,44 @@ export class AuthController {
     this.exigirAutoridadeSobre(usuarioAtual, alvo);
 
     await this.desbloquearUsuario.executar(id, usuarioAtual.id);
+    return { ok: true };
+  }
+
+  /** Teto do papel (o que pode ser concedido) + o que já foi concedido -- monta a UI de checkboxes de "funcionário com restrição". */
+  @Get('usuarios/:id/permissoes')
+  @Papeis(Papel.SUPER_ADMIN, Papel.ADMIN_FINANCEIRO, Papel.ADMIN_SUPORTE, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
+  async listarPermissoes(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<PermissoesDoUsuario> {
+    const alvo = await this.obterPerfil.executar(id);
+    this.exigirAutoridadeSobre(usuarioAtual, alvo);
+    return this.listarPermissoesUsuario.executar(alvo);
+  }
+
+  @Put('usuarios/:id/permissoes/:permissaoId')
+  @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
+  async concederPermissaoRota(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('permissaoId', ParseUUIDPipe) permissaoId: string,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ ok: true }> {
+    const alvo = await this.obterPerfil.executar(id);
+    this.exigirAutoridadeSobre(usuarioAtual, alvo);
+    await this.concederPermissao.executar(alvo, permissaoId, usuarioAtual.id);
+    return { ok: true };
+  }
+
+  @Delete('usuarios/:id/permissoes/:permissaoId')
+  @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
+  async revogarPermissaoRota(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('permissaoId', ParseUUIDPipe) permissaoId: string,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ ok: true }> {
+    const alvo = await this.obterPerfil.executar(id);
+    this.exigirAutoridadeSobre(usuarioAtual, alvo);
+    await this.revogarPermissao.executar(alvo, permissaoId, usuarioAtual.id);
     return { ok: true };
   }
 

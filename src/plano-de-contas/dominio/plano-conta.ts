@@ -12,9 +12,9 @@ export const GRUPOS_CONTA_CONTABIL: GrupoContaContabil[] = [
 
 /**
  * Natureza de saldo é 100% derivada do grupo -- nunca campo próprio editável (regra
- * contábil fixa, não dado de negócio que o usuário possa digitar errado). Ativo/Custo
- * são devedoras; Passivo/Patrimônio Líquido/Receita/Despesa são credoras.
+ * contábil fixa, não dado de negócio que o usuário possa digitar errado). Ativo/Custo/
+ * Despesa são devedoras; Passivo/Patrimônio Líquido/Receita são credoras.
  */
 export function naturezaDoGrupo(grupo: GrupoContaContabil): NaturezaSaldo {
-  return grupo === 'ativo' || grupo === 'custo' ? 'devedora' : 'credora';
+  return grupo === 'ativo' || grupo === 'custo' || grupo === 'despesa' ? 'devedora' : 'credora';
 }

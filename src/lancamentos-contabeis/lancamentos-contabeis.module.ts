@@ -20,5 +20,6 @@ import { LancamentosRepositorioSupabase } from './infraestrutura/lancamentos.rep
     EstornarLancamentoUseCase,
     ObterSaldoContaUseCase,
   ],
+  exports: [LANCAMENTOS_REPOSITORIO],
 })
 export class LancamentosContabeisModule {}
