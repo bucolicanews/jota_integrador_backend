@@ -6,8 +6,15 @@ export class CriarContratoDto {
   @IsUUID()
   modeloId!: string;
 
+  // Exatamente um dos dois -- checado no UseCase (BadRequestException), decorators só
+  // validam formato quando o campo vem preenchido.
+  @IsOptional()
   @IsUUID()
-  clienteId!: string;
+  clienteId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  empresaContraparteId?: string;
 
   @MinLength(1)
   titulo!: string;

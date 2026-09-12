@@ -34,12 +34,16 @@ export interface ConfiguracaoContratos {
   empresaId: string;
   contaPatrimonialReceberId: string | null;
   contaResultadoReceitaId: string | null;
+  contaPatrimonialPagarId: string | null; // usado quando esta empresa é a CONTRAPARTE (devedora) de um contrato de outra
+  contaResultadoDespesaId: string | null;
   urlBaseAssinatura: string | null;
 }
 
 export interface DadosConfiguracaoContratos {
   contaPatrimonialReceberId?: string | null;
   contaResultadoReceitaId?: string | null;
+  contaPatrimonialPagarId?: string | null;
+  contaResultadoDespesaId?: string | null;
   urlBaseAssinatura?: string | null;
 }
 
@@ -47,13 +51,15 @@ export interface ContratoGerado {
   id: string;
   empresaId: string;
   modeloId: string | null;
-  clienteId: string;
+  clienteId: string | null;
+  empresaContraparteId: string | null; // exatamente um de clienteId/empresaContraparteId é preenchido
   titulo: string;
   status: StatusContrato;
   valoresTags: Record<string, string>;
   conteudoRenderizado: string;
   valorTotal: number | null;
   contaReceberId: string | null;
+  contaPagarId: string | null; // só preenchido quando empresaContraparteId está preenchido
   tokenAssinatura: string;
   assinaturaNome: string | null;
   assinaturaSelfieRef: string | null;
@@ -66,12 +72,14 @@ export interface ContratoGerado {
 export interface DadosNovoContrato {
   empresaId: string;
   modeloId: string | null;
-  clienteId: string;
+  clienteId: string | null;
+  empresaContraparteId: string | null;
   titulo: string;
   valoresTags: Record<string, string>;
   conteudoRenderizado: string;
   valorTotal: number | null;
   contaReceberId: string | null;
+  contaPagarId: string | null;
   criadoPor: string;
 }
 
@@ -80,9 +88,27 @@ export interface DadosAtualizarContrato {
   valoresTags?: Record<string, string>;
   conteudoRenderizado?: string;
   // Só usados por RegistrarAditivoUseCase quando o aditivo troca valor/parcelamento --
-  // AtualizarContratoUseCase (edição livre de rascunho) nunca mexe nesses dois campos.
+  // AtualizarContratoUseCase (edição livre de rascunho) nunca mexe nesses campos.
   valorTotal?: number | null;
   contaReceberId?: string | null;
+  contaPagarId?: string | null;
+}
+
+/** Parâmetros de emitir_cobranca_interna (migration 20260912000002) -- gera receber(credora)+pagar(devedora) numa transação só. */
+export interface DadosCobrancaInterna {
+  empresaCredoraId: string;
+  nomeDevedor: string;
+  contaPatrimonialCredoraId: string;
+  contaResultadoCredoraId: string;
+  empresaDevedoraId: string;
+  nomeCredor: string;
+  contaResultadoDevedoraId: string;
+  contaPatrimonialDevedoraId: string;
+  descricao: string;
+  dataEmissao: string;
+  criadoPor: string;
+  parcelas: { numeroParcela: number; valorParcela: number; dataVencimento: string }[];
+  contratoId: string | null;
 }
 
 export interface ContratoAditivo {
@@ -136,6 +162,11 @@ export interface ContratosRepositorioPort {
 
   criarAditivo(dados: DadosNovoAditivo): Promise<ContratoAditivo>;
   listarAditivosPorContrato(contratoId: string): Promise<ContratoAditivo[]>;
+
+  /** Financeiro cross-tenant: cria os dois lados (receber+pagar) numa transação só. Ver emitir_cobranca_interna. */
+  emitirCobrancaInterna(dados: DadosCobrancaInterna): Promise<{ contaReceberId: string; contaPagarId: string }>;
+  /** Cancela os dois lados de uma cobrança interna já emitida (busca o vínculo pelo contrato). */
+  estornarCobrancaInternaDoContrato(contratoId: string, motivo: string, executadoPor: string): Promise<void>;
 }
 
 export const CONTRATOS_REPOSITORIO = Symbol('CONTRATOS_REPOSITORIO');

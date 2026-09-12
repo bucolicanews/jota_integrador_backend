@@ -4,6 +4,8 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { validate } from './common/config/env.validation';
 import { SupabaseModule } from './common/supabase/supabase.module';
+import { ModulosModule } from './common/modulos/modulos.module';
+import { UsuarioSistemaModule } from './common/usuario-sistema/usuario-sistema.module';
 import { AuditoriaModule } from './common/auditoria/auditoria.module';
 import { CofreModule } from './common/cofre/cofre.module';
 import { AuthModule } from './auth/auth.module';
@@ -32,6 +34,8 @@ import { DescricoesExtratoModule } from './descricoes-extrato/descricoes-extrato
 import { IdentificadoresExtratoModule } from './identificadores-extrato/identificadores-extrato.module';
 import { ContratosModule } from './contratos/contratos.module';
 import { DocumentosSocietariosModule } from './documentos-societarios/documentos-societarios.module';
+import { PacotesModulosModule } from './pacotes-modulos/pacotes-modulos.module';
+import { LicencasModuloModule } from './licencas-modulo/licencas-modulo.module';
 
 @Module({
   imports: [
@@ -48,6 +52,8 @@ import { DocumentosSocietariosModule } from './documentos-societarios/documentos
     // cobre os endpoints que o NestJS realmente expõe.
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     SupabaseModule,
+    ModulosModule,
+    UsuarioSistemaModule,
     AuditoriaModule,
     CofreModule,
     AuthModule,
@@ -76,6 +82,8 @@ import { DocumentosSocietariosModule } from './documentos-societarios/documentos
     IdentificadoresExtratoModule,
     ContratosModule,
     DocumentosSocietariosModule,
+    PacotesModulosModule,
+    LicencasModuloModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

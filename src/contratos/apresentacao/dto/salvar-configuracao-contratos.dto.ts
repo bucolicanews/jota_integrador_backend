@@ -10,6 +10,14 @@ export class SalvarConfiguracaoContratosDto {
   contaResultadoReceitaId?: string;
 
   @IsOptional()
+  @IsUUID()
+  contaPatrimonialPagarId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  contaResultadoDespesaId?: string;
+
+  @IsOptional()
   @IsString()
   urlBaseAssinatura?: string;
 }

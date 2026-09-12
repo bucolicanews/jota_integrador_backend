@@ -25,6 +25,8 @@ import { PermissoesGuard } from '../../auth/apresentacao/guards/permissoes.guard
 import { SupabaseAuthGuard } from '../../auth/apresentacao/guards/supabase-auth.guard';
 import { UsuarioAutenticado } from '../../auth/apresentacao/tipos/requisicao-autenticada';
 import { Papel } from '../../auth/dominio/papel';
+import { ExigirModulo } from '../../common/modulos/exigir-modulo.decorator';
+import { ModulosGuard } from '../../common/modulos/modulos.guard';
 import { Empresa, EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../../empresas/aplicacao/portas/empresas-repositorio.port';
 import { AtualizarContaResultadoUseCase } from '../aplicacao/casos-de-uso/atualizar-conta-resultado.usecase';
 import { BuscarParcelasCandidatasUseCase, ParcelaCandidata } from '../aplicacao/casos-de-uso/buscar-parcelas-candidatas.usecase';
@@ -52,7 +54,8 @@ import { VincularParcelaDto } from './dto/vincular-parcela.dto';
 const TAMANHO_MAXIMO_ARQUIVO = 10 * 1024 * 1024; // 10MB -- CSV de extrato, generoso o suficiente
 
 @Controller('empresas/:empresaId/conciliacao-bancaria')
-@UseGuards(SupabaseAuthGuard, PapeisGuard, PermissoesGuard)
+@UseGuards(SupabaseAuthGuard, PapeisGuard, PermissoesGuard, ModulosGuard)
+@ExigirModulo('conciliacao_bancaria')
 export class ConciliacaoBancariaController {
   constructor(
     @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,

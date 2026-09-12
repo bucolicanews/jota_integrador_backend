@@ -4,6 +4,15 @@ import { CONTAS_RECEBER_REPOSITORIO, ContasReceberRepositorioPort } from '../../
 import { podeExcluir } from '../../dominio/contrato';
 import { CONTRATOS_REPOSITORIO, ContratosRepositorioPort } from '../portas/contratos-repositorio.port';
 
+/**
+ * Dois caminhos, dependendo da contraparte:
+ * - clienteId: DELETE de verdade (comportamento original da Fase 6) -- não existe
+ *   vinculos_financeiros_espelho pra esse caso, só a conta_receber isolada.
+ * - empresaContraparteId: NUNCA hard-delete (a FK de vinculos_financeiros_espelho.
+ *   contrato_id bloquearia mesmo, sem "on delete") -- estorna os dois lados
+ *   (estornar_cobranca_interna já valida que nenhum dos dois tem recebimento/pagamento)
+ *   e marca o contrato como cancelado, preservando o histórico financeiro.
+ */
 @Injectable()
 export class ExcluirContratoUseCase {
   constructor(
@@ -21,21 +30,27 @@ export class ExcluirContratoUseCase {
       throw new BadRequestException('Só é possível excluir um contrato em rascunho ou pendente de assinatura');
     }
 
-    if (contrato.contaReceberId) {
-      const conta = await this.contasReceber.obterPorId(contrato.contaReceberId);
-      if (conta && conta.valorRecebido > 0) {
-        throw new BadRequestException('Contrato já tem recebimento registrado -- estorne antes de excluir');
+    if (contrato.empresaContraparteId) {
+      if (contrato.contaReceberId) {
+        await this.repositorio.estornarCobrancaInternaDoContrato(id, 'Contrato excluído', usuarioId);
       }
+      await this.repositorio.marcarStatus(id, 'cancelado');
+    } else {
+      if (contrato.contaReceberId) {
+        const conta = await this.contasReceber.obterPorId(contrato.contaReceberId);
+        if (conta && conta.valorRecebido > 0) {
+          throw new BadRequestException('Contrato já tem recebimento registrado -- estorne antes de excluir');
+        }
+      }
+      await this.repositorio.excluirContrato(id);
     }
-
-    await this.repositorio.excluirContrato(id);
 
     await this.auditoria.registrar({
       usuarioId,
       empresaId,
       acao: 'EXCLUIR_CONTRATO',
       recurso: `contratos:${id}`,
-      dadosAntigos: { titulo: contrato.titulo, clienteId: contrato.clienteId },
+      dadosAntigos: { titulo: contrato.titulo, clienteId: contrato.clienteId, empresaContraparteId: contrato.empresaContraparteId },
     });
   }
 }

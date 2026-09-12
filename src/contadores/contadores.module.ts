@@ -1,4 +1,7 @@
 import { Module } from '@nestjs/common';
+import { ContratosModule } from '../contratos/contratos.module';
+import { EmpresasModule } from '../empresas/empresas.module';
+import { PlanoDeContasModule } from '../plano-de-contas/plano-de-contas.module';
 import { AtualizarContadorUseCase } from './aplicacao/casos-de-uso/atualizar-contador.usecase';
 import { BloquearContadorUseCase } from './aplicacao/casos-de-uso/bloquear-contador.usecase';
 import { CriarContadorUseCase } from './aplicacao/casos-de-uso/criar-contador.usecase';
@@ -10,6 +13,7 @@ import { ContadoresController } from './apresentacao/contadores.controller';
 import { ContadoresRepositorioSupabase } from './infraestrutura/contadores.repositorio.supabase';
 
 @Module({
+  imports: [EmpresasModule, PlanoDeContasModule, ContratosModule],
   controllers: [ContadoresController],
   providers: [
     { provide: CONTADORES_REPOSITORIO, useClass: ContadoresRepositorioSupabase },

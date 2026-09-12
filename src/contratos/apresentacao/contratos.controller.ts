@@ -4,6 +4,8 @@ import { UsuarioAtual } from '../../auth/apresentacao/decorators/usuario-atual.d
 import { PapeisGuard } from '../../auth/apresentacao/guards/papeis.guard';
 import { PermissoesGuard } from '../../auth/apresentacao/guards/permissoes.guard';
 import { SupabaseAuthGuard } from '../../auth/apresentacao/guards/supabase-auth.guard';
+import { ExigirModulo } from '../../common/modulos/exigir-modulo.decorator';
+import { ModulosGuard } from '../../common/modulos/modulos.guard';
 import { UsuarioAutenticado } from '../../auth/apresentacao/tipos/requisicao-autenticada';
 import { Papel } from '../../auth/dominio/papel';
 import { Empresa, EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../../empresas/aplicacao/portas/empresas-repositorio.port';
@@ -37,7 +39,8 @@ import { RegistrarAditivoDto } from './dto/registrar-aditivo.dto';
 import { SalvarConfiguracaoContratosDto } from './dto/salvar-configuracao-contratos.dto';
 
 @Controller('empresas/:empresaId/contratos')
-@UseGuards(SupabaseAuthGuard, PapeisGuard, PermissoesGuard)
+@UseGuards(SupabaseAuthGuard, PapeisGuard, PermissoesGuard, ModulosGuard)
+@ExigirModulo('contratos')
 export class ContratosController {
   constructor(
     @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,
@@ -192,7 +195,8 @@ export class ContratosController {
     return this.criarContrato.executar({
       empresaId,
       modeloId: dto.modeloId,
-      clienteId: dto.clienteId,
+      clienteId: dto.clienteId ?? null,
+      empresaContraparteId: dto.empresaContraparteId ?? null,
       titulo: dto.titulo,
       valoresTagsManuais: dto.valoresTagsManuais,
       valorTotal: dto.valorTotal ?? null,

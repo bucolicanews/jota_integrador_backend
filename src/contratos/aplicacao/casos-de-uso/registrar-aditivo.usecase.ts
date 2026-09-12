@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { AuditoriaService } from '../../../common/auditoria/auditoria.service';
 import { CancelarContaReceberUseCase } from '../../../contas-a-receber/aplicacao/casos-de-uso/cancelar-conta-receber.usecase';
 import { CriarContaReceberUseCase } from '../../../contas-a-receber/aplicacao/casos-de-uso/criar-conta-receber.usecase';
@@ -43,6 +43,14 @@ export class RegistrarAditivoUseCase {
     const contrato = await this.repositorio.obterContratoPorId(dados.contratoId);
     if (!contrato || contrato.empresaId !== dados.empresaId) {
       throw new NotFoundException('Contrato não encontrado');
+    }
+
+    if (dados.mudancaFinanceira && contrato.empresaContraparteId) {
+      // v1: aditivo financeiro só suportado pra contrato com cliente -- trocar valor/
+      // parcelamento de uma cobrança cross-tenant exigiria estornar+remitir os dois lados
+      // (emitir_cobranca_interna) numa única operação atômica, ainda não implementada.
+      // Aditivo não-financeiro (só descrição) continua funcionando normalmente.
+      throw new BadRequestException('Aditivo com mudança de valor/parcelamento ainda não é suportado para contratos com empresa como contraparte');
     }
 
     let contaReceberAnteriorId: string | null = null;

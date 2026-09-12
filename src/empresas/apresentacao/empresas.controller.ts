@@ -4,6 +4,8 @@ import {
   Controller,
   ForbiddenException,
   Get,
+  Inject,
+  InternalServerErrorException,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -17,6 +19,7 @@ import { PapeisGuard } from '../../auth/apresentacao/guards/papeis.guard';
 import { SupabaseAuthGuard } from '../../auth/apresentacao/guards/supabase-auth.guard';
 import { UsuarioAutenticado } from '../../auth/apresentacao/tipos/requisicao-autenticada';
 import { Papel } from '../../auth/dominio/papel';
+import { SupabaseService } from '../../common/supabase/supabase.service';
 import { AtualizarEmpresaUseCase } from '../aplicacao/casos-de-uso/atualizar-empresa.usecase';
 import { AtualizarModoAcessoSerproUseCase } from '../aplicacao/casos-de-uso/atualizar-modo-acesso-serpro.usecase';
 import { BloquearEmpresaUseCase } from '../aplicacao/casos-de-uso/bloquear-empresa.usecase';
@@ -41,6 +44,7 @@ export class EmpresasController {
     private readonly atualizarModoAcessoSerpro: AtualizarModoAcessoSerproUseCase,
     private readonly bloquearEmpresa: BloquearEmpresaUseCase,
     private readonly desbloquearEmpresa: DesbloquearEmpresaUseCase,
+    private readonly supabase: SupabaseService,
   ) {}
 
   @Post()
@@ -105,6 +109,19 @@ export class EmpresasController {
       regimeTributario: dto.regimeTributario,
     });
     return { ok: true };
+  }
+
+  @Get(':id/modulos')
+  async modulosLiberados(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ modulos: string[] }> {
+    const empresa = await this.obterEmpresa.executar(id);
+    this.exigirPosse(usuarioAtual, empresa);
+
+    const { data, error } = await this.supabase.admin.rpc('empresa_modulos_liberados', { p_empresa_id: id });
+    if (error) throw new InternalServerErrorException(`Falha ao consultar módulos liberados: ${error.message}`);
+    return { modulos: (data as string[]) ?? [] };
   }
 
   @Patch(':id/modo-acesso-serpro')

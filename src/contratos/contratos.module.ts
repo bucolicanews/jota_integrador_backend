@@ -58,5 +58,10 @@ import { StorageContratosService } from './infraestrutura/storage-contratos.serv
     AssinarContratoPublicoUseCase,
     ObterUrlSelfieUseCase,
   ],
+  // CONTRATOS_REPOSITORIO exportado pra CriarContadorUseCase (ContadoresModule) seedar a
+  // configuracao_contratos da empresa interna de todo contador novo. CriarContratoUseCase
+  // exportado pra AtivarLicencaUseCase (LicencasModuloModule) gerar o contrato formal
+  // contador->empresa na hora de ativar uma licença.
+  exports: [CONTRATOS_REPOSITORIO, CriarContratoUseCase],
 })
 export class ContratosModule {}

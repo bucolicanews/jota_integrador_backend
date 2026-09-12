@@ -6,6 +6,8 @@ import { PermissoesGuard } from '../../auth/apresentacao/guards/permissoes.guard
 import { SupabaseAuthGuard } from '../../auth/apresentacao/guards/supabase-auth.guard';
 import { UsuarioAutenticado } from '../../auth/apresentacao/tipos/requisicao-autenticada';
 import { Papel } from '../../auth/dominio/papel';
+import { ExigirModulo } from '../../common/modulos/exigir-modulo.decorator';
+import { ModulosGuard } from '../../common/modulos/modulos.guard';
 import { Empresa, EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../../empresas/aplicacao/portas/empresas-repositorio.port';
 import { Balancete, ObterBalanceteUseCase } from '../aplicacao/casos-de-uso/obter-balancete.usecase';
 import { BalancoPatrimonial, ObterBalancoPatrimonialUseCase } from '../aplicacao/casos-de-uso/obter-balanco-patrimonial.usecase';
@@ -14,8 +16,9 @@ import { ObterFluxoCaixaUseCase, FluxoCaixa } from '../aplicacao/casos-de-uso/ob
 import { ContaRazao, ObterRazaoUseCase } from '../aplicacao/casos-de-uso/obter-razao.usecase';
 
 @Controller('empresas/:empresaId/relatorios')
-@UseGuards(SupabaseAuthGuard, PapeisGuard, PermissoesGuard)
+@UseGuards(SupabaseAuthGuard, PapeisGuard, PermissoesGuard, ModulosGuard)
 @ExigirPermissao('relatorios:visualizar')
+@ExigirModulo('relatorios')
 export class RelatoriosController {
   constructor(
     @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,

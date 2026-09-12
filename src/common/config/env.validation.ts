@@ -43,6 +43,13 @@ class EnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   STRIPE_WEBHOOK_SECRET_HONORARIOS!: string;
+
+  // Licenciamento de módulos (contador -> Jota, atacado) -- mesma secret key, webhook
+  // secret próprio (endpoint separado no dashboard Stripe). Sistema completamente
+  // separado de STRIPE_WEBHOOK_SECRET_ASSINATURAS (créditos SERPRO, nunca mesclar).
+  @IsString()
+  @IsNotEmpty()
+  STRIPE_WEBHOOK_SECRET_LICENCAS!: string;
 }
 
 export function validate(config: Record<string, unknown>): EnvironmentVariables {

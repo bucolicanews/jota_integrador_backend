@@ -1,6 +1,6 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { SupabaseService } from '../../common/supabase/supabase.service';
-import { ModoAcessoSerpro, RegimeTributario, StatusEmpresa } from '../dominio/empresa';
+import { ModoAcessoSerpro, RegimeTributario, StatusEmpresa, TipoEmpresa } from '../dominio/empresa';
 import {
   DadosAtualizacaoEmpresa,
   DadosNovaEmpresa,
@@ -11,6 +11,7 @@ import {
 interface LinhaEmpresa {
   id: string;
   contador_id: string;
+  tipo: TipoEmpresa;
   razao_social: string;
   nome_fantasia: string | null;
   cnpj: string;
@@ -21,7 +22,7 @@ interface LinhaEmpresa {
 }
 
 const COLUNAS_SELECT =
-  'id, contador_id, razao_social, nome_fantasia, cnpj, regime_tributario, modo_acesso_serpro, status, bloqueado';
+  'id, contador_id, tipo, razao_social, nome_fantasia, cnpj, regime_tributario, modo_acesso_serpro, status, bloqueado';
 
 @Injectable()
 export class EmpresasRepositorioSupabase implements EmpresasRepositorioPort {
@@ -33,6 +34,7 @@ export class EmpresasRepositorioSupabase implements EmpresasRepositorioPort {
       .from('empresas')
       .insert({
         contador_id: dados.contadorId,
+        tipo: dados.tipo ?? 'cliente',
         razao_social: dados.razaoSocial,
         nome_fantasia: dados.nomeFantasia,
         cnpj: dados.cnpj,
@@ -63,16 +65,33 @@ export class EmpresasRepositorioSupabase implements EmpresasRepositorioPort {
   }
 
   async listarPorContador(contadorId: string): Promise<Empresa[]> {
+    // Só empresas-cliente de verdade -- a empresa interna do próprio contador nunca aparece
+    // misturada na carteira (ela não é um cliente, é a contabilidade do próprio contador).
     const { data, error } = await this.supabase.admin
       .from('empresas')
       .select(COLUNAS_SELECT)
       .eq('contador_id', contadorId)
+      .eq('tipo', 'cliente')
       .order('razao_social', { ascending: true });
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao listar empresas: ${error.message}`);
     }
     return (data as LinhaEmpresa[]).map((linha) => this.mapear(linha));
+  }
+
+  async buscarEmpresaInternaDoContador(contadorId: string): Promise<Empresa | null> {
+    const { data, error } = await this.supabase.admin
+      .from('empresas')
+      .select(COLUNAS_SELECT)
+      .eq('contador_id', contadorId)
+      .eq('tipo', 'interna_contador')
+      .maybeSingle();
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao buscar empresa interna do contador: ${error.message}`);
+    }
+    return data ? this.mapear(data as LinhaEmpresa) : null;
   }
 
   async pertenceAoContador(empresaId: string, contadorId: string): Promise<boolean> {
@@ -140,6 +159,7 @@ export class EmpresasRepositorioSupabase implements EmpresasRepositorioPort {
     return {
       id: linha.id,
       contadorId: linha.contador_id,
+      tipo: linha.tipo,
       razaoSocial: linha.razao_social,
       nomeFantasia: linha.nome_fantasia,
       cnpj: linha.cnpj,

@@ -1,8 +1,9 @@
-import { ModoAcessoSerpro, RegimeTributario, StatusEmpresa } from '../../dominio/empresa';
+import { ModoAcessoSerpro, RegimeTributario, StatusEmpresa, TipoEmpresa } from '../../dominio/empresa';
 
 export interface Empresa {
   id: string;
   contadorId: string;
+  tipo: TipoEmpresa;
   razaoSocial: string;
   nomeFantasia: string | null;
   cnpj: string;
@@ -14,6 +15,7 @@ export interface Empresa {
 
 export interface DadosNovaEmpresa {
   contadorId: string;
+  tipo?: TipoEmpresa; // default 'cliente' (mesmo default da coluna) -- só informado explicitamente ao criar empresa interna de contador/plataforma
   razaoSocial: string;
   nomeFantasia: string | null;
   cnpj: string;
@@ -31,6 +33,8 @@ export interface EmpresasRepositorioPort {
   criar(dados: DadosNovaEmpresa): Promise<Empresa>;
   buscarPorId(id: string): Promise<Empresa | null>;
   listarPorContador(contadorId: string): Promise<Empresa[]>;
+  /** A empresa interna do próprio contador (tipo='interna_contador') -- nunca aparece em listarPorContador. */
+  buscarEmpresaInternaDoContador(contadorId: string): Promise<Empresa | null>;
   /** Usado por outros módulos (ex: auth) pra checar posse sem expor o repositório inteiro. */
   pertenceAoContador(empresaId: string, contadorId: string): Promise<boolean>;
   atualizar(id: string, dados: DadosAtualizacaoEmpresa): Promise<void>;

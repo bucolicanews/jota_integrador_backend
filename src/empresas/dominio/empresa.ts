@@ -1,6 +1,11 @@
 export type ModoAcessoSerpro = 'procuracao' | 'certificado_proprio';
 export type StatusEmpresa = 'ativo' | 'inativo';
 
+// cliente = empresa-cliente de verdade (padrão). interna_contador/interna_plataforma =
+// contabilidade do próprio contador/da própria Jota (Fase de licenciamento de módulos) --
+// nunca aparecem em carteira/marketplace, sempre liberadas do módulo de licenciamento.
+export type TipoEmpresa = 'cliente' | 'interna_contador' | 'interna_plataforma';
+
 // Nomenclatura de regime tributário alinhada com os serviços do SERPRO/Integra Contador
 // (MEI tem serviços próprios -- CCMEI/PGMEI -- separados do Simples Nacional "regular" --
 // PGDAS-D/DEFIS -- por isso não é só um sub-caso do mesmo valor).

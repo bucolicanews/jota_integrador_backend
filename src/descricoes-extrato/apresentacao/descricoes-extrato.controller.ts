@@ -6,6 +6,8 @@ import { PermissoesGuard } from '../../auth/apresentacao/guards/permissoes.guard
 import { SupabaseAuthGuard } from '../../auth/apresentacao/guards/supabase-auth.guard';
 import { UsuarioAutenticado } from '../../auth/apresentacao/tipos/requisicao-autenticada';
 import { Papel } from '../../auth/dominio/papel';
+import { ExigirModulo } from '../../common/modulos/exigir-modulo.decorator';
+import { ModulosGuard } from '../../common/modulos/modulos.guard';
 import { Empresa, EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../../empresas/aplicacao/portas/empresas-repositorio.port';
 import { AtualizarDescricaoExtratoUseCase } from '../aplicacao/casos-de-uso/atualizar-descricao-extrato.usecase';
 import { CriarDescricaoExtratoUseCase } from '../aplicacao/casos-de-uso/criar-descricao-extrato.usecase';
@@ -16,7 +18,8 @@ import { AtualizarDescricaoExtratoDto } from './dto/atualizar-descricao-extrato.
 import { CriarDescricaoExtratoDto } from './dto/criar-descricao-extrato.dto';
 
 @Controller('empresas/:empresaId/descricoes-extrato')
-@UseGuards(SupabaseAuthGuard, PapeisGuard, PermissoesGuard)
+@UseGuards(SupabaseAuthGuard, PapeisGuard, PermissoesGuard, ModulosGuard)
+@ExigirModulo('conciliacao_bancaria')
 export class DescricoesExtratoController {
   constructor(
     @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,

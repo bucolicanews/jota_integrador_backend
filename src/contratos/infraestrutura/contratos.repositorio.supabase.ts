@@ -8,6 +8,7 @@ import {
   ContratoTag,
   ContratosRepositorioPort,
   DadosAtualizarContrato,
+  DadosCobrancaInterna,
   DadosConfiguracaoContratos,
   DadosContratoTag,
   DadosModeloContrato,
@@ -38,6 +39,8 @@ interface LinhaConfiguracao {
   empresa_id: string;
   conta_patrimonial_receber_id: string | null;
   conta_resultado_receita_id: string | null;
+  conta_patrimonial_pagar_id: string | null;
+  conta_resultado_despesa_id: string | null;
   url_base_assinatura: string | null;
 }
 
@@ -45,13 +48,15 @@ interface LinhaContrato {
   id: string;
   empresa_id: string;
   modelo_id: string | null;
-  cliente_id: string;
+  cliente_id: string | null;
+  empresa_contraparte_id: string | null;
   titulo: string;
   status: StatusContrato;
   valores_tags: Record<string, string>;
   conteudo_renderizado: string;
   valor_total: number | null;
   conta_receber_id: string | null;
+  conta_pagar_id: string | null;
   token_assinatura: string;
   assinatura_nome: string | null;
   assinatura_selfie_ref: string | null;
@@ -75,9 +80,10 @@ interface LinhaAditivo {
 
 const COLUNAS_MODELO = 'id, empresa_id, titulo, conteudo_template, tipo_conteudo, criado_em, atualizado_em';
 const COLUNAS_TAG = 'id, empresa_id, nome_tag, descricao';
-const COLUNAS_CONFIGURACAO = 'empresa_id, conta_patrimonial_receber_id, conta_resultado_receita_id, url_base_assinatura';
+const COLUNAS_CONFIGURACAO =
+  'empresa_id, conta_patrimonial_receber_id, conta_resultado_receita_id, conta_patrimonial_pagar_id, conta_resultado_despesa_id, url_base_assinatura';
 const COLUNAS_CONTRATO =
-  'id, empresa_id, modelo_id, cliente_id, titulo, status, valores_tags, conteudo_renderizado, valor_total, conta_receber_id, token_assinatura, assinatura_nome, assinatura_selfie_ref, assinado_em, criado_por, criado_em, atualizado_em';
+  'id, empresa_id, modelo_id, cliente_id, empresa_contraparte_id, titulo, status, valores_tags, conteudo_renderizado, valor_total, conta_receber_id, conta_pagar_id, token_assinatura, assinatura_nome, assinatura_selfie_ref, assinado_em, criado_por, criado_em, atualizado_em';
 const COLUNAS_ADITIVO =
   'id, contrato_id, descricao, valor_total_novo, numero_parcelas_novo, conta_receber_anterior_id, conta_receber_nova_id, criado_por, criado_em';
 
@@ -158,14 +164,19 @@ export class ContratosRepositorioSupabase implements ContratosRepositorioPort {
   }
 
   async salvarConfiguracao(empresaId: string, dados: DadosConfiguracaoContratos): Promise<ConfiguracaoContratos> {
+    // Merge com o que já existe -- 4 campos agora (receber/receita/pagar/despesa), salvar
+    // só 2 de cada vez (ex: tela configura só o lado credor) não pode zerar os outros 2.
+    const existente = await this.obterConfiguracao(empresaId);
     const { data, error } = await this.supabase.admin
       .from('configuracao_contratos')
       .upsert(
         {
           empresa_id: empresaId,
-          conta_patrimonial_receber_id: dados.contaPatrimonialReceberId ?? null,
-          conta_resultado_receita_id: dados.contaResultadoReceitaId ?? null,
-          url_base_assinatura: dados.urlBaseAssinatura ?? null,
+          conta_patrimonial_receber_id: dados.contaPatrimonialReceberId !== undefined ? dados.contaPatrimonialReceberId : (existente?.contaPatrimonialReceberId ?? null),
+          conta_resultado_receita_id: dados.contaResultadoReceitaId !== undefined ? dados.contaResultadoReceitaId : (existente?.contaResultadoReceitaId ?? null),
+          conta_patrimonial_pagar_id: dados.contaPatrimonialPagarId !== undefined ? dados.contaPatrimonialPagarId : (existente?.contaPatrimonialPagarId ?? null),
+          conta_resultado_despesa_id: dados.contaResultadoDespesaId !== undefined ? dados.contaResultadoDespesaId : (existente?.contaResultadoDespesaId ?? null),
+          url_base_assinatura: dados.urlBaseAssinatura !== undefined ? dados.urlBaseAssinatura : (existente?.urlBaseAssinatura ?? null),
         },
         { onConflict: 'empresa_id' },
       )
@@ -182,11 +193,13 @@ export class ContratosRepositorioSupabase implements ContratosRepositorioPort {
         empresa_id: dados.empresaId,
         modelo_id: dados.modeloId,
         cliente_id: dados.clienteId,
+        empresa_contraparte_id: dados.empresaContraparteId,
         titulo: dados.titulo,
         valores_tags: dados.valoresTags,
         conteudo_renderizado: dados.conteudoRenderizado,
         valor_total: dados.valorTotal,
         conta_receber_id: dados.contaReceberId,
+        conta_pagar_id: dados.contaPagarId,
         criado_por: dados.criadoPor,
       })
       .select(COLUNAS_CONTRATO)
@@ -222,6 +235,7 @@ export class ContratosRepositorioSupabase implements ContratosRepositorioPort {
     if (dados.conteudoRenderizado !== undefined) campos.conteudo_renderizado = dados.conteudoRenderizado;
     if (dados.valorTotal !== undefined) campos.valor_total = dados.valorTotal;
     if (dados.contaReceberId !== undefined) campos.conta_receber_id = dados.contaReceberId;
+    if (dados.contaPagarId !== undefined) campos.conta_pagar_id = dados.contaPagarId;
 
     const { error } = await this.supabase.admin.from('contratos_gerados').update(campos).eq('id', id);
     if (error) throw new InternalServerErrorException(`Falha ao atualizar contrato: ${error.message}`);
@@ -299,8 +313,49 @@ export class ContratosRepositorioSupabase implements ContratosRepositorioPort {
       empresaId: linha.empresa_id,
       contaPatrimonialReceberId: linha.conta_patrimonial_receber_id,
       contaResultadoReceitaId: linha.conta_resultado_receita_id,
+      contaPatrimonialPagarId: linha.conta_patrimonial_pagar_id,
+      contaResultadoDespesaId: linha.conta_resultado_despesa_id,
       urlBaseAssinatura: linha.url_base_assinatura,
     };
+  }
+
+  async emitirCobrancaInterna(dados: DadosCobrancaInterna): Promise<{ contaReceberId: string; contaPagarId: string }> {
+    const { data, error } = await this.supabase.admin.rpc('emitir_cobranca_interna', {
+      p_empresa_credora_id: dados.empresaCredoraId,
+      p_nome_devedor: dados.nomeDevedor,
+      p_conta_patrimonial_credora_id: dados.contaPatrimonialCredoraId,
+      p_conta_resultado_credora_id: dados.contaResultadoCredoraId,
+      p_empresa_devedora_id: dados.empresaDevedoraId,
+      p_nome_credor: dados.nomeCredor,
+      p_conta_resultado_devedora_id: dados.contaResultadoDevedoraId,
+      p_conta_patrimonial_devedora_id: dados.contaPatrimonialDevedoraId,
+      p_descricao: dados.descricao,
+      p_data_emissao: dados.dataEmissao,
+      p_criado_por: dados.criadoPor,
+      p_parcelas: dados.parcelas.map((p) => ({ numero_parcela: p.numeroParcela, valor_parcela: p.valorParcela, data_vencimento: p.dataVencimento })),
+      p_contrato_id: dados.contratoId,
+    });
+    if (error) throw new InternalServerErrorException(`Falha ao emitir cobrança interna: ${error.message}`);
+    const linha = (data as { conta_receber_id: string; conta_pagar_id: string }[])[0];
+    return { contaReceberId: linha.conta_receber_id, contaPagarId: linha.conta_pagar_id };
+  }
+
+  async estornarCobrancaInternaDoContrato(contratoId: string, motivo: string, executadoPor: string): Promise<void> {
+    const { data: vinculo, error: erroVinculo } = await this.supabase.admin
+      .from('vinculos_financeiros_espelho')
+      .select('id')
+      .eq('contrato_id', contratoId)
+      .eq('estornado', false)
+      .maybeSingle();
+    if (erroVinculo) throw new InternalServerErrorException(`Falha ao buscar vínculo financeiro do contrato: ${erroVinculo.message}`);
+    if (!vinculo) throw new InternalServerErrorException(`Contrato ${contratoId} não tem vínculo financeiro ativo pra estornar`);
+
+    const { error } = await this.supabase.admin.rpc('estornar_cobranca_interna', {
+      p_vinculo_id: vinculo.id,
+      p_motivo: motivo,
+      p_executado_por: executadoPor,
+    });
+    if (error) throw new InternalServerErrorException(`Falha ao estornar cobrança interna: ${error.message}`);
   }
 
   private mapearContrato(linha: LinhaContrato): ContratoGerado {
@@ -309,12 +364,14 @@ export class ContratosRepositorioSupabase implements ContratosRepositorioPort {
       empresaId: linha.empresa_id,
       modeloId: linha.modelo_id,
       clienteId: linha.cliente_id,
+      empresaContraparteId: linha.empresa_contraparte_id,
       titulo: linha.titulo,
       status: linha.status,
       valoresTags: linha.valores_tags ?? {},
       conteudoRenderizado: linha.conteudo_renderizado,
       valorTotal: linha.valor_total,
       contaReceberId: linha.conta_receber_id,
+      contaPagarId: linha.conta_pagar_id,
       tokenAssinatura: linha.token_assinatura,
       assinaturaNome: linha.assinatura_nome,
       assinaturaSelfieRef: linha.assinatura_selfie_ref,

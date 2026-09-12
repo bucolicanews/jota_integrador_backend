@@ -25,6 +25,8 @@ import { PermissoesGuard } from '../../auth/apresentacao/guards/permissoes.guard
 import { SupabaseAuthGuard } from '../../auth/apresentacao/guards/supabase-auth.guard';
 import { UsuarioAutenticado } from '../../auth/apresentacao/tipos/requisicao-autenticada';
 import { Papel } from '../../auth/dominio/papel';
+import { ExigirModulo } from '../../common/modulos/exigir-modulo.decorator';
+import { ModulosGuard } from '../../common/modulos/modulos.guard';
 import { Empresa, EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../../empresas/aplicacao/portas/empresas-repositorio.port';
 import { AtualizarProtocoloUseCase } from '../aplicacao/casos-de-uso/atualizar-protocolo.usecase';
 import { AvancarStatusProtocoloUseCase } from '../aplicacao/casos-de-uso/avancar-status-protocolo.usecase';
@@ -46,7 +48,8 @@ import { RegistrarEntregaProtocoloDto } from './dto/registrar-entrega-protocolo.
 const TAMANHO_MAXIMO_ARQUIVO = 10 * 1024 * 1024; // 10MB por arquivo -- documento/foto, generoso o suficiente
 
 @Controller('empresas/:empresaId/protocolos')
-@UseGuards(SupabaseAuthGuard, PapeisGuard, PermissoesGuard)
+@UseGuards(SupabaseAuthGuard, PapeisGuard, PermissoesGuard, ModulosGuard)
+@ExigirModulo('protocolos')
 export class ProtocolosController {
   constructor(
     @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,

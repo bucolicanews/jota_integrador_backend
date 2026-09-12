@@ -13,11 +13,13 @@ export class SalvarConfiguracaoContratosUseCase {
   async executar(empresaId: string, dados: DadosConfiguracaoContratos) {
     if (dados.contaPatrimonialReceberId) await this.validarConta(empresaId, dados.contaPatrimonialReceberId, 'ativo');
     if (dados.contaResultadoReceitaId) await this.validarConta(empresaId, dados.contaResultadoReceitaId, 'receita');
+    if (dados.contaPatrimonialPagarId) await this.validarConta(empresaId, dados.contaPatrimonialPagarId, 'passivo');
+    if (dados.contaResultadoDespesaId) await this.validarConta(empresaId, dados.contaResultadoDespesaId, 'despesa');
 
     return this.repositorio.salvarConfiguracao(empresaId, dados);
   }
 
-  private async validarConta(empresaId: string, contaId: string, grupoEsperado: 'ativo' | 'receita'): Promise<void> {
+  private async validarConta(empresaId: string, contaId: string, grupoEsperado: 'ativo' | 'receita' | 'passivo' | 'despesa'): Promise<void> {
     const conta = await this.planoContas.buscarPorId(contaId);
     if (!conta || conta.empresaId !== empresaId) {
       throw new NotFoundException('Conta contábil não encontrada');
