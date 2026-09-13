@@ -37,6 +37,7 @@ import { DocumentosSocietariosModule } from './documentos-societarios/documentos
 import { PacotesModulosModule } from './pacotes-modulos/pacotes-modulos.module';
 import { LicencasModuloModule } from './licencas-modulo/licencas-modulo.module';
 import { SuporteModule } from './suporte/suporte.module';
+import { PontoEletronicoModule } from './ponto-eletronico/ponto-eletronico.module';
 
 @Module({
   imports: [
@@ -86,6 +87,7 @@ import { SuporteModule } from './suporte/suporte.module';
     PacotesModulosModule,
     LicencasModuloModule,
     SuporteModule,
+    PontoEletronicoModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
