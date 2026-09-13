@@ -25,6 +25,7 @@ import { SupabaseAuthGuard } from '../../auth/apresentacao/guards/supabase-auth.
 import { UsuarioAutenticado } from '../../auth/apresentacao/tipos/requisicao-autenticada';
 import { Papel } from '../../auth/dominio/papel';
 import { USUARIOS_REPOSITORIO, UsuariosRepositorioPort } from '../../auth/aplicacao/portas/usuarios-repositorio.port';
+import { EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../../empresas/aplicacao/portas/empresas-repositorio.port';
 import { AjustarRegistrosDoDiaUseCase } from '../aplicacao/casos-de-uso/ajustar-registros-do-dia.usecase';
 import { CancelarFeriasUseCase } from '../aplicacao/casos-de-uso/cancelar-ferias.usecase';
 import { ConfigurarFuncionarioUseCase } from '../aplicacao/casos-de-uso/configurar-funcionario.usecase';
@@ -59,6 +60,7 @@ const PAPEIS_GESTORES = [Papel.SUPER_ADMIN, Papel.CONTADOR_DONO, Papel.EMPRESARI
 export class PontoEletronicoController {
   constructor(
     @Inject(USUARIOS_REPOSITORIO) private readonly usuariosRepositorio: UsuariosRepositorioPort,
+    @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,
     private readonly registrarBatida: RegistrarBatidaUseCase,
     private readonly listarRegistros: ListarRegistrosUseCase,
     private readonly obterResumoMensal: ObterResumoMensalUseCase,
@@ -242,7 +244,7 @@ export class PontoEletronicoController {
     if (alvoId !== usuarioAtual.id) {
       const funcionario = await this.usuariosRepositorio.buscarPorId(alvoId);
       if (!funcionario) throw new NotFoundException('Funcionário não encontrado');
-      exigirGestorSobre(usuarioAtual, funcionario);
+      await exigirGestorSobre(usuarioAtual, funcionario, this.empresasRepositorio);
     }
     return alvoId;
   }

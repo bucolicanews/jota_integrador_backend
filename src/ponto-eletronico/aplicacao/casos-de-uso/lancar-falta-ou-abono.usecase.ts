@@ -2,6 +2,7 @@ import { BadRequestException, Inject, Injectable, NotFoundException } from '@nes
 import { AuditoriaService } from '../../../common/auditoria/auditoria.service';
 import { UsuarioAutenticado } from '../../../auth/apresentacao/tipos/requisicao-autenticada';
 import { USUARIOS_REPOSITORIO, UsuariosRepositorioPort } from '../../../auth/aplicacao/portas/usuarios-repositorio.port';
+import { EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../../../empresas/aplicacao/portas/empresas-repositorio.port';
 import { validarSplitFaltaAbono } from '../../dominio/ponto';
 import { StoragePontoService } from '../../infraestrutura/storage-ponto.service';
 import { exigirGestorSobre } from '../exigir-gestor-sobre';
@@ -24,6 +25,7 @@ export class LancarFaltaOuAbonoUseCase {
   constructor(
     @Inject(REGISTROS_PONTO_REPOSITORIO) private readonly registrosRepositorio: RegistrosPontoRepositorioPort,
     @Inject(USUARIOS_REPOSITORIO) private readonly usuariosRepositorio: UsuariosRepositorioPort,
+    @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,
     private readonly storage: StoragePontoService,
     private readonly auditoria: AuditoriaService,
   ) {}
@@ -38,7 +40,7 @@ export class LancarFaltaOuAbonoUseCase {
 
     const funcionario = await this.usuariosRepositorio.buscarPorId(dados.usuarioAlvoId);
     if (!funcionario) throw new NotFoundException('Funcionário não encontrado');
-    exigirGestorSobre(dados.usuarioAtual, funcionario);
+    await exigirGestorSobre(dados.usuarioAtual, funcionario, this.empresasRepositorio);
 
     const atestadoRef = dados.atestado
       ? await this.storage.armazenarAtestado(funcionario.id, dados.atestado.nomeOriginal, dados.atestado.buffer, dados.atestado.contentType)

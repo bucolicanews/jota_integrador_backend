@@ -2,6 +2,7 @@ import { BadRequestException, Inject, Injectable, NotFoundException } from '@nes
 import { AuditoriaService } from '../../../common/auditoria/auditoria.service';
 import { UsuarioAutenticado } from '../../../auth/apresentacao/tipos/requisicao-autenticada';
 import { USUARIOS_REPOSITORIO, UsuariosRepositorioPort } from '../../../auth/aplicacao/portas/usuarios-repositorio.port';
+import { EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../../../empresas/aplicacao/portas/empresas-repositorio.port';
 import { JORNADA_DIARIA_PADRAO_HORAS } from '../../dominio/ponto';
 import { exigirGestorSobre } from '../exigir-gestor-sobre';
 import { horarioMeioDiaUtc } from '../intervalo-datas';
@@ -28,6 +29,7 @@ export class LancarFolgaTrabalhadaUseCase {
   constructor(
     @Inject(REGISTROS_PONTO_REPOSITORIO) private readonly registrosRepositorio: RegistrosPontoRepositorioPort,
     @Inject(USUARIOS_REPOSITORIO) private readonly usuariosRepositorio: UsuariosRepositorioPort,
+    @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,
     private readonly auditoria: AuditoriaService,
   ) {}
 
@@ -38,7 +40,7 @@ export class LancarFolgaTrabalhadaUseCase {
 
     const funcionario = await this.usuariosRepositorio.buscarPorId(dados.usuarioAlvoId);
     if (!funcionario) throw new NotFoundException('Funcionário não encontrado');
-    exigirGestorSobre(dados.usuarioAtual, funcionario);
+    await exigirGestorSobre(dados.usuarioAtual, funcionario, this.empresasRepositorio);
 
     const base = {
       usuarioId: funcionario.id,

@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { AuditoriaService } from '../../../common/auditoria/auditoria.service';
 import { UsuarioAutenticado } from '../../../auth/apresentacao/tipos/requisicao-autenticada';
 import { USUARIOS_REPOSITORIO, UsuariosRepositorioPort } from '../../../auth/aplicacao/portas/usuarios-repositorio.port';
+import { EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../../../empresas/aplicacao/portas/empresas-repositorio.port';
 import { exigirGestorSobre } from '../exigir-gestor-sobre';
 import {
   CONFIGURACAO_FUNCIONARIO_REPOSITORIO,
@@ -15,13 +16,14 @@ export class ConfigurarFuncionarioUseCase {
   constructor(
     @Inject(CONFIGURACAO_FUNCIONARIO_REPOSITORIO) private readonly configuracaoRepositorio: ConfiguracaoFuncionarioRepositorioPort,
     @Inject(USUARIOS_REPOSITORIO) private readonly usuariosRepositorio: UsuariosRepositorioPort,
+    @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,
     private readonly auditoria: AuditoriaService,
   ) {}
 
   async executar(usuarioAlvoId: string, dados: DadosConfiguracaoFuncionario, usuarioAtual: UsuarioAutenticado): Promise<ConfiguracaoFuncionario> {
     const funcionario = await this.usuariosRepositorio.buscarPorId(usuarioAlvoId);
     if (!funcionario) throw new NotFoundException('Funcionário não encontrado');
-    exigirGestorSobre(usuarioAtual, funcionario);
+    await exigirGestorSobre(usuarioAtual, funcionario, this.empresasRepositorio);
 
     const configuracao = await this.configuracaoRepositorio.upsert(usuarioAlvoId, dados);
 
