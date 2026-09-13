@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -10,6 +11,7 @@ import {
   Patch,
   Post,
   Put,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -24,6 +26,7 @@ import { ConcederPermissaoUseCase } from '../aplicacao/casos-de-uso/conceder-per
 import { CriarUsuarioUseCase } from '../aplicacao/casos-de-uso/criar-usuario.usecase';
 import { DesbloquearUsuarioUseCase } from '../aplicacao/casos-de-uso/desbloquear-usuario.usecase';
 import { ListarPermissoesUsuarioUseCase, PermissoesDoUsuario } from '../aplicacao/casos-de-uso/listar-permissoes-usuario.usecase';
+import { ListarUsuariosUseCase } from '../aplicacao/casos-de-uso/listar-usuarios.usecase';
 import { LogoutGlobalUseCase } from '../aplicacao/casos-de-uso/logout-global.usecase';
 import { ObterPerfilUseCase } from '../aplicacao/casos-de-uso/obter-perfil.usecase';
 import { RevogarPermissaoUseCase } from '../aplicacao/casos-de-uso/revogar-permissao.usecase';
@@ -50,6 +53,7 @@ export class AuthController {
     private readonly obterPerfil: ObterPerfilUseCase,
     private readonly logoutGlobal: LogoutGlobalUseCase,
     private readonly listarPermissoesUsuario: ListarPermissoesUsuarioUseCase,
+    private readonly listarUsuarios: ListarUsuariosUseCase,
     private readonly concederPermissao: ConcederPermissaoUseCase,
     private readonly revogarPermissao: RevogarPermissaoUseCase,
     @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,
@@ -67,6 +71,28 @@ export class AuthController {
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
   ): Promise<Usuario> {
     return this.atualizarNomeProprio.executar(usuarioAtual.id, dto.nome);
+  }
+
+  /** Une "meus funcionários" (escopo contador) + "funcionários dos clientes" (escopo empresa) numa lista só -- o frontend agrupa visualmente por vínculo. */
+  @Get('usuarios')
+  @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
+  async listar(
+    @Query('contadorId') contadorIdConsulta: string | undefined,
+    @Query('empresaId') empresaIdConsulta: string | undefined,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<Usuario[]> {
+    if (usuarioAtual.papel === Papel.EMPRESARIO_DONO) {
+      return this.listarUsuarios.executar({ contadorId: null, empresaIdUnico: usuarioAtual.empresaId });
+    }
+
+    const contadorId = usuarioAtual.papel === Papel.SUPER_ADMIN ? (contadorIdConsulta ?? null) : usuarioAtual.contadorId;
+    const empresaIdUnico = empresaIdConsulta ?? null;
+
+    if (!contadorId && !empresaIdUnico) {
+      throw new BadRequestException('contadorId ou empresaId é obrigatório (via query, quando plataforma)');
+    }
+
+    return this.listarUsuarios.executar({ contadorId, empresaIdUnico });
   }
 
   @Post('logout-global')

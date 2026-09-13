@@ -24,7 +24,8 @@ import { EmpresasRepositorioSupabase } from './infraestrutura/empresas.repositor
   ],
   // Exportado pra AuthModule resolver a checagem de posse ao criar EMPRESARIO_DONO/
   // OPERADOR_EMPRESA pra uma empresa da carteira do contador (limitação v1 documentada
-  // em AuthController -- ver commit do módulo de autenticação).
-  exports: [EMPRESAS_REPOSITORIO],
+  // em AuthController -- ver commit do módulo de autenticação). ListarEmpresasUseCase
+  // também exportado -- ListarUsuariosUseCase reusa ele pra resolver a carteira do contador.
+  exports: [EMPRESAS_REPOSITORIO, ListarEmpresasUseCase],
 })
 export class EmpresasModule {}

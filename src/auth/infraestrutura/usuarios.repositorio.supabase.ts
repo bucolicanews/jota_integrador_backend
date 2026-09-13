@@ -108,6 +108,31 @@ export class UsuariosRepositorioSupabase implements UsuariosRepositorioPort {
     }
   }
 
+  async listar(filtro: { contadorId: string | null; empresaIds: string[] }): Promise<Usuario[]> {
+    let consulta = this.supabase.admin
+      .from('usuarios')
+      .select('id, nome, email, contador_id, empresa_id, mfa_habilitado, status, bloqueado, papeis(nome)')
+      .order('nome', { ascending: true });
+
+    if (filtro.contadorId && filtro.empresaIds.length > 0) {
+      consulta = consulta.or(`contador_id.eq.${filtro.contadorId},empresa_id.in.(${filtro.empresaIds.join(',')})`);
+    } else if (filtro.contadorId) {
+      consulta = consulta.eq('contador_id', filtro.contadorId);
+    } else if (filtro.empresaIds.length > 0) {
+      consulta = consulta.in('empresa_id', filtro.empresaIds);
+    } else {
+      return [];
+    }
+
+    const { data, error } = await consulta;
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao listar usuários: ${error.message}`);
+    }
+
+    return (data as unknown as LinhaUsuario[]).map((linha) => this.mapear(linha));
+  }
+
   async buscarIdPapelPorNome(nomePapel: Papel): Promise<string> {
     const { data, error } = await this.supabase.admin
       .from('papeis')

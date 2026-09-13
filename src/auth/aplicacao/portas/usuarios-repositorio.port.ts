@@ -25,6 +25,12 @@ export interface DadosNovoUsuario {
 export interface UsuariosRepositorioPort {
   criar(dados: DadosNovoUsuario): Promise<Usuario>;
   buscarPorId(id: string): Promise<Usuario | null>;
+  /**
+   * Lista usuários por vínculo -- `contadorId` (escopo `contador`, o próprio escritório)
+   * e/ou `empresaIds` (escopo `empresa`, uma ou mais empresas da carteira). Os dois juntos
+   * unem "meus funcionários" + "funcionários dos clientes" numa lista só (OR).
+   */
+  listar(filtro: { contadorId: string | null; empresaIds: string[] }): Promise<Usuario[]>;
   atualizarPapelEVinculo(
     id: string,
     papelId: string,

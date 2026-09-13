@@ -7,6 +7,7 @@ import { ConcederPermissaoUseCase } from './aplicacao/casos-de-uso/conceder-perm
 import { CriarUsuarioUseCase } from './aplicacao/casos-de-uso/criar-usuario.usecase';
 import { DesbloquearUsuarioUseCase } from './aplicacao/casos-de-uso/desbloquear-usuario.usecase';
 import { ListarPermissoesUsuarioUseCase } from './aplicacao/casos-de-uso/listar-permissoes-usuario.usecase';
+import { ListarUsuariosUseCase } from './aplicacao/casos-de-uso/listar-usuarios.usecase';
 import { LogoutGlobalUseCase } from './aplicacao/casos-de-uso/logout-global.usecase';
 import { ObterPerfilUseCase } from './aplicacao/casos-de-uso/obter-perfil.usecase';
 import { RevogarPermissaoUseCase } from './aplicacao/casos-de-uso/revogar-permissao.usecase';
@@ -42,6 +43,7 @@ import { UsuariosRepositorioSupabase } from './infraestrutura/usuarios.repositor
     ObterPerfilUseCase,
     LogoutGlobalUseCase,
     ListarPermissoesUsuarioUseCase,
+    ListarUsuariosUseCase,
     ConcederPermissaoUseCase,
     RevogarPermissaoUseCase,
     SupabaseAuthGuard,
