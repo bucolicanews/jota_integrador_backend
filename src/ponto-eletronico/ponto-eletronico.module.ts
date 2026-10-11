@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { EmpresasModule } from '../empresas/empresas.module';
 import { AjustarRegistrosDoDiaUseCase } from './aplicacao/casos-de-uso/ajustar-registros-do-dia.usecase';
 import { CancelarFeriasUseCase } from './aplicacao/casos-de-uso/cancelar-ferias.usecase';
 import { ConfigurarFuncionarioUseCase } from './aplicacao/casos-de-uso/configurar-funcionario.usecase';
@@ -23,6 +24,7 @@ import { RegistrosPontoRepositorioSupabase } from './infraestrutura/registros-po
 import { StoragePontoService } from './infraestrutura/storage-ponto.service';
 
 @Module({
+  imports: [EmpresasModule],
   controllers: [PontoEletronicoController],
   providers: [
     { provide: REGISTROS_PONTO_REPOSITORIO, useClass: RegistrosPontoRepositorioSupabase },
