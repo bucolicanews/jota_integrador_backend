@@ -26,6 +26,7 @@ import { BloquearEmpresaUseCase } from '../aplicacao/casos-de-uso/bloquear-empre
 import { CriarEmpresaUseCase } from '../aplicacao/casos-de-uso/criar-empresa.usecase';
 import { DesbloquearEmpresaUseCase } from '../aplicacao/casos-de-uso/desbloquear-empresa.usecase';
 import { ListarEmpresasUseCase } from '../aplicacao/casos-de-uso/listar-empresas.usecase';
+import { ObterEmpresaInternaUseCase } from '../aplicacao/casos-de-uso/obter-empresa-interna.usecase';
 import { ObterEmpresaUseCase } from '../aplicacao/casos-de-uso/obter-empresa.usecase';
 import { Empresa } from '../aplicacao/portas/empresas-repositorio.port';
 import { AtualizarEmpresaDto } from './dto/atualizar-empresa.dto';
@@ -40,6 +41,7 @@ export class EmpresasController {
     private readonly criarEmpresa: CriarEmpresaUseCase,
     private readonly listarEmpresas: ListarEmpresasUseCase,
     private readonly obterEmpresa: ObterEmpresaUseCase,
+    private readonly obterEmpresaInterna: ObterEmpresaInternaUseCase,
     private readonly atualizarEmpresa: AtualizarEmpresaUseCase,
     private readonly atualizarModoAcessoSerpro: AtualizarModoAcessoSerproUseCase,
     private readonly bloquearEmpresa: BloquearEmpresaUseCase,
@@ -82,6 +84,26 @@ export class EmpresasController {
     }
 
     return this.listarEmpresas.executar(contadorId);
+  }
+
+  /**
+   * Workspace fixo de quem não navega por carteira: plataforma cai na "interna_plataforma",
+   * contador dono/operador cai na própria "interna_contador" -- sem query params, resolvido
+   * só pelo papel/vínculo do token (nunca pelo que o cliente informar).
+   */
+  @Get('interna')
+  @Papeis(
+    Papel.SUPER_ADMIN,
+    Papel.ADMIN_FINANCEIRO,
+    Papel.ADMIN_SUPORTE,
+    Papel.CONTADOR_DONO,
+    Papel.OPERADOR_CONTADOR,
+  )
+  async obterInterna(@UsuarioAtual() usuarioAtual: UsuarioAutenticado): Promise<Empresa> {
+    return this.obterEmpresaInterna.executar({
+      papel: usuarioAtual.papel,
+      contadorId: usuarioAtual.contadorId,
+    });
   }
 
   @Get(':id')

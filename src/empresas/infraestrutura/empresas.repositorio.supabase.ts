@@ -94,6 +94,19 @@ export class EmpresasRepositorioSupabase implements EmpresasRepositorioPort {
     return data ? this.mapear(data as LinhaEmpresa) : null;
   }
 
+  async buscarEmpresaInternaDaPlataforma(): Promise<Empresa | null> {
+    const { data, error } = await this.supabase.admin
+      .from('empresas')
+      .select(COLUNAS_SELECT)
+      .eq('tipo', 'interna_plataforma')
+      .maybeSingle();
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao buscar empresa interna da plataforma: ${error.message}`);
+    }
+    return data ? this.mapear(data as LinhaEmpresa) : null;
+  }
+
   async pertenceAoContador(empresaId: string, contadorId: string): Promise<boolean> {
     const { data, error } = await this.supabase.admin
       .from('empresas')

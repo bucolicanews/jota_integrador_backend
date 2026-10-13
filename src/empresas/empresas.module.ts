@@ -5,6 +5,7 @@ import { BloquearEmpresaUseCase } from './aplicacao/casos-de-uso/bloquear-empres
 import { CriarEmpresaUseCase } from './aplicacao/casos-de-uso/criar-empresa.usecase';
 import { DesbloquearEmpresaUseCase } from './aplicacao/casos-de-uso/desbloquear-empresa.usecase';
 import { ListarEmpresasUseCase } from './aplicacao/casos-de-uso/listar-empresas.usecase';
+import { ObterEmpresaInternaUseCase } from './aplicacao/casos-de-uso/obter-empresa-interna.usecase';
 import { ObterEmpresaUseCase } from './aplicacao/casos-de-uso/obter-empresa.usecase';
 import { EMPRESAS_REPOSITORIO } from './aplicacao/portas/empresas-repositorio.port';
 import { EmpresasController } from './apresentacao/empresas.controller';
@@ -17,6 +18,7 @@ import { EmpresasRepositorioSupabase } from './infraestrutura/empresas.repositor
     CriarEmpresaUseCase,
     ListarEmpresasUseCase,
     ObterEmpresaUseCase,
+    ObterEmpresaInternaUseCase,
     AtualizarEmpresaUseCase,
     AtualizarModoAcessoSerproUseCase,
     BloquearEmpresaUseCase,

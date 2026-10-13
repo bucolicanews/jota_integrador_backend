@@ -35,6 +35,8 @@ export interface EmpresasRepositorioPort {
   listarPorContador(contadorId: string): Promise<Empresa[]>;
   /** A empresa interna do próprio contador (tipo='interna_contador') -- nunca aparece em listarPorContador. */
   buscarEmpresaInternaDoContador(contadorId: string): Promise<Empresa | null>;
+  /** A empresa interna da própria Jota (tipo='interna_plataforma') -- workspace fixo da plataforma. */
+  buscarEmpresaInternaDaPlataforma(): Promise<Empresa | null>;
   /** Usado por outros módulos (ex: auth) pra checar posse sem expor o repositório inteiro. */
   pertenceAoContador(empresaId: string, contadorId: string): Promise<boolean>;
   atualizar(id: string, dados: DadosAtualizacaoEmpresa): Promise<void>;
