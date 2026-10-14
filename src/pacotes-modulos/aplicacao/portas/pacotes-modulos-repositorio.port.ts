@@ -3,17 +3,23 @@ export type Periodicidade = 'mensal' | 'anual';
 export interface PacoteModulos {
   id: string;
   nome: string;
+  descricao: string | null;
   modulos: string[];
   preco: number;
   periodicidade: Periodicidade;
+  dataValidade: string | null;
+  gratuito: boolean;
   ativo: boolean;
 }
 
 export interface DadosPacoteModulos {
   nome: string;
+  descricao: string | null;
   modulos: string[];
   preco: number;
   periodicidade: Periodicidade;
+  dataValidade: string | null;
+  gratuito: boolean;
 }
 
 export interface PacotesModulosRepositorioPort {

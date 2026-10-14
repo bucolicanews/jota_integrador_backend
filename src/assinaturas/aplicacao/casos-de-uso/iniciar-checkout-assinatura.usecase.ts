@@ -11,6 +11,7 @@ import {
   ContadoresRepositorioPort,
 } from '../../../contadores/aplicacao/portas/contadores-repositorio.port';
 import { StripeAssinaturasService } from '../../infraestrutura/stripe-assinaturas.service';
+import { planoExpirado } from '../../dominio/plano';
 import { ASSINATURAS_REPOSITORIO, AssinaturasRepositorioPort } from '../portas/assinaturas-repositorio.port';
 import { PLANOS_REPOSITORIO, PlanosRepositorioPort } from '../portas/planos-repositorio.port';
 
@@ -41,6 +42,9 @@ export class IniciarCheckoutAssinaturaUseCase {
     const plano = await this.planosRepositorio.buscarPorId(dados.planoId);
     if (!plano || !plano.ativo) {
       throw new NotFoundException('Plano não encontrado ou não está mais disponível');
+    }
+    if (planoExpirado(plano.dataValidade)) {
+      throw new BadRequestException('Plano expirado -- não é possível assinar');
     }
 
     // v1 não suporta troca direta de plano nem múltiplas assinaturas simultâneas --

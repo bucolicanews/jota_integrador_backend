@@ -32,7 +32,15 @@ export class PacotesModulosController {
   @Post()
   @Papeis(Papel.SUPER_ADMIN, Papel.ADMIN_FINANCEIRO)
   async criar(@Body() dto: CriarPacoteModulosDto): Promise<PacoteModulos> {
-    return this.criarPacote.executar(dto);
+    return this.criarPacote.executar({
+      nome: dto.nome,
+      descricao: dto.descricao ?? null,
+      modulos: dto.modulos,
+      preco: dto.preco,
+      periodicidade: dto.periodicidade,
+      dataValidade: dto.dataValidade ?? null,
+      gratuito: dto.gratuito ?? false,
+    });
   }
 
   @Patch(':id')

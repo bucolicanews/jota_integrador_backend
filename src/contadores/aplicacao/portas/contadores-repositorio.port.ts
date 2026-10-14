@@ -14,6 +14,7 @@ export interface Contador {
   stripeChargesEnabled: boolean;
   stripePayoutsEnabled: boolean;
   stripeDetailsSubmitted: boolean;
+  pagbankAccountId: string | null;
 }
 
 export interface DadosNovoContador {
@@ -44,6 +45,8 @@ export interface ContadoresRepositorioPort {
     id: string,
     status: { chargesEnabled: boolean; payoutsEnabled: boolean; detailsSubmitted: boolean },
   ): Promise<void>;
+  /** Colado manualmente pelo contador (sem OAuth) -- necessário pra receber a parte dele no split PagBank. */
+  atualizarPagbankAccountId(id: string, pagbankAccountId: string): Promise<void>;
 }
 
 export const CONTADORES_REPOSITORIO = Symbol('CONTADORES_REPOSITORIO');

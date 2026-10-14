@@ -36,6 +36,8 @@ import { ContratosModule } from './contratos/contratos.module';
 import { DocumentosSocietariosModule } from './documentos-societarios/documentos-societarios.module';
 import { PacotesModulosModule } from './pacotes-modulos/pacotes-modulos.module';
 import { LicencasModuloModule } from './licencas-modulo/licencas-modulo.module';
+import { CustosSerproModule } from './custos-serpro/custos-serpro.module';
+import { PlanosRevendaPacoteModule } from './planos-revenda-pacote/planos-revenda-pacote.module';
 import { SuporteModule } from './suporte/suporte.module';
 import { PontoEletronicoModule } from './ponto-eletronico/ponto-eletronico.module';
 
@@ -86,6 +88,8 @@ import { PontoEletronicoModule } from './ponto-eletronico/ponto-eletronico.modul
     DocumentosSocietariosModule,
     PacotesModulosModule,
     LicencasModuloModule,
+    CustosSerproModule,
+    PlanosRevendaPacoteModule,
     SuporteModule,
     PontoEletronicoModule,
   ],

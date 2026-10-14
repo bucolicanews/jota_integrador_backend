@@ -7,10 +7,12 @@ import { ehPapelDePlataforma } from '../../auth/dominio/papel';
 import { AtivarLicencaUseCase } from '../aplicacao/casos-de-uso/ativar-licenca.usecase';
 import { DesativarLicencaUseCase } from '../aplicacao/casos-de-uso/desativar-licenca.usecase';
 import { IniciarCheckoutLicencaUseCase } from '../aplicacao/casos-de-uso/iniciar-checkout-licenca.usecase';
+import { IniciarPagamentoAtivacaoLicencaUseCase, ResultadoIniciarPagamento } from '../aplicacao/casos-de-uso/iniciar-pagamento-ativacao-licenca.usecase';
 import { ListarLicencasUseCase } from '../aplicacao/casos-de-uso/listar-licencas.usecase';
 import { LicencaModulo } from '../aplicacao/portas/licencas-modulo-repositorio.port';
 import { AtivarLicencaDto } from './dto/ativar-licenca.dto';
 import { IniciarCheckoutLicencaDto } from './dto/iniciar-checkout-licenca.dto';
+import { IniciarPagamentoAtivacaoDto } from './dto/iniciar-pagamento-ativacao.dto';
 
 @Controller('contadores/:contadorId/licencas-modulo')
 @UseGuards(SupabaseAuthGuard, PapeisGuard)
@@ -20,6 +22,7 @@ export class LicencasModuloController {
     private readonly iniciarCheckout: IniciarCheckoutLicencaUseCase,
     private readonly ativarLicenca: AtivarLicencaUseCase,
     private readonly desativarLicenca: DesativarLicencaUseCase,
+    private readonly iniciarPagamentoAtivacao: IniciarPagamentoAtivacaoLicencaUseCase,
   ) {}
 
   @Get()
@@ -53,6 +56,24 @@ export class LicencasModuloController {
       valorCobrado: dto.valorCobrado ?? null,
       parcelamento: dto.parcelamento ?? null,
       executadoPor: usuarioAtual.id,
+    });
+  }
+
+  @Post(':licencaId/iniciar-pagamento')
+  async iniciarPagamento(
+    @Param('contadorId', ParseUUIDPipe) contadorId: string,
+    @Param('licencaId', ParseUUIDPipe) licencaId: string,
+    @Body() dto: IniciarPagamentoAtivacaoDto,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<ResultadoIniciarPagamento> {
+    this.exigirPosse(usuarioAtual, contadorId);
+    return this.iniciarPagamentoAtivacao.executar({
+      licencaId,
+      contadorId,
+      empresaId: dto.empresaId,
+      metodo: dto.metodo,
+      customerEmail: dto.customerEmail,
+      customerTelefoneE164: dto.customerTelefoneE164 ?? null,
     });
   }
 

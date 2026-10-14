@@ -4,6 +4,7 @@ import { CONTRATOS_REPOSITORIO, ContratosRepositorioPort } from '../../../contra
 import { ModoParcelamento } from '../../../contas-a-receber/dominio/conta-receber';
 import { EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../../../empresas/aplicacao/portas/empresas-repositorio.port';
 import { PACOTES_MODULOS_REPOSITORIO, PacotesModulosRepositorioPort } from '../../../pacotes-modulos/aplicacao/portas/pacotes-modulos-repositorio.port';
+import { pacoteExpirado } from '../../../pacotes-modulos/dominio/pacote-modulos';
 import { podeAtivar } from '../../dominio/licenca-modulo';
 import { LICENCAS_MODULO_REPOSITORIO, LicencaModulo, LicencasModuloRepositorioPort } from '../portas/licencas-modulo-repositorio.port';
 
@@ -56,14 +57,22 @@ export class AtivarLicencaUseCase {
     if (!pacote) {
       throw new NotFoundException('Pacote da licença não encontrado');
     }
+    if (pacoteExpirado(pacote.dataValidade)) {
+      throw new BadRequestException('Pacote expirado -- não é possível ativar licença dele');
+    }
 
     const empresaInterna = await this.empresasRepositorio.buscarEmpresaInternaDoContador(dados.contadorId);
     if (!empresaInterna) {
       throw new NotFoundException('Empresa interna do contador não encontrada -- contate o suporte');
     }
 
-    if (dados.valorCobrado != null && dados.valorCobrado > 0 && !dados.parcelamento) {
-      throw new BadRequestException('Informe o parcelamento para cobrar a empresa pela ativação');
+    // Caminho de cobrança real passou a ser IniciarPagamentoAtivacaoLicencaUseCase (split
+    // PagBank) -- este usecase fica só pra ativação GRATUITA. Antes aceitava valorCobrado
+    // livre e só lançava contábil (sem gateway nenhum movendo dinheiro de verdade).
+    if (dados.valorCobrado != null && dados.valorCobrado > 0) {
+      throw new BadRequestException(
+        'Ativação com cobrança real passou a usar pagamento com split -- use "iniciar-pagamento" em vez de informar valorCobrado aqui',
+      );
     }
 
     const modelo = await this.obterOuCriarModeloAtivacao(empresaInterna.id);

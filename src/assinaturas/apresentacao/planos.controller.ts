@@ -31,7 +31,16 @@ export class PlanosController {
   @Post()
   @Papeis(Papel.SUPER_ADMIN, Papel.ADMIN_FINANCEIRO)
   async criar(@Body() dto: CriarPlanoDto): Promise<Plano> {
-    return this.criarPlano.executar(dto);
+    return this.criarPlano.executar({
+      nome: dto.nome,
+      descricao: dto.descricao ?? null,
+      operacoesIncluidas: dto.operacoesIncluidas,
+      modulos: dto.modulos ?? [],
+      preco: dto.preco,
+      periodicidade: dto.periodicidade,
+      dataValidade: dto.dataValidade ?? null,
+      gratuito: dto.gratuito ?? false,
+    });
   }
 
   @Patch(':id')

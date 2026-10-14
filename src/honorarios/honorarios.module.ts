@@ -3,6 +3,7 @@ import { ContadoresModule } from '../contadores/contadores.module';
 import { EmpresasModule } from '../empresas/empresas.module';
 import { CriarCobrancaHonorarioUseCase } from './aplicacao/casos-de-uso/criar-cobranca-honorario.usecase';
 import { GerenciarComissaoPlataformaUseCase } from './aplicacao/casos-de-uso/gerenciar-comissao-plataforma.usecase';
+import { GerenciarConfiguracaoPagbankUseCase } from './aplicacao/casos-de-uso/gerenciar-configuracao-pagbank.usecase';
 import { IniciarOnboardingStripeConnectUseCase } from './aplicacao/casos-de-uso/iniciar-onboarding-stripe-connect.usecase';
 import { ListarCobrancasHonorarioUseCase } from './aplicacao/casos-de-uso/listar-cobrancas-honorario.usecase';
 import { ProcessarWebhookStripeHonorarioUseCase } from './aplicacao/casos-de-uso/processar-webhook-stripe-honorario.usecase';
@@ -34,6 +35,7 @@ import { StripeHonorariosService } from './infraestrutura/stripe-honorarios.serv
     CriarCobrancaHonorarioUseCase,
     ListarCobrancasHonorarioUseCase,
     GerenciarComissaoPlataformaUseCase,
+    GerenciarConfiguracaoPagbankUseCase,
     ProcessarWebhookStripeHonorarioUseCase,
   ],
 })

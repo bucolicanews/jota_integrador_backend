@@ -1,9 +1,13 @@
-import { ArrayMinSize, IsArray, IsIn, IsNumber, IsPositive, IsString, MinLength } from 'class-validator';
+import { ArrayMinSize, IsArray, IsBoolean, IsDateString, IsIn, IsNumber, IsOptional, IsString, Min, MinLength } from 'class-validator';
 import { MODULOS_LICENCIAVEIS } from '../../dominio/pacote-modulos';
 
 export class CriarPacoteModulosDto {
   @MinLength(1)
   nome!: string;
+
+  @IsOptional()
+  @IsString()
+  descricao?: string | null;
 
   @IsArray()
   @ArrayMinSize(1)
@@ -11,10 +15,20 @@ export class CriarPacoteModulosDto {
   @IsIn(MODULOS_LICENCIAVEIS, { each: true })
   modulos!: string[];
 
+  // Positivo só é exigido pelo usecase quando gratuito=false (validarPrecoGratuito) --
+  // aqui só garante não-negativo, pra permitir preco=0 em pacote grátis.
   @IsNumber()
-  @IsPositive()
+  @Min(0)
   preco!: number;
 
   @IsIn(['mensal', 'anual'])
   periodicidade!: 'mensal' | 'anual';
+
+  @IsOptional()
+  @IsDateString()
+  dataValidade?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  gratuito?: boolean;
 }

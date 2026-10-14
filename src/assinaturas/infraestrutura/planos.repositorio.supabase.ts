@@ -11,13 +11,17 @@ import {
 interface LinhaPlano {
   id: string;
   nome: string;
+  descricao: string | null;
   operacoes_incluidas: number;
+  modulos: string[];
   preco: number;
   periodicidade: Periodicidade;
+  data_validade: string | null;
+  gratuito: boolean;
   ativo: boolean;
 }
 
-const COLUNAS_SELECT = 'id, nome, operacoes_incluidas, preco, periodicidade, ativo';
+const COLUNAS_SELECT = 'id, nome, descricao, operacoes_incluidas, modulos, preco, periodicidade, data_validade, gratuito, ativo';
 
 @Injectable()
 export class PlanosRepositorioSupabase implements PlanosRepositorioPort {
@@ -28,9 +32,13 @@ export class PlanosRepositorioSupabase implements PlanosRepositorioPort {
       .from('planos')
       .insert({
         nome: dados.nome,
+        descricao: dados.descricao,
         operacoes_incluidas: dados.operacoesIncluidas,
+        modulos: dados.modulos,
         preco: dados.preco,
         periodicidade: dados.periodicidade,
+        data_validade: dados.dataValidade,
+        gratuito: dados.gratuito,
       })
       .select(COLUNAS_SELECT)
       .single();
@@ -70,9 +78,13 @@ export class PlanosRepositorioSupabase implements PlanosRepositorioPort {
   async atualizar(id: string, dados: DadosAtualizacaoPlano): Promise<Plano> {
     const campos: Record<string, unknown> = {};
     if (dados.nome !== undefined) campos.nome = dados.nome;
+    if (dados.descricao !== undefined) campos.descricao = dados.descricao;
     if (dados.operacoesIncluidas !== undefined) campos.operacoes_incluidas = dados.operacoesIncluidas;
+    if (dados.modulos !== undefined) campos.modulos = dados.modulos;
     if (dados.preco !== undefined) campos.preco = dados.preco;
     if (dados.ativo !== undefined) campos.ativo = dados.ativo;
+    if (dados.dataValidade !== undefined) campos.data_validade = dados.dataValidade;
+    if (dados.gratuito !== undefined) campos.gratuito = dados.gratuito;
 
     const { data, error } = await this.supabase.admin
       .from('planos')
@@ -91,9 +103,13 @@ export class PlanosRepositorioSupabase implements PlanosRepositorioPort {
     return {
       id: linha.id,
       nome: linha.nome,
+      descricao: linha.descricao,
       operacoesIncluidas: linha.operacoes_incluidas,
+      modulos: linha.modulos,
       preco: Number(linha.preco),
       periodicidade: linha.periodicidade,
+      dataValidade: linha.data_validade,
+      gratuito: linha.gratuito,
       ativo: linha.ativo,
     };
   }

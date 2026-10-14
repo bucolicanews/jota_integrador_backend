@@ -22,10 +22,11 @@ interface LinhaContador {
   stripe_charges_enabled: boolean;
   stripe_payouts_enabled: boolean;
   stripe_details_submitted: boolean;
+  pagbank_account_id: string | null;
 }
 
 const COLUNAS_SELECT =
-  'id, nome, cnpj_cpf, email, telefone, tipo, status, bloqueado, stripe_customer_id, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted';
+  'id, nome, cnpj_cpf, email, telefone, tipo, status, bloqueado, stripe_customer_id, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted, pagbank_account_id';
 
 @Injectable()
 export class ContadoresRepositorioSupabase implements ContadoresRepositorioPort {
@@ -151,6 +152,17 @@ export class ContadoresRepositorioSupabase implements ContadoresRepositorioPort 
     }
   }
 
+  async atualizarPagbankAccountId(id: string, pagbankAccountId: string): Promise<void> {
+    const { error } = await this.supabase.admin
+      .from('contadores')
+      .update({ pagbank_account_id: pagbankAccountId })
+      .eq('id', id);
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao atualizar pagbank_account_id: ${error.message}`);
+    }
+  }
+
   private mapear(linha: LinhaContador): Contador {
     return {
       id: linha.id,
@@ -166,6 +178,7 @@ export class ContadoresRepositorioSupabase implements ContadoresRepositorioPort 
       stripeChargesEnabled: linha.stripe_charges_enabled,
       stripePayoutsEnabled: linha.stripe_payouts_enabled,
       stripeDetailsSubmitted: linha.stripe_details_submitted,
+      pagbankAccountId: linha.pagbank_account_id,
     };
   }
 }

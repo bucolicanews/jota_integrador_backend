@@ -1,5 +1,6 @@
-import { Inject, Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import { CONTADORES_REPOSITORIO, ContadoresRepositorioPort } from '../../../contadores/aplicacao/portas/contadores-repositorio.port';
+import { pacoteExpirado } from '../../../pacotes-modulos/dominio/pacote-modulos';
 import { PACOTES_MODULOS_REPOSITORIO, PacotesModulosRepositorioPort } from '../../../pacotes-modulos/aplicacao/portas/pacotes-modulos-repositorio.port';
 import { StripeLicencasService } from '../../infraestrutura/stripe-licencas.service';
 
@@ -27,6 +28,9 @@ export class IniciarCheckoutLicencaUseCase {
 
     const pacote = await this.pacotesRepositorio.obterPorId(dados.pacoteId);
     if (!pacote || !pacote.ativo) throw new NotFoundException('Pacote não encontrado ou não está mais disponível');
+    if (pacoteExpirado(pacote.dataValidade)) {
+      throw new BadRequestException('Pacote expirado -- não é possível comprar');
+    }
 
     try {
       let stripeCustomerId = contador.stripeCustomerId;

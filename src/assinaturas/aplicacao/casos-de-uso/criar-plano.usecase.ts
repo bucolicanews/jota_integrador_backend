@@ -8,7 +8,7 @@ export class CriarPlanoUseCase {
 
   async executar(dados: DadosNovoPlano): Promise<Plano> {
     try {
-      validarDadosPlano(dados.operacoesIncluidas, dados.preco);
+      validarDadosPlano(dados.operacoesIncluidas, dados.preco, dados.gratuito, dados.modulos);
     } catch (erro) {
       throw new BadRequestException((erro as Error).message);
     }

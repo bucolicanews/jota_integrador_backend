@@ -3,24 +3,36 @@ import { Periodicidade } from '../../dominio/plano';
 export interface Plano {
   id: string;
   nome: string;
+  descricao: string | null;
   operacoesIncluidas: number;
+  modulos: string[];
   preco: number;
   periodicidade: Periodicidade;
+  dataValidade: string | null;
+  gratuito: boolean;
   ativo: boolean;
 }
 
 export interface DadosNovoPlano {
   nome: string;
+  descricao: string | null;
   operacoesIncluidas: number;
+  modulos: string[];
   preco: number;
   periodicidade: Periodicidade;
+  dataValidade: string | null;
+  gratuito: boolean;
 }
 
 export interface DadosAtualizacaoPlano {
   nome?: string;
+  descricao?: string | null;
   operacoesIncluidas?: number;
+  modulos?: string[];
   preco?: number;
   ativo?: boolean;
+  dataValidade?: string | null;
+  gratuito?: boolean;
 }
 
 export interface PlanosRepositorioPort {

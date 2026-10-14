@@ -16,3 +16,19 @@ export type ModuloLicenciavel = (typeof MODULOS_LICENCIAVEIS)[number];
 export function modulosValidos(modulos: string[]): boolean {
   return modulos.length > 0 && modulos.every((m) => (MODULOS_LICENCIAVEIS as readonly string[]).includes(m));
 }
+
+/**
+ * Espelha a constraint pacotes_modulos_gratuito_preco_check do banco -- revalidada aqui
+ * também (Zero Trust, docs/SEGURANCA.md), não só confiar que o CHECK vai pegar o erro.
+ */
+export function validarPrecoGratuito(preco: number, gratuito: boolean): void {
+  if (!gratuito && preco <= 0) {
+    throw new Error('Pacote pago precisa de preço maior que zero -- marque "grátis" ou informe um preço válido');
+  }
+}
+
+/** Pacote expirado não pode ser comprado/ativado de novo (licença já ativa não é revogada). */
+export function pacoteExpirado(dataValidade: string | null): boolean {
+  if (!dataValidade) return false;
+  return dataValidade < new Date().toISOString().slice(0, 10);
+}
