@@ -13,7 +13,7 @@ export class EstornarCreditosUseCase {
     @Inject(CREDITOS_REPOSITORIO) private readonly creditosRepositorio: CreditosRepositorioPort,
   ) {}
 
-  async executar(contadorId: string, quantidade: number, motivo: string): Promise<number> {
-    return this.creditosRepositorio.creditar(contadorId, quantidade, `ESTORNO: ${motivo}`);
+  async executar(contadorId: string, empresaId: string, quantidade: number, motivo: string): Promise<number> {
+    return this.creditosRepositorio.creditar(contadorId, empresaId, quantidade, `ESTORNO: ${motivo}`);
   }
 }

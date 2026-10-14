@@ -14,12 +14,13 @@ export interface MovimentoCredito {
 export class SaldoInsuficienteError extends Error {}
 
 export interface CreditosRepositorioPort {
-  obterSaldo(contadorId: string): Promise<number>;
-  listarMovimentos(contadorId: string): Promise<MovimentoCredito[]>;
-  /** Atômico via função Postgres (debitar_creditos) -- nunca implementar isso como UPDATE+INSERT separados. */
+  /** Saldo é por EMPRESA (não mais por contador) -- cada empresa-cliente tem o próprio plano/saldo. */
+  obterSaldo(empresaId: string): Promise<number>;
+  listarMovimentos(empresaId: string): Promise<MovimentoCredito[]>;
+  /** Atômico via função Postgres (debitar_creditos) -- nunca implementar isso como UPDATE+INSERT separados. contadorId só vai pra auditoria em creditos_movimentos. */
   debitar(contadorId: string, empresaId: string, tipoOperacao: string, quantidade: number, motivo: string): Promise<number>;
   /** Atômico via função Postgres (creditar_creditos). tipoOperacao default 'AJUSTE_MANUAL' -- assinaturas/ usa 'RENOVACAO_ASSINATURA'. */
-  creditar(contadorId: string, quantidade: number, motivo: string, tipoOperacao?: string): Promise<number>;
+  creditar(contadorId: string, empresaId: string, quantidade: number, motivo: string, tipoOperacao?: string): Promise<number>;
 }
 
 export const CREDITOS_REPOSITORIO = Symbol('CREDITOS_REPOSITORIO');

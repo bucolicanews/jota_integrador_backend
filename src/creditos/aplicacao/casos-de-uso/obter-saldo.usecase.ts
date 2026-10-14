@@ -7,7 +7,7 @@ export class ObterSaldoUseCase {
     @Inject(CREDITOS_REPOSITORIO) private readonly creditosRepositorio: CreditosRepositorioPort,
   ) {}
 
-  async executar(contadorId: string): Promise<number> {
-    return this.creditosRepositorio.obterSaldo(contadorId);
+  async executar(empresaId: string): Promise<number> {
+    return this.creditosRepositorio.obterSaldo(empresaId);
   }
 }

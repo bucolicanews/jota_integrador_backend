@@ -1,40 +1,41 @@
 import { Module } from '@nestjs/common';
 import { ContadoresModule } from '../contadores/contadores.module';
+import { ContratosModule } from '../contratos/contratos.module';
 import { CreditosModule } from '../creditos/creditos.module';
-import { AtualizarPlanoUseCase } from './aplicacao/casos-de-uso/atualizar-plano.usecase';
-import { CancelarAssinaturaUseCase } from './aplicacao/casos-de-uso/cancelar-assinatura.usecase';
-import { CriarPlanoUseCase } from './aplicacao/casos-de-uso/criar-plano.usecase';
-import { IniciarCheckoutAssinaturaUseCase } from './aplicacao/casos-de-uso/iniciar-checkout-assinatura.usecase';
-import { ListarFaturasUseCase } from './aplicacao/casos-de-uso/listar-faturas.usecase';
-import { ListarPlanosUseCase } from './aplicacao/casos-de-uso/listar-planos.usecase';
+import { EmpresasModule } from '../empresas/empresas.module';
+import { PagbankModule } from '../common/pagbank/pagbank.module';
+import { PlanosModule } from '../planos/planos.module';
+import { PlanosRevendaCreditosModule } from '../planos-revenda-creditos/planos-revenda-creditos.module';
+import { AtivarAssinaturaManualUseCase } from './aplicacao/casos-de-uso/ativar-assinatura-manual.usecase';
+import { BloquearAssinaturaUseCase } from './aplicacao/casos-de-uso/bloquear-assinatura.usecase';
+import { IniciarPagamentoAssinaturaCreditosUseCase } from './aplicacao/casos-de-uso/iniciar-pagamento-assinatura-creditos.usecase';
 import { ObterAssinaturaAtualUseCase } from './aplicacao/casos-de-uso/obter-assinatura-atual.usecase';
-import { ProcessarWebhookStripeAssinaturaUseCase } from './aplicacao/casos-de-uso/processar-webhook-stripe-assinatura.usecase';
+import { ProcessarWebhookPagbankCreditosUseCase } from './aplicacao/casos-de-uso/processar-webhook-pagbank-creditos.usecase';
 import { ASSINATURAS_REPOSITORIO } from './aplicacao/portas/assinaturas-repositorio.port';
-import { PLANOS_REPOSITORIO } from './aplicacao/portas/planos-repositorio.port';
+import { PAGAMENTOS_ASSINATURA_CREDITOS_REPOSITORIO } from './aplicacao/portas/pagamentos-assinatura-creditos-repositorio.port';
 import { AssinaturasController } from './apresentacao/assinaturas.controller';
-import { PlanosController } from './apresentacao/planos.controller';
-import { WebhookAssinaturasController } from './apresentacao/webhook-assinaturas.controller';
+import { WebhookPagbankCreditosController } from './apresentacao/webhook-pagbank-creditos.controller';
 import { AssinaturasRepositorioSupabase } from './infraestrutura/assinaturas.repositorio.supabase';
-import { PlanosRepositorioSupabase } from './infraestrutura/planos.repositorio.supabase';
-import { StripeAssinaturasService } from './infraestrutura/stripe-assinaturas.service';
+import { PagamentosAssinaturaCreditosRepositorioSupabase } from './infraestrutura/pagamentos-assinatura-creditos.repositorio.supabase';
 
 @Module({
-  // ContadoresModule (CONTADORES_REPOSITORIO) -- resolver/atualizar stripe_customer_id.
-  // CreditosModule (CreditarCreditosUseCase) -- creditar operações na renovação paga.
-  imports: [ContadoresModule, CreditosModule],
-  controllers: [PlanosController, AssinaturasController, WebhookAssinaturasController],
+  // PlanosModule -- catálogo de planos de créditos. PlanosRevendaCreditosModule -- plano
+  // de revenda do contador. ContadoresModule/EmpresasModule -- posse/pagbankAccountId.
+  // ContratosModule -- registro contábil interno ao confirmar pagamento. CreditosModule
+  // -- creditar operações na ativação manual/renovação paga. PagbankModule -- split.
+  imports: [ContadoresModule, EmpresasModule, PlanosModule, PlanosRevendaCreditosModule, ContratosModule, CreditosModule, PagbankModule],
+  controllers: [AssinaturasController, WebhookPagbankCreditosController],
   providers: [
-    { provide: PLANOS_REPOSITORIO, useClass: PlanosRepositorioSupabase },
     { provide: ASSINATURAS_REPOSITORIO, useClass: AssinaturasRepositorioSupabase },
-    StripeAssinaturasService,
-    CriarPlanoUseCase,
-    ListarPlanosUseCase,
-    AtualizarPlanoUseCase,
+    { provide: PAGAMENTOS_ASSINATURA_CREDITOS_REPOSITORIO, useClass: PagamentosAssinaturaCreditosRepositorioSupabase },
     ObterAssinaturaAtualUseCase,
-    IniciarCheckoutAssinaturaUseCase,
-    CancelarAssinaturaUseCase,
-    ListarFaturasUseCase,
-    ProcessarWebhookStripeAssinaturaUseCase,
+    AtivarAssinaturaManualUseCase,
+    BloquearAssinaturaUseCase,
+    IniciarPagamentoAssinaturaCreditosUseCase,
+    ProcessarWebhookPagbankCreditosUseCase,
   ],
+  // ASSINATURAS_REPOSITORIO exportado -- serpro/ e caixa-postal/ consultam
+  // buscarAtivaPorEmpresa antes de debitar crédito (gate de acesso por empresa).
+  exports: [ASSINATURAS_REPOSITORIO],
 })
 export class AssinaturasModule {}

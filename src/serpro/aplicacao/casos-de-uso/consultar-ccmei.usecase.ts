@@ -3,6 +3,10 @@ import { custoDaOperacao } from '../../../creditos/dominio/credito';
 import { DebitarCreditosUseCase } from '../../../creditos/aplicacao/casos-de-uso/debitar-creditos.usecase';
 import { EstornarCreditosUseCase } from '../../../creditos/aplicacao/casos-de-uso/estornar-creditos.usecase';
 import {
+  ASSINATURAS_REPOSITORIO,
+  AssinaturasRepositorioPort,
+} from '../../../assinaturas/aplicacao/portas/assinaturas-repositorio.port';
+import {
   EMPRESAS_REPOSITORIO,
   EmpresasRepositorioPort,
 } from '../../../empresas/aplicacao/portas/empresas-repositorio.port';
@@ -26,6 +30,7 @@ export class ConsultarCcmeiUseCase {
     @Inject(VERIFICAR_ACESSO_SERPRO) private readonly verificarAcesso: VerificarAcessoSerproPort,
     @Inject(SERPRO_GATEWAY) private readonly gateway: SerproGatewayPort,
     @Inject(CONSULTAS_SERPRO_REPOSITORIO) private readonly consultasRepositorio: ConsultasSerproRepositorioPort,
+    @Inject(ASSINATURAS_REPOSITORIO) private readonly assinaturasRepositorio: AssinaturasRepositorioPort,
     private readonly debitarCreditos: DebitarCreditosUseCase,
     private readonly estornarCreditos: EstornarCreditosUseCase,
   ) {}
@@ -43,8 +48,16 @@ export class ConsultarCcmeiUseCase {
       throw new ForbiddenException(acesso.motivo ?? 'Empresa sem acesso válido ao SERPRO');
     }
 
-    // Débito ANTES da chamada -- falha rápido (sem gastar cota do SERPRO) se o
-    // contador não tem crédito. SaldoInsuficienteError sobe crua daqui -- convertida
+    // Gate de créditos por EMPRESA (mudança de 2026-10-14) -- checagem explícita antes
+    // do débito, pra dar uma mensagem clara ("sem plano ativo") em vez de deixar cair no
+    // erro genérico de "sem registro de saldo" que debitar_creditos lançaria depois.
+    const assinatura = await this.assinaturasRepositorio.buscarAtivaPorEmpresa(empresaId);
+    if (!assinatura) {
+      throw new ForbiddenException('Empresa sem plano de créditos ativo -- contate seu contador');
+    }
+
+    // Débito ANTES da chamada -- falha rápido (sem gastar cota do SERPRO) se a
+    // empresa não tem crédito. SaldoInsuficienteError sobe crua daqui -- convertida
     // pra HTTP 402 pelo filtro global (src/common/filtros/saldo-insuficiente.filter.ts).
     await this.debitarCreditos.executar(
       empresa.contadorId,
@@ -78,6 +91,7 @@ export class ConsultarCcmeiUseCase {
       // uma consulta que não aconteceu.
       await this.estornarCreditos.executar(
         empresa.contadorId,
+        empresaId,
         custoDaOperacao(ID_SISTEMA_CCMEI),
         `Consulta CCMEI falhou (${codigoErro})`,
       );

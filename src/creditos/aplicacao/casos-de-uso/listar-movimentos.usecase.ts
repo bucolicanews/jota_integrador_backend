@@ -11,7 +11,7 @@ export class ListarMovimentosUseCase {
     @Inject(CREDITOS_REPOSITORIO) private readonly creditosRepositorio: CreditosRepositorioPort,
   ) {}
 
-  async executar(contadorId: string): Promise<MovimentoCredito[]> {
-    return this.creditosRepositorio.listarMovimentos(contadorId);
+  async executar(empresaId: string): Promise<MovimentoCredito[]> {
+    return this.creditosRepositorio.listarMovimentos(empresaId);
   }
 }

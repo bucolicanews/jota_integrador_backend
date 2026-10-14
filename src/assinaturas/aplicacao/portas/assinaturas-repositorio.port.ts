@@ -1,60 +1,36 @@
-import { StatusAssinatura, StatusFatura } from '../../dominio/assinatura';
+import { StatusAssinatura } from '../../dominio/assinatura';
 
 export interface Assinatura {
   id: string;
   contadorId: string;
+  empresaId: string;
   planoId: string;
-  stripeSubscriptionId: string | null;
+  planoRevendaId: string | null;
   status: StatusAssinatura;
   inicioEm: string;
   fimEm: string | null;
-  renovacaoAutomatica: boolean;
-}
-
-export interface Fatura {
-  id: string;
-  contadorId: string;
-  assinaturaId: string;
-  stripeInvoiceId: string | null;
-  valor: number;
-  competencia: string;
-  vencimento: string;
-  status: StatusFatura;
-  pagoEm: string | null;
 }
 
 export interface DadosNovaAssinatura {
   contadorId: string;
+  empresaId: string;
   planoId: string;
-  stripeSubscriptionId: string;
+  planoRevendaId: string | null;
 }
 
-export interface DadosNovaFatura {
-  contadorId: string;
-  assinaturaId: string;
-  stripeInvoiceId: string | null;
-  valor: number;
-  competencia: string;
-  vencimento: string;
-  status: StatusFatura;
-  pagoEm: string | null;
+export interface DadosAtualizacaoAssinatura {
+  planoId?: string;
+  planoRevendaId?: string | null;
 }
 
 export interface AssinaturasRepositorioPort {
-  buscarAtivaPorContador(contadorId: string): Promise<Assinatura | null>;
-  buscarPorStripeSubscriptionId(stripeSubscriptionId: string): Promise<Assinatura | null>;
+  /** A assinatura corrente da empresa (qualquer status != cancelada -- índice único garante só 1). Null = empresa nunca teve/já cancelou. */
+  buscarPorEmpresa(empresaId: string): Promise<Assinatura | null>;
+  /** Só status='ativa' -- usado pelo gate de acesso ao SERPRO (bloqueada/cancelada não passa). */
+  buscarAtivaPorEmpresa(empresaId: string): Promise<Assinatura | null>;
   criar(dados: DadosNovaAssinatura): Promise<Assinatura>;
+  atualizar(id: string, dados: DadosAtualizacaoAssinatura): Promise<void>;
   atualizarStatus(id: string, status: StatusAssinatura): Promise<void>;
-  atualizarRenovacaoAutomatica(id: string, renovacaoAutomatica: boolean): Promise<void>;
-
-  criarFatura(dados: DadosNovaFatura): Promise<Fatura>;
-  /** Idempotência de webhook -- evita duplicar fatura se o Stripe reenviar o mesmo invoice.paid. */
-  buscarFaturaPorStripeInvoiceId(stripeInvoiceId: string): Promise<Fatura | null>;
-  listarFaturasPorContador(contadorId: string): Promise<Fatura[]>;
-
-  /** true se já processado (idempotência genérica de webhook, tabela webhook_eventos_processados). */
-  jaProcessouEventoWebhook(gateway: string, eventoId: string): Promise<boolean>;
-  marcarEventoWebhookProcessado(gateway: string, eventoId: string): Promise<void>;
 }
 
 export const ASSINATURAS_REPOSITORIO = Symbol('ASSINATURAS_REPOSITORIO');

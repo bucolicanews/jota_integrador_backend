@@ -13,7 +13,7 @@ export class CreditarCreditosUseCase {
     @Inject(CREDITOS_REPOSITORIO) private readonly creditosRepositorio: CreditosRepositorioPort,
   ) {}
 
-  async executar(contadorId: string, quantidade: number, motivo: string, tipoOperacao?: string): Promise<number> {
-    return this.creditosRepositorio.creditar(contadorId, quantidade, motivo, tipoOperacao);
+  async executar(contadorId: string, empresaId: string, quantidade: number, motivo: string, tipoOperacao?: string): Promise<number> {
+    return this.creditosRepositorio.creditar(contadorId, empresaId, quantidade, motivo, tipoOperacao);
   }
 }

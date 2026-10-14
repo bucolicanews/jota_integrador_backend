@@ -1,6 +1,6 @@
 import { IsInt, IsPositive, MaxLength, MinLength } from 'class-validator';
 
-export class CreditarCreditosDto {
+export class AjustarCreditosDto {
   @IsInt()
   @IsPositive()
   quantidade!: number;

@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
+import { EmpresasModule } from '../empresas/empresas.module';
 import { CreditarCreditosUseCase } from './aplicacao/casos-de-uso/creditar-creditos.usecase';
+import { DebitarCreditosManualUseCase } from './aplicacao/casos-de-uso/debitar-creditos-manual.usecase';
 import { DebitarCreditosUseCase } from './aplicacao/casos-de-uso/debitar-creditos.usecase';
 import { EstornarCreditosUseCase } from './aplicacao/casos-de-uso/estornar-creditos.usecase';
 import { ListarMovimentosUseCase } from './aplicacao/casos-de-uso/listar-movimentos.usecase';
@@ -9,12 +11,14 @@ import { CreditosController } from './apresentacao/creditos.controller';
 import { CreditosRepositorioSupabase } from './infraestrutura/creditos.repositorio.supabase';
 
 @Module({
+  imports: [EmpresasModule],
   controllers: [CreditosController],
   providers: [
     { provide: CREDITOS_REPOSITORIO, useClass: CreditosRepositorioSupabase },
     ObterSaldoUseCase,
     ListarMovimentosUseCase,
     DebitarCreditosUseCase,
+    DebitarCreditosManualUseCase,
     CreditarCreditosUseCase,
     EstornarCreditosUseCase,
   ],

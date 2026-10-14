@@ -22,11 +22,11 @@ interface LinhaMovimento {
 export class CreditosRepositorioSupabase implements CreditosRepositorioPort {
   constructor(private readonly supabase: SupabaseService) {}
 
-  async obterSaldo(contadorId: string): Promise<number> {
+  async obterSaldo(empresaId: string): Promise<number> {
     const { data, error } = await this.supabase.admin
       .from('creditos_saldo')
       .select('saldo_atual')
-      .eq('contador_id', contadorId)
+      .eq('empresa_id', empresaId)
       .maybeSingle();
 
     if (error) {
@@ -35,11 +35,11 @@ export class CreditosRepositorioSupabase implements CreditosRepositorioPort {
     return data?.saldo_atual ?? 0;
   }
 
-  async listarMovimentos(contadorId: string): Promise<MovimentoCredito[]> {
+  async listarMovimentos(empresaId: string): Promise<MovimentoCredito[]> {
     const { data, error } = await this.supabase.admin
       .from('creditos_movimentos')
       .select('id, contador_id, empresa_id, tipo_operacao, quantidade, saldo_antes, saldo_depois, motivo, criado_em')
-      .eq('contador_id', contadorId)
+      .eq('empresa_id', empresaId)
       .order('criado_em', { ascending: false });
 
     if (error) {
@@ -56,7 +56,8 @@ export class CreditosRepositorioSupabase implements CreditosRepositorioPort {
     motivo: string,
   ): Promise<number> {
     // Nunca implementar isso como UPDATE+INSERT separados -- a função Postgres
-    // (migration 0011) garante atomicidade real via lock de linha (docs/SEGURANCA.md §6).
+    // (migration 0011, reescrita em 20261014000004 pra chave por empresa) garante
+    // atomicidade real via lock de linha (docs/SEGURANCA.md §6).
     const { data, error } = await this.supabase.admin.rpc('debitar_creditos', {
       p_contador_id: contadorId,
       p_empresa_id: empresaId,
@@ -66,7 +67,7 @@ export class CreditosRepositorioSupabase implements CreditosRepositorioPort {
     });
 
     if (error) {
-      if (error.message.includes('Saldo insuficiente')) {
+      if (error.message.includes('Saldo insuficiente') || error.message.includes('não possui registro de saldo')) {
         throw new SaldoInsuficienteError(error.message);
       }
       throw new InternalServerErrorException(`Falha ao debitar créditos: ${error.message}`);
@@ -74,9 +75,10 @@ export class CreditosRepositorioSupabase implements CreditosRepositorioPort {
     return data as number;
   }
 
-  async creditar(contadorId: string, quantidade: number, motivo: string, tipoOperacao?: string): Promise<number> {
+  async creditar(contadorId: string, empresaId: string, quantidade: number, motivo: string, tipoOperacao?: string): Promise<number> {
     const { data, error } = await this.supabase.admin.rpc('creditar_creditos', {
       p_contador_id: contadorId,
+      p_empresa_id: empresaId,
       p_quantidade: quantidade,
       p_motivo: motivo,
       ...(tipoOperacao ? { p_tipo_operacao: tipoOperacao } : {}),

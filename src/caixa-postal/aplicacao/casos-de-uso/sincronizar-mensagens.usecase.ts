@@ -3,6 +3,10 @@ import { DebitarCreditosUseCase } from '../../../creditos/aplicacao/casos-de-uso
 import { EstornarCreditosUseCase } from '../../../creditos/aplicacao/casos-de-uso/estornar-creditos.usecase';
 import { custoDaOperacao } from '../../../creditos/dominio/credito';
 import {
+  ASSINATURAS_REPOSITORIO,
+  AssinaturasRepositorioPort,
+} from '../../../assinaturas/aplicacao/portas/assinaturas-repositorio.port';
+import {
   EMPRESAS_REPOSITORIO,
   EmpresasRepositorioPort,
 } from '../../../empresas/aplicacao/portas/empresas-repositorio.port';
@@ -49,6 +53,7 @@ export class SincronizarMensagensUseCase {
     @Inject(CONSULTAS_SERPRO_REPOSITORIO) private readonly consultasRepositorio: ConsultasSerproRepositorioPort,
     @Inject(MENSAGENS_CAIXA_POSTAL_REPOSITORIO)
     private readonly mensagensRepositorio: MensagensCaixaPostalRepositorioPort,
+    @Inject(ASSINATURAS_REPOSITORIO) private readonly assinaturasRepositorio: AssinaturasRepositorioPort,
     private readonly debitarCreditos: DebitarCreditosUseCase,
     private readonly estornarCreditos: EstornarCreditosUseCase,
   ) {}
@@ -62,6 +67,11 @@ export class SincronizarMensagensUseCase {
     const acesso = await this.verificarAcesso.possuiAcessoValido(empresaId);
     if (!acesso.valido) {
       throw new ForbiddenException(acesso.motivo ?? 'Empresa sem acesso válido ao SERPRO');
+    }
+
+    const assinatura = await this.assinaturasRepositorio.buscarAtivaPorEmpresa(empresaId);
+    if (!assinatura) {
+      throw new ForbiddenException('Empresa sem plano de créditos ativo -- contate seu contador');
     }
 
     await this.debitarCreditos.executar(
@@ -98,6 +108,7 @@ export class SincronizarMensagensUseCase {
     if (!sucesso) {
       await this.estornarCreditos.executar(
         empresa.contadorId,
+        empresaId,
         custoDaOperacao(CUSTO_OPERACAO),
         `Sincronizar Caixa Postal falhou (${codigoErro})`,
       );
