@@ -6,6 +6,7 @@ import { UsuarioAutenticado } from '../../auth/apresentacao/tipos/requisicao-aut
 import { ehPapelDePlataforma } from '../../auth/dominio/papel';
 import { AtivarAssinaturaManualUseCase } from '../aplicacao/casos-de-uso/ativar-assinatura-manual.usecase';
 import { BloquearAssinaturaUseCase } from '../aplicacao/casos-de-uso/bloquear-assinatura.usecase';
+import { CancelarAssinaturaCreditoUseCase } from '../aplicacao/casos-de-uso/cancelar-assinatura-credito.usecase';
 import { IniciarPagamentoAssinaturaCreditosUseCase, ResultadoIniciarPagamentoAssinaturaCreditos } from '../aplicacao/casos-de-uso/iniciar-pagamento-assinatura-creditos.usecase';
 import { ObterAssinaturaAtualUseCase } from '../aplicacao/casos-de-uso/obter-assinatura-atual.usecase';
 import { Assinatura } from '../aplicacao/portas/assinaturas-repositorio.port';
@@ -24,6 +25,7 @@ export class AssinaturasController {
     private readonly obterAssinaturaAtual: ObterAssinaturaAtualUseCase,
     private readonly ativarManual: AtivarAssinaturaManualUseCase,
     private readonly bloquear: BloquearAssinaturaUseCase,
+    private readonly cancelar: CancelarAssinaturaCreditoUseCase,
     private readonly iniciarPagamento: IniciarPagamentoAssinaturaCreditosUseCase,
   ) {}
 
@@ -61,6 +63,17 @@ export class AssinaturasController {
   ): Promise<{ ok: true }> {
     this.exigirPosse(usuarioAtual, contadorId);
     await this.bloquear.executar(contadorId, empresaId);
+    return { ok: true };
+  }
+
+  @Post('cancelar')
+  async cancelarRota(
+    @Param('contadorId', ParseUUIDPipe) contadorId: string,
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ ok: true }> {
+    this.exigirPosse(usuarioAtual, contadorId);
+    await this.cancelar.executar(contadorId, empresaId);
     return { ok: true };
   }
 

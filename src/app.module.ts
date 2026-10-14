@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { AssinaturaAtivaInterceptor } from './assinaturas/apresentacao/interceptors/assinatura-ativa.interceptor';
 import { validate } from './common/config/env.validation';
 import { SupabaseModule } from './common/supabase/supabase.module';
 import { ModulosModule } from './common/modulos/modulos.module';
@@ -97,6 +98,11 @@ import { PontoEletronicoModule } from './ponto-eletronico/ponto-eletronico.modul
     SuporteModule,
     PontoEletronicoModule,
   ],
-  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
+  providers: [
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    // Global -- roda depois de todos os guards (SupabaseAuthGuard de cada controller já
+    // populou req.usuario nesse ponto). Ver comentário completo no interceptor.
+    { provide: APP_INTERCEPTOR, useClass: AssinaturaAtivaInterceptor },
+  ],
 })
 export class AppModule {}

@@ -8,6 +8,7 @@ import { PlanosModule } from '../planos/planos.module';
 import { PlanosRevendaCreditosModule } from '../planos-revenda-creditos/planos-revenda-creditos.module';
 import { AtivarAssinaturaManualUseCase } from './aplicacao/casos-de-uso/ativar-assinatura-manual.usecase';
 import { BloquearAssinaturaUseCase } from './aplicacao/casos-de-uso/bloquear-assinatura.usecase';
+import { CancelarAssinaturaCreditoUseCase } from './aplicacao/casos-de-uso/cancelar-assinatura-credito.usecase';
 import { IniciarPagamentoAssinaturaCreditosUseCase } from './aplicacao/casos-de-uso/iniciar-pagamento-assinatura-creditos.usecase';
 import { ObterAssinaturaAtualUseCase } from './aplicacao/casos-de-uso/obter-assinatura-atual.usecase';
 import { ProcessarWebhookPagbankCreditosUseCase } from './aplicacao/casos-de-uso/processar-webhook-pagbank-creditos.usecase';
@@ -31,6 +32,7 @@ import { PagamentosAssinaturaCreditosRepositorioSupabase } from './infraestrutur
     ObterAssinaturaAtualUseCase,
     AtivarAssinaturaManualUseCase,
     BloquearAssinaturaUseCase,
+    CancelarAssinaturaCreditoUseCase,
     IniciarPagamentoAssinaturaCreditosUseCase,
     ProcessarWebhookPagbankCreditosUseCase,
   ],
