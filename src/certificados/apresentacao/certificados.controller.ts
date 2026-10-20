@@ -29,6 +29,7 @@ import {
 import { CadastrarOuRotacionarCertificadoUseCase } from '../aplicacao/casos-de-uso/cadastrar-ou-rotacionar-certificado.usecase';
 import { ListarCertificadosUseCase } from '../aplicacao/casos-de-uso/listar-certificados.usecase';
 import { RevogarCertificadoUseCase } from '../aplicacao/casos-de-uso/revogar-certificado.usecase';
+import { ResultadoTesteCertificado, TestarCertificadoUseCase } from '../aplicacao/casos-de-uso/testar-certificado.usecase';
 import { CertificadoMetadados } from '../aplicacao/portas/certificados-repositorio.port';
 import { CadastrarCertificadoDto } from './dto/cadastrar-certificado.dto';
 
@@ -42,6 +43,7 @@ export class CertificadosController {
     private readonly cadastrarOuRotacionar: CadastrarOuRotacionarCertificadoUseCase,
     private readonly listarCertificados: ListarCertificadosUseCase,
     private readonly revogarCertificado: RevogarCertificadoUseCase,
+    private readonly testarCertificado: TestarCertificadoUseCase,
   ) {}
 
   @Get()
@@ -84,11 +86,40 @@ export class CertificadosController {
         arquivo: arquivo.buffer,
         nomeArquivo: arquivo.originalname,
         senha: dto.senha,
-        validadeInicio: dto.validadeInicio ?? null,
-        validadeFim: dto.validadeFim,
+        cnpjEmpresa: empresa.cnpj,
       },
       usuarioAtual.id,
     );
+  }
+
+  /** Dry-run -- só abre o .pfx com a senha informada e devolve a validade real, nunca persiste nada. */
+  @Post('testar')
+  @UseInterceptors(
+    FileInterceptor('arquivo', {
+      storage: memoryStorage(),
+      limits: { fileSize: TAMANHO_MAXIMO_ARQUIVO },
+    }),
+  )
+  async testar(
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @UploadedFile() arquivo: Express.Multer.File | undefined,
+    @Body() dto: CadastrarCertificadoDto,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<ResultadoTesteCertificado> {
+    const empresa = await this.buscarEmpresaOuFalhar(empresaId);
+    this.exigirPosse(usuarioAtual, empresa);
+
+    if (!arquivo) {
+      throw new BadRequestException('Arquivo do certificado (campo "arquivo") é obrigatório');
+    }
+
+    return this.testarCertificado.executar({
+      tipo: dto.tipo,
+      arquivo: arquivo.buffer,
+      nomeArquivo: arquivo.originalname,
+      senha: dto.senha,
+      cnpjEmpresa: empresa.cnpj,
+    });
   }
 
   @Post('revogar')

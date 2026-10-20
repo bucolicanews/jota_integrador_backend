@@ -1,7 +1,14 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { AuditoriaService } from '../../../common/auditoria/auditoria.service';
 import { CofreCertificadosService } from '../../../common/cofre/cofre-certificados.service';
-import { TipoCertificado, validarArquivoObrigatorio, validarVigencia } from '../../dominio/certificado';
+import {
+  TipoCertificado,
+  cnpjsEquivalentes,
+  extrairCnpjDoTitular,
+  extrairValidadeDoPfx,
+  validarArquivoObrigatorio,
+  validarVigencia,
+} from '../../dominio/certificado';
 import {
   CERTIFICADOS_REPOSITORIO,
   CertificadoMetadados,
@@ -14,8 +21,8 @@ export interface DadosCadastroCertificado {
   arquivo: Buffer;
   nomeArquivo: string;
   senha: string;
-  validadeInicio: string | null;
-  validadeFim: string;
+  /** CNPJ da empresa (já resolvido pelo controller, posse já confirmada) -- usado pra bloquear cadastro de certificado de outra empresa. */
+  cnpjEmpresa: string;
 }
 
 /**
@@ -39,9 +46,27 @@ export class CadastrarOuRotacionarCertificadoUseCase {
   ) {}
 
   async executar(dados: DadosCadastroCertificado, executadoPorId: string): Promise<CertificadoMetadados> {
+    let validadeInicio: string;
+    let validadeFim: string;
     try {
       validarArquivoObrigatorio(dados.tipo, dados.nomeArquivo);
-      validarVigencia(dados.validadeInicio, dados.validadeFim);
+      // Nunca mais confia em data digitada -- abre o .pfx de verdade e usa a validade
+      // REAL do certificado (mesma extração usada pelo botão "Testar certificado",
+      // repetida aqui como defesa em profundidade -- nunca assume que um teste anterior
+      // do frontend ainda vale pro arquivo/senha que está sendo enviado agora).
+      const extraida = extrairValidadeDoPfx(dados.arquivo, dados.senha);
+      validadeInicio = extraida.validadeInicio.toISOString();
+      validadeFim = extraida.validadeFim.toISOString();
+      validarVigencia(validadeInicio, validadeFim);
+
+      // Bloqueia de verdade aqui (diferente do "testar", que só avisa) -- nunca deixar
+      // cadastrar o certificado de uma empresa diferente da que está sendo editada.
+      const cnpjCertificado = extrairCnpjDoTitular(extraida.titular);
+      if (cnpjCertificado !== null && !cnpjsEquivalentes(cnpjCertificado, dados.cnpjEmpresa)) {
+        throw new Error(
+          `O CNPJ do certificado (${cnpjCertificado}) não corresponde ao CNPJ desta empresa (${dados.cnpjEmpresa}) -- confirme se enviou o certificado correto.`,
+        );
+      }
     } catch (erro) {
       throw new BadRequestException((erro as Error).message);
     }
@@ -55,8 +80,8 @@ export class CadastrarOuRotacionarCertificadoUseCase {
       tipo: dados.tipo,
       arquivoRef,
       senhaRef,
-      validadeInicio: dados.validadeInicio,
-      validadeFim: dados.validadeFim,
+      validadeInicio,
+      validadeFim,
     });
 
     if (ativoAnterior) {

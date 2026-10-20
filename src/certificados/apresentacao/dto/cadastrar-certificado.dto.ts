@@ -1,4 +1,4 @@
-import { IsDateString, IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsIn, IsString, MaxLength, MinLength } from 'class-validator';
 import { TipoCertificado } from '../../dominio/certificado';
 
 export class CadastrarCertificadoDto {
@@ -11,10 +11,6 @@ export class CadastrarCertificadoDto {
   @MaxLength(500)
   senha!: string;
 
-  @IsOptional()
-  @IsDateString()
-  validadeInicio?: string;
-
-  @IsDateString()
-  validadeFim!: string;
+  // validadeInicio/validadeFim não são mais input do cliente -- extraídas de verdade do
+  // .pfx (extrairValidadeDoPfx), nunca digitadas (ver cadastrar-ou-rotacionar-certificado.usecase.ts).
 }

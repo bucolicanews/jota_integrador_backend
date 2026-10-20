@@ -3,6 +3,7 @@ import { EmpresasModule } from '../empresas/empresas.module';
 import { CadastrarOuRotacionarCertificadoUseCase } from './aplicacao/casos-de-uso/cadastrar-ou-rotacionar-certificado.usecase';
 import { ListarCertificadosUseCase } from './aplicacao/casos-de-uso/listar-certificados.usecase';
 import { RevogarCertificadoUseCase } from './aplicacao/casos-de-uso/revogar-certificado.usecase';
+import { TestarCertificadoUseCase } from './aplicacao/casos-de-uso/testar-certificado.usecase';
 import { CERTIFICADOS_REPOSITORIO } from './aplicacao/portas/certificados-repositorio.port';
 import { CertificadosController } from './apresentacao/certificados.controller';
 import { CertificadosRepositorioSupabase } from './infraestrutura/certificados.repositorio.supabase';
@@ -17,6 +18,7 @@ import { CertificadosRepositorioSupabase } from './infraestrutura/certificados.r
     CadastrarOuRotacionarCertificadoUseCase,
     ListarCertificadosUseCase,
     RevogarCertificadoUseCase,
+    TestarCertificadoUseCase,
   ],
   // Exportado pra quando o caminho de autenticação Modo B do SerproModule for implementado
   // (precisará de buscarRefsAtivoPorEmpresa + CofreCertificadosService.recuperar).
