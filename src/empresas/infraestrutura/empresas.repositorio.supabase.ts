@@ -107,6 +107,21 @@ export class EmpresasRepositorioSupabase implements EmpresasRepositorioPort {
     return data ? this.mapear(data as LinhaEmpresa) : null;
   }
 
+  async listarAtivasPorRegime(regimes: RegimeTributario[]): Promise<Empresa[]> {
+    const { data, error } = await this.supabase.admin
+      .from('empresas')
+      .select(COLUNAS_SELECT)
+      .eq('tipo', 'cliente')
+      .eq('status', 'ativo')
+      .eq('bloqueado', false)
+      .in('regime_tributario', regimes);
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao listar empresas por regime tributário: ${error.message}`);
+    }
+    return (data as LinhaEmpresa[]).map((linha) => this.mapear(linha));
+  }
+
   async pertenceAoContador(empresaId: string, contadorId: string): Promise<boolean> {
     const { data, error } = await this.supabase.admin
       .from('empresas')

@@ -39,6 +39,8 @@ export interface EmpresasRepositorioPort {
   buscarEmpresaInternaDaPlataforma(): Promise<Empresa | null>;
   /** Usado por outros módulos (ex: auth) pra checar posse sem expor o repositório inteiro. */
   pertenceAoContador(empresaId: string, contadorId: string): Promise<boolean>;
+  /** Empresas-cliente ativas (não bloqueadas) num dos regimes informados -- usado pelo cron de sincronização de DAS. */
+  listarAtivasPorRegime(regimes: RegimeTributario[]): Promise<Empresa[]>;
   atualizar(id: string, dados: DadosAtualizacaoEmpresa): Promise<void>;
   atualizarModoAcessoSerpro(id: string, modo: ModoAcessoSerpro): Promise<void>;
   marcarBloqueio(id: string, bloqueado: boolean, motivo: string | null, executadoPorId: string): Promise<void>;

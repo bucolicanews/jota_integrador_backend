@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { AssinaturaAtivaInterceptor } from './assinaturas/apresentacao/interceptors/assinatura-ativa.interceptor';
@@ -43,6 +44,7 @@ import { PlanosModule } from './planos/planos.module';
 import { PlanosRevendaCreditosModule } from './planos-revenda-creditos/planos-revenda-creditos.module';
 import { SuporteModule } from './suporte/suporte.module';
 import { PontoEletronicoModule } from './ponto-eletronico/ponto-eletronico.module';
+import { DasModule } from './das/das.module';
 
 @Module({
   imports: [
@@ -58,6 +60,8 @@ import { PontoEletronicoModule } from './ponto-eletronico/ponto-eletronico.modul
     // §13). Login em si não passa por aqui (ver nota em docs/SEGURANCA.md §8) -- isso
     // cobre os endpoints que o NestJS realmente expõe.
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
+    // Primeiro cron do sistema -- usado pelo módulo DAS (sincronização diária automática).
+    ScheduleModule.forRoot(),
     SupabaseModule,
     ModulosModule,
     UsuarioSistemaModule,
@@ -97,6 +101,7 @@ import { PontoEletronicoModule } from './ponto-eletronico/ponto-eletronico.modul
     PlanosRevendaCreditosModule,
     SuporteModule,
     PontoEletronicoModule,
+    DasModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
