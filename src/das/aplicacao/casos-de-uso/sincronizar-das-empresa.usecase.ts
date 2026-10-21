@@ -23,6 +23,7 @@ import {
 import { RegimeDas, competenciaParaAAAAMM, vencimentoPadrao } from '../../dominio/das';
 import { StorageDasService } from '../../infraestrutura/storage-das.service';
 import { DAS_REPOSITORIO, DasRepositorioPort } from '../portas/das-repositorio.port';
+import { VerificarCotaIncluidaUseCase } from './verificar-cota-incluida.usecase';
 
 const ID_SISTEMA_PGMEI = 'PGMEI';
 const ID_SERVICO_GERAR_DAS_PDF_MEI = 'GERARDASPDF21';
@@ -77,6 +78,7 @@ export class SincronizarDasEmpresaUseCase {
     private readonly storage: StorageDasService,
     private readonly debitarCreditos: DebitarCreditosUseCase,
     private readonly estornarCreditos: EstornarCreditosUseCase,
+    private readonly verificarCotaIncluida: VerificarCotaIncluidaUseCase,
   ) {}
 
   async executar(empresaId: string): Promise<ResultadoSincronizacao> {
@@ -99,21 +101,23 @@ export class SincronizarDasEmpresaUseCase {
     }
 
     const competenciasNovas =
-      empresa.regimeTributario === 'mei' ? await this.sincronizarMei(empresa) : await this.sincronizarSimplesNacional(empresa);
+      empresa.regimeTributario === 'mei'
+        ? await this.sincronizarMei(empresa, assinatura.planoId)
+        : await this.sincronizarSimplesNacional(empresa, assinatura.planoId);
 
-    const pagamentosAtualizados = await this.verificarPagamentos(empresa);
+    const pagamentosAtualizados = await this.verificarPagamentos(empresa, assinatura.planoId);
 
     return { competenciasNovas, pagamentosAtualizados };
   }
 
-  private async sincronizarMei(empresa: Empresa): Promise<number> {
+  private async sincronizarMei(empresa: Empresa, planoId: string | null): Promise<number> {
     const existentes = new Set((await this.dasRepositorio.listarPorEmpresa(empresa.id, 'mei')).map((item) => item.competencia));
 
     let novas = 0;
     for (const competencia of this.ultimasCompetencias()) {
       if (existentes.has(competencia)) continue;
 
-      const resposta = await this.chamarServico(empresa, {
+      const resposta = await this.chamarServico(empresa, planoId, {
         idSistema: ID_SISTEMA_PGMEI,
         idServico: ID_SERVICO_GERAR_DAS_PDF_MEI,
         dados: JSON.stringify({ periodoApuracao: competenciaParaAAAAMM(competencia) }),
@@ -141,8 +145,8 @@ export class SincronizarDasEmpresaUseCase {
     return novas;
   }
 
-  private async sincronizarSimplesNacional(empresa: Empresa): Promise<number> {
-    const respostaDeclaracoes = await this.chamarServico(empresa, {
+  private async sincronizarSimplesNacional(empresa: Empresa, planoId: string | null): Promise<number> {
+    const respostaDeclaracoes = await this.chamarServico(empresa, planoId, {
       idSistema: ID_SISTEMA_PGDASD,
       idServico: ID_SERVICO_CONSULTAR_DECLARACOES,
       dados: JSON.stringify({ anoCalendario: String(new Date().getFullYear()) }),
@@ -160,7 +164,7 @@ export class SincronizarDasEmpresaUseCase {
     for (const declaracao of declaracoes) {
       if (existentes.has(declaracao.competencia)) continue;
 
-      const respostaExtrato = await this.chamarServico(empresa, {
+      const respostaExtrato = await this.chamarServico(empresa, planoId, {
         idSistema: ID_SISTEMA_PGDASD,
         idServico: ID_SERVICO_CONSULTAR_EXTRATO,
         dados: JSON.stringify({ numeroDas: declaracao.numeroDas }),
@@ -196,13 +200,13 @@ export class SincronizarDasEmpresaUseCase {
   }
 
   /** Só MEI -- Simples Nacional já recebe `dasPago` direto de CONSDECLARACAO13 (ver sincronizarSimplesNacional). */
-  private async verificarPagamentos(empresa: Empresa): Promise<number> {
+  private async verificarPagamentos(empresa: Empresa, planoId: string | null): Promise<number> {
     if (empresa.regimeTributario !== 'mei') return 0;
     const regime: RegimeDas = 'mei';
     const pendentes = await this.dasRepositorio.listarPendentesComNumeroDocumento(empresa.id, regime);
     if (pendentes.length === 0) return 0;
 
-    const resposta = await this.chamarServico(empresa, {
+    const resposta = await this.chamarServico(empresa, planoId, {
       idSistema: ID_SISTEMA_PAGTOWEB,
       idServico: ID_SERVICO_CONSULTAR_PAGAMENTOS,
       dados: JSON.stringify({
@@ -237,12 +241,18 @@ export class SincronizarDasEmpresaUseCase {
     return competencias;
   }
 
-  /** Saga completa (débito -> chamada -> estorno-se-falhar -> log) -- reusada por toda chamada SERPRO deste usecase. */
+  /** Saga completa (cota incluída -> débito -> chamada -> estorno-se-falhar -> log) -- reusada por toda chamada SERPRO deste usecase. */
   private async chamarServico(
     empresa: Empresa,
+    planoId: string | null,
     params: { idSistema: string; idServico: string; dados: string; custoOperacao: string; motivo: string },
   ): Promise<{ sucesso: boolean; corpo: unknown }> {
-    await this.debitarCreditos.executar(empresa.contadorId, empresa.id, params.custoOperacao, params.motivo);
+    // Dentro da cota incluída no plano (ex: "1 PGDASD/mês"), a consulta não debita do pool
+    // fungível de créditos -- fora dela, segue o fluxo normal de débito/estorno.
+    const dentroDaCota = await this.verificarCotaIncluida.executar(empresa.id, planoId, params.idSistema);
+    if (!dentroDaCota) {
+      await this.debitarCreditos.executar(empresa.contadorId, empresa.id, params.custoOperacao, params.motivo);
+    }
 
     let sucesso = false;
     let codigoErro: string | null = null;
@@ -262,7 +272,7 @@ export class SincronizarDasEmpresaUseCase {
       codigoErro = 'ERRO_COMUNICACAO';
     }
 
-    if (!sucesso) {
+    if (!sucesso && !dentroDaCota) {
       await this.estornarCreditos.executar(
         empresa.contadorId,
         empresa.id,
@@ -278,7 +288,7 @@ export class SincronizarDasEmpresaUseCase {
       idServico: params.idServico,
       sucesso,
       codigoErro,
-      creditosConsumidos: sucesso ? custoDaOperacao(params.custoOperacao) : 0,
+      creditosConsumidos: sucesso && !dentroDaCota ? custoDaOperacao(params.custoOperacao) : 0,
     });
 
     return { sucesso, corpo };

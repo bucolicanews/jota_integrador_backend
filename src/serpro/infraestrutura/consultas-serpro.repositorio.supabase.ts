@@ -24,4 +24,19 @@ export class ConsultasSerproRepositorioSupabase implements ConsultasSerproReposi
       throw new InternalServerErrorException(`Falha ao registrar consulta SERPRO: ${error.message}`);
     }
   }
+
+  async contarSucessoNoPeriodo(empresaId: string, idSistema: string, desde: Date): Promise<number> {
+    const { count, error } = await this.supabase.admin
+      .from('consultas_serpro')
+      .select('id', { count: 'exact', head: true })
+      .eq('empresa_id', empresaId)
+      .eq('id_sistema', idSistema)
+      .eq('sucesso', true)
+      .gte('criado_em', desde.toISOString());
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao contar consultas SERPRO do período: ${error.message}`);
+    }
+    return count ?? 0;
+  }
 }

@@ -42,7 +42,7 @@ export class CustosConsultasSerproController {
     @Param('idSistema') idSistema: string,
     @Body() dto: DefinirCustoConsultaSerproDto,
   ): Promise<CustoConsultaSerpro> {
-    return this.definirCusto.executar(idSistema, dto.custoReais);
+    return this.definirCusto.executar(idSistema, dto.custoReais, dto.precoVendaReais);
   }
 
   @Delete(':idSistema')

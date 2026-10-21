@@ -21,6 +21,8 @@ import { PapeisGuard } from '../../auth/apresentacao/guards/papeis.guard';
 import { SupabaseAuthGuard } from '../../auth/apresentacao/guards/supabase-auth.guard';
 import { UsuarioAutenticado } from '../../auth/apresentacao/tipos/requisicao-autenticada';
 import { Papel } from '../../auth/dominio/papel';
+import { ExigirModulo } from '../../common/modulos/exigir-modulo.decorator';
+import { ModulosGuard } from '../../common/modulos/modulos.guard';
 import {
   EMPRESAS_REPOSITORIO,
   Empresa,
@@ -36,7 +38,8 @@ import { CadastrarCertificadoDto } from './dto/cadastrar-certificado.dto';
 const TAMANHO_MAXIMO_ARQUIVO = 10 * 1024 * 1024; // 10MB -- .pfx/.p12 são pequenos, generoso o suficiente
 
 @Controller('empresas/:empresaId/certificado')
-@UseGuards(SupabaseAuthGuard, PapeisGuard)
+@UseGuards(SupabaseAuthGuard, PapeisGuard, ModulosGuard)
+@ExigirModulo('fiscal')
 export class CertificadosController {
   constructor(
     @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,

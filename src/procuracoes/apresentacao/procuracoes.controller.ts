@@ -16,6 +16,8 @@ import { PapeisGuard } from '../../auth/apresentacao/guards/papeis.guard';
 import { SupabaseAuthGuard } from '../../auth/apresentacao/guards/supabase-auth.guard';
 import { UsuarioAutenticado } from '../../auth/apresentacao/tipos/requisicao-autenticada';
 import { Papel } from '../../auth/dominio/papel';
+import { ExigirModulo } from '../../common/modulos/exigir-modulo.decorator';
+import { ModulosGuard } from '../../common/modulos/modulos.guard';
 import {
   EMPRESAS_REPOSITORIO,
   Empresa,
@@ -27,7 +29,8 @@ import { Procuracao } from '../aplicacao/portas/procuracoes-repositorio.port';
 import { AtualizarStatusProcuracaoDto } from './dto/atualizar-status-procuracao.dto';
 
 @Controller('empresas/:empresaId/procuracao')
-@UseGuards(SupabaseAuthGuard, PapeisGuard)
+@UseGuards(SupabaseAuthGuard, PapeisGuard, ModulosGuard)
+@ExigirModulo('fiscal')
 export class ProcuracoesController {
   constructor(
     @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,

@@ -8,10 +8,11 @@ import {
 interface Linha {
   id_sistema: string;
   custo_reais: number;
+  preco_venda_reais: number | null;
   atualizado_em: string;
 }
 
-const COLUNAS = 'id_sistema, custo_reais, atualizado_em';
+const COLUNAS = 'id_sistema, custo_reais, preco_venda_reais, atualizado_em';
 
 @Injectable()
 export class CustosConsultasSerproRepositorioSupabase implements CustosConsultasSerproRepositorioPort {
@@ -26,10 +27,14 @@ export class CustosConsultasSerproRepositorioSupabase implements CustosConsultas
     return (data as Linha[]).map((linha) => this.mapear(linha));
   }
 
-  async definir(idSistema: string, custoReais: number): Promise<CustoConsultaSerpro> {
+  async definir(idSistema: string, custoReais: number, precoVendaReais?: number): Promise<CustoConsultaSerpro> {
+    const linha: Record<string, unknown> = { id_sistema: idSistema, custo_reais: custoReais };
+    if (precoVendaReais !== undefined) {
+      linha.preco_venda_reais = precoVendaReais;
+    }
     const { data, error } = await this.supabase.admin
       .from('custos_consultas_serpro')
-      .upsert({ id_sistema: idSistema, custo_reais: custoReais })
+      .upsert(linha)
       .select(COLUNAS)
       .single();
     if (error || !data) throw new InternalServerErrorException(`Falha ao definir custo de consulta: ${error?.message}`);
@@ -42,6 +47,11 @@ export class CustosConsultasSerproRepositorioSupabase implements CustosConsultas
   }
 
   private mapear(linha: Linha): CustoConsultaSerpro {
-    return { idSistema: linha.id_sistema, custoReais: Number(linha.custo_reais), atualizadoEm: linha.atualizado_em };
+    return {
+      idSistema: linha.id_sistema,
+      custoReais: Number(linha.custo_reais),
+      precoVendaReais: linha.preco_venda_reais === null ? null : Number(linha.preco_venda_reais),
+      atualizadoEm: linha.atualizado_em,
+    };
   }
 }

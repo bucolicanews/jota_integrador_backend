@@ -4,3 +4,9 @@ export function validarCusto(custoReais: number): void {
     throw new Error('custoReais não pode ser negativo');
   }
 }
+
+export function validarPrecoVenda(precoVendaReais: number): void {
+  if (precoVendaReais < 0) {
+    throw new Error('precoVendaReais não pode ser negativo');
+  }
+}

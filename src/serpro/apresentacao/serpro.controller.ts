@@ -13,6 +13,8 @@ import { SupabaseAuthGuard } from '../../auth/apresentacao/guards/supabase-auth.
 import { UsuarioAtual } from '../../auth/apresentacao/decorators/usuario-atual.decorator';
 import { UsuarioAutenticado } from '../../auth/apresentacao/tipos/requisicao-autenticada';
 import { Papel } from '../../auth/dominio/papel';
+import { ExigirModulo } from '../../common/modulos/exigir-modulo.decorator';
+import { ModulosGuard } from '../../common/modulos/modulos.guard';
 import {
   EMPRESAS_REPOSITORIO,
   Empresa,
@@ -21,7 +23,8 @@ import {
 import { ConsultarCcmeiUseCase } from '../aplicacao/casos-de-uso/consultar-ccmei.usecase';
 
 @Controller('empresas/:empresaId/serpro')
-@UseGuards(SupabaseAuthGuard, PapeisGuard)
+@UseGuards(SupabaseAuthGuard, PapeisGuard, ModulosGuard)
+@ExigirModulo('fiscal')
 export class SerproController {
   constructor(
     // Injeta a porta (EMPRESAS_REPOSITORIO), não um caso de uso do EmpresasModule --

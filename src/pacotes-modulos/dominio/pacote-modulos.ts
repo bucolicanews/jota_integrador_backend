@@ -9,6 +9,10 @@ export const MODULOS_LICENCIAVEIS = [
   'protocolos',
   'bancos',
   'relatorios',
+  // Separado de "contabilidade" (que nunca entra aqui, é núcleo sempre liberado) --
+  // cobre tudo que fala com o SERPRO em nome da empresa: DAS, Caixa Postal, CCMEI,
+  // Procuração/Certificado (acesso_serpro).
+  'fiscal',
 ] as const;
 
 export type ModuloLicenciavel = (typeof MODULOS_LICENCIAVEIS)[number];
