@@ -66,6 +66,27 @@ export class ContadoresRepositorioSupabase implements ContadoresRepositorioPort 
     return data ? this.mapear(data as LinhaContador) : null;
   }
 
+  async buscarPorCnpjCpf(cnpjCpf: string): Promise<Contador | null> {
+    const { data, error } = await this.supabase.admin
+      .from('contadores')
+      .select(COLUNAS_SELECT)
+      .eq('cnpj_cpf', cnpjCpf)
+      .maybeSingle();
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao buscar contador por CPF/CNPJ: ${error.message}`);
+    }
+    return data ? this.mapear(data as LinhaContador) : null;
+  }
+
+  async atualizarCnpjCpf(id: string, cnpjCpf: string): Promise<void> {
+    const { error } = await this.supabase.admin.from('contadores').update({ cnpj_cpf: cnpjCpf }).eq('id', id);
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao corrigir CPF/CNPJ: ${error.message}`);
+    }
+  }
+
   async listar(): Promise<Contador[]> {
     const { data, error } = await this.supabase.admin
       .from('contadores')

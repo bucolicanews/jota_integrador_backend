@@ -23,7 +23,9 @@ import { SupabaseService } from '../../common/supabase/supabase.service';
 import { AtualizarEmpresaUseCase } from '../aplicacao/casos-de-uso/atualizar-empresa.usecase';
 import { AtualizarModoAcessoSerproUseCase } from '../aplicacao/casos-de-uso/atualizar-modo-acesso-serpro.usecase';
 import { BloquearEmpresaUseCase } from '../aplicacao/casos-de-uso/bloquear-empresa.usecase';
+import { CorrigirCnpjEmpresaUseCase } from '../aplicacao/casos-de-uso/corrigir-cnpj-empresa.usecase';
 import { CriarEmpresaUseCase } from '../aplicacao/casos-de-uso/criar-empresa.usecase';
+import { TransferirCarteiraEmpresaUseCase } from '../aplicacao/casos-de-uso/transferir-carteira-empresa.usecase';
 import { DesbloquearEmpresaUseCase } from '../aplicacao/casos-de-uso/desbloquear-empresa.usecase';
 import { ListarEmpresasUseCase } from '../aplicacao/casos-de-uso/listar-empresas.usecase';
 import { ObterEmpresaInternaUseCase } from '../aplicacao/casos-de-uso/obter-empresa-interna.usecase';
@@ -32,6 +34,8 @@ import { Empresa } from '../aplicacao/portas/empresas-repositorio.port';
 import { AtualizarEmpresaDto } from './dto/atualizar-empresa.dto';
 import { AtualizarModoAcessoSerproDto } from './dto/atualizar-modo-acesso-serpro.dto';
 import { BloquearEmpresaDto } from './dto/bloquear-empresa.dto';
+import { CorrigirCnpjEmpresaDto } from './dto/corrigir-cnpj-empresa.dto';
+import { TransferirCarteiraEmpresaDto } from './dto/transferir-carteira-empresa.dto';
 import { CriarEmpresaDto } from './dto/criar-empresa.dto';
 
 @Controller('empresas')
@@ -46,6 +50,8 @@ export class EmpresasController {
     private readonly atualizarModoAcessoSerpro: AtualizarModoAcessoSerproUseCase,
     private readonly bloquearEmpresa: BloquearEmpresaUseCase,
     private readonly desbloquearEmpresa: DesbloquearEmpresaUseCase,
+    private readonly corrigirCnpjEmpresa: CorrigirCnpjEmpresaUseCase,
+    private readonly transferirCarteiraEmpresa: TransferirCarteiraEmpresaUseCase,
     private readonly supabase: SupabaseService,
   ) {}
 
@@ -130,6 +136,33 @@ export class EmpresasController {
       nomeFantasia: dto.nomeFantasia,
       regimeTributario: dto.regimeTributario,
     });
+    return { ok: true };
+  }
+
+  /** Correção pontual de CNPJ cadastrado errado -- fora do `atualizar()` normal de propósito (ação sensível, sempre auditada). Só admin ou o contador dono da carteira, nunca a própria empresa. */
+  @Patch(':id/cnpj')
+  @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO)
+  async corrigirCnpj(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CorrigirCnpjEmpresaDto,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ ok: true }> {
+    const empresa = await this.obterEmpresa.executar(id);
+    this.exigirPosseDeContador(usuarioAtual, empresa);
+
+    await this.corrigirCnpjEmpresa.executar(id, dto.cnpj, usuarioAtual.id);
+    return { ok: true };
+  }
+
+  /** Mover empresa pra outra carteira -- só SUPER_ADMIN, sempre auditada. Contador (nem o antigo, nem o novo) nunca chega aqui. */
+  @Patch(':id/contador')
+  @Papeis(Papel.SUPER_ADMIN)
+  async transferirCarteira(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: TransferirCarteiraEmpresaDto,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ ok: true }> {
+    await this.transferirCarteiraEmpresa.executar(id, dto.contadorId, usuarioAtual.id);
     return { ok: true };
   }
 

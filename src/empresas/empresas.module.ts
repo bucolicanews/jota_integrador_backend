@@ -2,7 +2,9 @@ import { Module } from '@nestjs/common';
 import { AtualizarEmpresaUseCase } from './aplicacao/casos-de-uso/atualizar-empresa.usecase';
 import { AtualizarModoAcessoSerproUseCase } from './aplicacao/casos-de-uso/atualizar-modo-acesso-serpro.usecase';
 import { BloquearEmpresaUseCase } from './aplicacao/casos-de-uso/bloquear-empresa.usecase';
+import { CorrigirCnpjEmpresaUseCase } from './aplicacao/casos-de-uso/corrigir-cnpj-empresa.usecase';
 import { CriarEmpresaUseCase } from './aplicacao/casos-de-uso/criar-empresa.usecase';
+import { TransferirCarteiraEmpresaUseCase } from './aplicacao/casos-de-uso/transferir-carteira-empresa.usecase';
 import { DesbloquearEmpresaUseCase } from './aplicacao/casos-de-uso/desbloquear-empresa.usecase';
 import { ListarEmpresasUseCase } from './aplicacao/casos-de-uso/listar-empresas.usecase';
 import { ObterEmpresaInternaUseCase } from './aplicacao/casos-de-uso/obter-empresa-interna.usecase';
@@ -23,6 +25,8 @@ import { EmpresasRepositorioSupabase } from './infraestrutura/empresas.repositor
     AtualizarModoAcessoSerproUseCase,
     BloquearEmpresaUseCase,
     DesbloquearEmpresaUseCase,
+    CorrigirCnpjEmpresaUseCase,
+    TransferirCarteiraEmpresaUseCase,
   ],
   // Exportado pra AuthModule resolver a checagem de posse ao criar EMPRESARIO_DONO/
   // OPERADOR_EMPRESA pra uma empresa da carteira do contador (limitação v1 documentada

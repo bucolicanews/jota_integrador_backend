@@ -18,6 +18,7 @@ import { UsuarioAutenticado } from '../../auth/apresentacao/tipos/requisicao-aut
 import { ehPapelDePlataforma, Papel } from '../../auth/dominio/papel';
 import { AtualizarContadorUseCase } from '../aplicacao/casos-de-uso/atualizar-contador.usecase';
 import { BloquearContadorUseCase } from '../aplicacao/casos-de-uso/bloquear-contador.usecase';
+import { CorrigirCnpjCpfContadorUseCase } from '../aplicacao/casos-de-uso/corrigir-cnpj-cpf-contador.usecase';
 import { CriarContadorUseCase } from '../aplicacao/casos-de-uso/criar-contador.usecase';
 import { DesbloquearContadorUseCase } from '../aplicacao/casos-de-uso/desbloquear-contador.usecase';
 import { ListarContadoresUseCase } from '../aplicacao/casos-de-uso/listar-contadores.usecase';
@@ -25,6 +26,7 @@ import { ObterContadorUseCase } from '../aplicacao/casos-de-uso/obter-contador.u
 import { Contador } from '../aplicacao/portas/contadores-repositorio.port';
 import { AtualizarContadorDto } from './dto/atualizar-contador.dto';
 import { BloquearContadorDto } from './dto/bloquear-contador.dto';
+import { CorrigirCnpjCpfContadorDto } from './dto/corrigir-cnpj-cpf-contador.dto';
 import { CriarContadorDto } from './dto/criar-contador.dto';
 
 @Controller('contadores')
@@ -37,6 +39,7 @@ export class ContadoresController {
     private readonly atualizarContador: AtualizarContadorUseCase,
     private readonly bloquearContador: BloquearContadorUseCase,
     private readonly desbloquearContador: DesbloquearContadorUseCase,
+    private readonly corrigirCnpjCpfContador: CorrigirCnpjCpfContadorUseCase,
   ) {}
 
   @Post()
@@ -82,6 +85,18 @@ export class ContadoresController {
   ): Promise<{ ok: true }> {
     this.exigirPosse(usuarioAtual, id);
     await this.atualizarContador.executar(id, dto);
+    return { ok: true };
+  }
+
+  /** Correção pontual de CPF/CNPJ cadastrado errado -- fora do `atualizar()` normal de propósito (ação sensível, sempre auditada). Mesma posse do endpoint acima: admin/plataforma ou o próprio contador. */
+  @Patch(':id/cnpj-cpf')
+  async corrigirCnpjCpf(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CorrigirCnpjCpfContadorDto,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ ok: true }> {
+    this.exigirPosse(usuarioAtual, id);
+    await this.corrigirCnpjCpfContador.executar(id, dto.cnpjCpf, usuarioAtual.id);
     return { ok: true };
   }
 

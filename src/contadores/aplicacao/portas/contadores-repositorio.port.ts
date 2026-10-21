@@ -33,8 +33,12 @@ export interface DadosAtualizacaoContador {
 export interface ContadoresRepositorioPort {
   criar(dados: DadosNovoContador): Promise<Contador>;
   buscarPorId(id: string): Promise<Contador | null>;
+  /** `cnpj_cpf` não tem unique constraint no banco (ao contrário de `empresas.cnpj`) -- usado pra checar duplicado na correção, na aplicação. */
+  buscarPorCnpjCpf(cnpjCpf: string): Promise<Contador | null>;
   listar(): Promise<Contador[]>;
   atualizar(id: string, dados: DadosAtualizacaoContador): Promise<void>;
+  /** Correção pontual de CPF/CNPJ já cadastrado errado -- fora de `atualizar()` de propósito (ação sensível, sempre auditada). */
+  atualizarCnpjCpf(id: string, cnpjCpf: string): Promise<void>;
   marcarBloqueio(id: string, bloqueado: boolean, motivo: string | null, executadoPorId: string): Promise<void>;
   /** Só o backend chama (nunca vindo de um DTO de update genérico) -- setado ao criar o Stripe Customer na primeira assinatura. */
   atualizarStripeCustomerId(id: string, stripeCustomerId: string): Promise<void>;

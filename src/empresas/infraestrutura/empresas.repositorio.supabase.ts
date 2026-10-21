@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { SupabaseService } from '../../common/supabase/supabase.service';
 import { ModoAcessoSerpro, RegimeTributario, StatusEmpresa, TipoEmpresa } from '../dominio/empresa';
 import {
@@ -148,6 +148,31 @@ export class EmpresasRepositorioSupabase implements EmpresasRepositorioPort {
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao atualizar empresa: ${error.message}`);
+    }
+  }
+
+  async atualizarCnpj(id: string, cnpj: string): Promise<void> {
+    const { error } = await this.supabase.admin.from('empresas').update({ cnpj }).eq('id', id);
+
+    if (error) {
+      // 23505 = violação do unique index em empresas.cnpj -- conflito de negócio (409),
+      // não bug nosso (500), por isso a exceção diferente aqui.
+      if (error.code === '23505') {
+        throw new ConflictException('CNPJ já cadastrado em outra empresa');
+      }
+      throw new InternalServerErrorException(`Falha ao corrigir CNPJ: ${error.message}`);
+    }
+  }
+
+  async atualizarContadorId(id: string, contadorId: string): Promise<void> {
+    const { error } = await this.supabase.admin.from('empresas').update({ contador_id: contadorId }).eq('id', id);
+
+    if (error) {
+      // 23503 = violação da FK empresas.contador_id -> contadores.id (contador inexistente).
+      if (error.code === '23503') {
+        throw new BadRequestException('Contador informado não existe');
+      }
+      throw new InternalServerErrorException(`Falha ao transferir carteira: ${error.message}`);
     }
   }
 
