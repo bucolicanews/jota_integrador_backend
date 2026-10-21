@@ -3,15 +3,7 @@ import { MODULOS_LICENCIAVEIS } from '../../pacotes-modulos/dominio/pacote-modul
 export type Periodicidade = 'mensal' | 'anual';
 
 /** Regra de negócio pura -- mesmo que o CHECK do banco já garanta, revalidar aqui (Zero Trust, docs/SEGURANCA.md). */
-export function validarDadosPlano(
-  operacoesIncluidas: number,
-  preco: number,
-  gratuito: boolean,
-  modulos: string[],
-): void {
-  if (!Number.isInteger(operacoesIncluidas) || operacoesIncluidas < 0) {
-    throw new Error('operacoesIncluidas precisa ser um inteiro >= 0');
-  }
+export function validarDadosPlano(preco: number, gratuito: boolean, modulos: string[]): void {
   if (preco < 0) {
     throw new Error('preco não pode ser negativo');
   }

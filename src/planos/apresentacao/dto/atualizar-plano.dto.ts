@@ -1,4 +1,4 @@
-import { ArrayUnique, IsArray, IsBoolean, IsDateString, IsIn, IsInt, IsNumber, IsOptional, IsString, Min, MinLength } from 'class-validator';
+import { ArrayUnique, IsArray, IsBoolean, IsDateString, IsIn, IsNumber, IsOptional, IsString, Min, MinLength } from 'class-validator';
 import { MODULOS_LICENCIAVEIS } from '../../../pacotes-modulos/dominio/pacote-modulos';
 
 export class AtualizarPlanoDto {
@@ -10,11 +10,6 @@ export class AtualizarPlanoDto {
   @IsOptional()
   @IsString()
   descricao?: string | null;
-
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  operacoesIncluidas?: number;
 
   @IsOptional()
   @IsArray()

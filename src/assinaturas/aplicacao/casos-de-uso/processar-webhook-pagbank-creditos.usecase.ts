@@ -1,7 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PagbankConfigService } from '../../../common/pagbank/pagbank-config.service';
 import { UsuarioSistemaService } from '../../../common/usuario-sistema/usuario-sistema.service';
-import { CreditarCreditosUseCase } from '../../../creditos/aplicacao/casos-de-uso/creditar-creditos.usecase';
 import { CriarContratoUseCase } from '../../../contratos/aplicacao/casos-de-uso/criar-contrato.usecase';
 import { CONTRATOS_REPOSITORIO, ContratosRepositorioPort } from '../../../contratos/aplicacao/portas/contratos-repositorio.port';
 import { EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../../../empresas/aplicacao/portas/empresas-repositorio.port';
@@ -39,7 +38,6 @@ export class ProcessarWebhookPagbankCreditosUseCase {
     @Inject(CONTRATOS_REPOSITORIO) private readonly contratosRepositorio: ContratosRepositorioPort,
     private readonly pagbankConfig: PagbankConfigService,
     private readonly criarContrato: CriarContratoUseCase,
-    private readonly creditar: CreditarCreditosUseCase,
     private readonly usuarioSistema: UsuarioSistemaService,
   ) {}
 
@@ -94,16 +92,6 @@ export class ProcessarWebhookPagbankCreditosUseCase {
         planoId: pagamento.planoId,
         planoRevendaId: pagamento.planoRevendaId,
       });
-    }
-
-    if (plano.operacoesIncluidas > 0) {
-      await this.creditar.executar(
-        pagamento.contadorId,
-        pagamento.empresaId,
-        plano.operacoesIncluidas,
-        `Renovação assinatura "${plano.nome}" (pagamento PagBank ${pagamento.id})`,
-        'RENOVACAO_ASSINATURA',
-      );
     }
   }
 

@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
+  PeriodoConsultaIncluida,
   PLANO_CONSULTAS_INCLUIDAS_REPOSITORIO,
   PlanoConsultasIncluidasRepositorioPort,
 } from '../../../planos/aplicacao/portas/plano-consultas-incluidas-repositorio.port';
@@ -8,10 +9,27 @@ import {
   ConsultasSerproRepositorioPort,
 } from '../../../serpro/aplicacao/portas/consultas-serpro-repositorio.port';
 
-/** Início do mês corrente (UTC) -- mesmo período usado em todo o resto do sistema como "mensal", ver [[project_jota_integrador]]. */
-function inicioDoPeriodoAtual(): Date {
+/** Início do período corrente (UTC) conforme a granularidade da cota -- semanal começa na segunda-feira ISO. */
+function inicioDoPeriodo(periodo: PeriodoConsultaIncluida): Date {
   const agora = new Date();
-  return new Date(Date.UTC(agora.getUTCFullYear(), agora.getUTCMonth(), 1));
+  const ano = agora.getUTCFullYear();
+
+  switch (periodo) {
+    case 'semanal': {
+      const diaSemanaIso = agora.getUTCDay() === 0 ? 7 : agora.getUTCDay(); // 1 (segunda) .. 7 (domingo)
+      const inicioSegunda = new Date(Date.UTC(ano, agora.getUTCMonth(), agora.getUTCDate() - (diaSemanaIso - 1)));
+      return inicioSegunda;
+    }
+    case 'trimestral': {
+      const inicioTrimestre = Math.floor(agora.getUTCMonth() / 3) * 3;
+      return new Date(Date.UTC(ano, inicioTrimestre, 1));
+    }
+    case 'anual':
+      return new Date(Date.UTC(ano, 0, 1));
+    case 'mensal':
+    default:
+      return new Date(Date.UTC(ano, agora.getUTCMonth(), 1));
+  }
 }
 
 @Injectable()
@@ -34,7 +52,7 @@ export class VerificarCotaIncluidaUseCase {
     const usoNoPeriodo = await this.consultasSerproRepositorio.contarSucessoNoPeriodo(
       empresaId,
       idSistema,
-      inicioDoPeriodoAtual(),
+      inicioDoPeriodo(cota.periodo),
     );
     return usoNoPeriodo < cota.quantidadePorPeriodo;
   }

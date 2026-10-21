@@ -34,7 +34,6 @@ export class PlanosController {
     return this.criarPlano.executar({
       nome: dto.nome,
       descricao: dto.descricao ?? null,
-      operacoesIncluidas: dto.operacoesIncluidas,
       modulos: dto.modulos ?? [],
       preco: dto.preco,
       periodicidade: dto.periodicidade,

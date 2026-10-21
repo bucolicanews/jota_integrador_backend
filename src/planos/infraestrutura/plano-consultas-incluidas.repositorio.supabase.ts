@@ -2,6 +2,7 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { SupabaseService } from '../../common/supabase/supabase.service';
 import {
   ConsultaIncluidaPlano,
+  PeriodoConsultaIncluida,
   PlanoConsultasIncluidasRepositorioPort,
 } from '../aplicacao/portas/plano-consultas-incluidas-repositorio.port';
 
@@ -10,9 +11,10 @@ interface Linha {
   plano_id: string;
   id_sistema: string;
   quantidade_por_periodo: number;
+  periodo: PeriodoConsultaIncluida;
 }
 
-const COLUNAS = 'id, plano_id, id_sistema, quantidade_por_periodo';
+const COLUNAS = 'id, plano_id, id_sistema, quantidade_por_periodo, periodo';
 
 @Injectable()
 export class PlanoConsultasIncluidasRepositorioSupabase implements PlanoConsultasIncluidasRepositorioPort {
@@ -39,11 +41,16 @@ export class PlanoConsultasIncluidasRepositorioSupabase implements PlanoConsulta
     return data ? this.mapear(data as Linha) : null;
   }
 
-  async definir(planoId: string, idSistema: string, quantidadePorPeriodo: number): Promise<ConsultaIncluidaPlano> {
+  async definir(
+    planoId: string,
+    idSistema: string,
+    quantidadePorPeriodo: number,
+    periodo: PeriodoConsultaIncluida,
+  ): Promise<ConsultaIncluidaPlano> {
     const { data, error } = await this.supabase.admin
       .from('plano_consultas_incluidas')
       .upsert(
-        { plano_id: planoId, id_sistema: idSistema, quantidade_por_periodo: quantidadePorPeriodo },
+        { plano_id: planoId, id_sistema: idSistema, quantidade_por_periodo: quantidadePorPeriodo, periodo },
         { onConflict: 'plano_id,id_sistema' },
       )
       .select(COLUNAS)
@@ -67,6 +74,7 @@ export class PlanoConsultasIncluidasRepositorioSupabase implements PlanoConsulta
       planoId: linha.plano_id,
       idSistema: linha.id_sistema,
       quantidadePorPeriodo: linha.quantidade_por_periodo,
+      periodo: linha.periodo,
     };
   }
 }

@@ -1,5 +1,4 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { CreditarCreditosUseCase } from '../../../creditos/aplicacao/casos-de-uso/creditar-creditos.usecase';
 import { EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../../../empresas/aplicacao/portas/empresas-repositorio.port';
 import { PLANOS_REPOSITORIO, PlanosRepositorioPort } from '../../../planos/aplicacao/portas/planos-repositorio.port';
 import { planoExpirado } from '../../../planos/dominio/plano';
@@ -15,10 +14,8 @@ export interface DadosAtivarAssinaturaManual {
 /**
  * Contador inclui/edita/reativa manualmente o plano de créditos de uma empresa da
  * própria carteira, SEM cobrar via PagBank -- mesma separação "manual grátis vs. split
- * pago" de AtivarLicencaUseCase/IniciarPagamentoAtivacaoLicencaUseCase. Sempre credita
- * plano.operacoesIncluidas de novo (representa a concessão deste ciclo) -- se o
- * contador só quer bloquear/desbloquear sem mexer no plano, use
- * BloquearAssinaturaUseCase.
+ * pago" de AtivarLicencaUseCase/IniciarPagamentoAtivacaoLicencaUseCase. Se o contador só
+ * quer bloquear/desbloquear sem mexer no plano, use BloquearAssinaturaUseCase.
  */
 @Injectable()
 export class AtivarAssinaturaManualUseCase {
@@ -26,7 +23,6 @@ export class AtivarAssinaturaManualUseCase {
     @Inject(ASSINATURAS_REPOSITORIO) private readonly repositorio: AssinaturasRepositorioPort,
     @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,
     @Inject(PLANOS_REPOSITORIO) private readonly planosRepositorio: PlanosRepositorioPort,
-    private readonly creditar: CreditarCreditosUseCase,
   ) {}
 
   async executar(dados: DadosAtivarAssinaturaManual): Promise<Assinatura> {
@@ -58,18 +54,6 @@ export class AtivarAssinaturaManualUseCase {
         planoId: dados.planoId,
         planoRevendaId: dados.planoRevendaId,
       });
-    }
-
-    // creditar_creditos rejeita quantidade <= 0 -- plano com 0 operações incluídas só
-    // habilita acesso (via a própria assinatura), não gera lançamento de crédito.
-    if (plano.operacoesIncluidas > 0) {
-      await this.creditar.executar(
-        dados.contadorId,
-        dados.empresaId,
-        plano.operacoesIncluidas,
-        `Ativação manual do plano "${plano.nome}" pelo contador`,
-        'ATIVACAO_MANUAL',
-      );
     }
 
     return assinatura;

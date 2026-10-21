@@ -1,4 +1,4 @@
-import { ArrayUnique, IsArray, IsBoolean, IsDateString, IsIn, IsInt, IsNumber, IsOptional, IsString, Min, MinLength } from 'class-validator';
+import { ArrayUnique, IsArray, IsBoolean, IsDateString, IsIn, IsNumber, IsOptional, IsString, Min, MinLength } from 'class-validator';
 import { Periodicidade } from '../../dominio/plano';
 import { MODULOS_LICENCIAVEIS } from '../../../pacotes-modulos/dominio/pacote-modulos';
 
@@ -10,10 +10,6 @@ export class CriarPlanoDto {
   @IsOptional()
   @IsString()
   descricao?: string | null;
-
-  @IsInt()
-  @Min(0)
-  operacoesIncluidas!: number;
 
   // Vitrine informativa (o que o plano anuncia) -- não gate de acesso, ver comment da
   // coluna planos.modulos na migration 20260913000004.

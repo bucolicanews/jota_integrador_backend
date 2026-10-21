@@ -4,7 +4,6 @@ export interface Plano {
   id: string;
   nome: string;
   descricao: string | null;
-  operacoesIncluidas: number;
   modulos: string[];
   preco: number;
   periodicidade: Periodicidade;
@@ -16,7 +15,6 @@ export interface Plano {
 export interface DadosNovoPlano {
   nome: string;
   descricao: string | null;
-  operacoesIncluidas: number;
   modulos: string[];
   preco: number;
   periodicidade: Periodicidade;
@@ -27,7 +25,6 @@ export interface DadosNovoPlano {
 export interface DadosAtualizacaoPlano {
   nome?: string;
   descricao?: string | null;
-  operacoesIncluidas?: number;
   modulos?: string[];
   preco?: number;
   ativo?: boolean;

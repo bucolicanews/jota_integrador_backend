@@ -1,6 +1,7 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import {
   ConsultaIncluidaPlano,
+  PeriodoConsultaIncluida,
   PLANO_CONSULTAS_INCLUIDAS_REPOSITORIO,
   PlanoConsultasIncluidasRepositorioPort,
 } from '../portas/plano-consultas-incluidas-repositorio.port';
@@ -13,7 +14,12 @@ export class DefinirConsultaIncluidaUseCase {
     @Inject(PLANOS_REPOSITORIO) private readonly planosRepositorio: PlanosRepositorioPort,
   ) {}
 
-  async executar(planoId: string, idSistema: string, quantidadePorPeriodo: number): Promise<ConsultaIncluidaPlano> {
+  async executar(
+    planoId: string,
+    idSistema: string,
+    quantidadePorPeriodo: number,
+    periodo: PeriodoConsultaIncluida = 'mensal',
+  ): Promise<ConsultaIncluidaPlano> {
     const plano = await this.planosRepositorio.buscarPorId(planoId);
     if (!plano) {
       throw new NotFoundException('Plano não encontrado');
@@ -21,6 +27,6 @@ export class DefinirConsultaIncluidaUseCase {
     if (quantidadePorPeriodo <= 0) {
       throw new BadRequestException('quantidadePorPeriodo precisa ser maior que zero');
     }
-    return this.repositorio.definir(planoId, idSistema.trim().toUpperCase(), quantidadePorPeriodo);
+    return this.repositorio.definir(planoId, idSistema.trim().toUpperCase(), quantidadePorPeriodo, periodo);
   }
 }

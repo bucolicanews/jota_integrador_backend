@@ -12,7 +12,6 @@ interface LinhaPlano {
   id: string;
   nome: string;
   descricao: string | null;
-  operacoes_incluidas: number;
   modulos: string[];
   preco: number;
   periodicidade: Periodicidade;
@@ -21,7 +20,7 @@ interface LinhaPlano {
   ativo: boolean;
 }
 
-const COLUNAS_SELECT = 'id, nome, descricao, operacoes_incluidas, modulos, preco, periodicidade, data_validade, gratuito, ativo';
+const COLUNAS_SELECT = 'id, nome, descricao, modulos, preco, periodicidade, data_validade, gratuito, ativo';
 
 @Injectable()
 export class PlanosRepositorioSupabase implements PlanosRepositorioPort {
@@ -33,7 +32,9 @@ export class PlanosRepositorioSupabase implements PlanosRepositorioPort {
       .insert({
         nome: dados.nome,
         descricao: dados.descricao,
-        operacoes_incluidas: dados.operacoesIncluidas,
+        // operacoes_incluidas não é mais editável (substituído por plano_consultas_incluidas,
+        // ver VerificarCotaIncluidaUseCase) -- sempre 0, coluna mantida só por compatibilidade.
+        operacoes_incluidas: 0,
         modulos: dados.modulos,
         preco: dados.preco,
         periodicidade: dados.periodicidade,
@@ -79,7 +80,6 @@ export class PlanosRepositorioSupabase implements PlanosRepositorioPort {
     const campos: Record<string, unknown> = {};
     if (dados.nome !== undefined) campos.nome = dados.nome;
     if (dados.descricao !== undefined) campos.descricao = dados.descricao;
-    if (dados.operacoesIncluidas !== undefined) campos.operacoes_incluidas = dados.operacoesIncluidas;
     if (dados.modulos !== undefined) campos.modulos = dados.modulos;
     if (dados.preco !== undefined) campos.preco = dados.preco;
     if (dados.ativo !== undefined) campos.ativo = dados.ativo;
@@ -104,7 +104,6 @@ export class PlanosRepositorioSupabase implements PlanosRepositorioPort {
       id: linha.id,
       nome: linha.nome,
       descricao: linha.descricao,
-      operacoesIncluidas: linha.operacoes_incluidas,
       modulos: linha.modulos,
       preco: Number(linha.preco),
       periodicidade: linha.periodicidade,

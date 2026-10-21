@@ -18,12 +18,7 @@ export class AtualizarPlanoUseCase {
     }
 
     try {
-      validarDadosPlano(
-        dados.operacoesIncluidas ?? existente.operacoesIncluidas,
-        dados.preco ?? existente.preco,
-        dados.gratuito ?? existente.gratuito,
-        dados.modulos ?? existente.modulos,
-      );
+      validarDadosPlano(dados.preco ?? existente.preco, dados.gratuito ?? existente.gratuito, dados.modulos ?? existente.modulos);
     } catch (erro) {
       throw new BadRequestException((erro as Error).message);
     }

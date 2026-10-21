@@ -32,7 +32,7 @@ export class PlanoConsultasIncluidasController {
     @Param('idSistema') idSistema: string,
     @Body() dto: DefinirConsultaIncluidaDto,
   ): Promise<ConsultaIncluidaPlano> {
-    return this.definirConsultaIncluida.executar(planoId, idSistema, dto.quantidadePorPeriodo);
+    return this.definirConsultaIncluida.executar(planoId, idSistema, dto.quantidadePorPeriodo, dto.periodo);
   }
 
   @Delete(':idSistema')
