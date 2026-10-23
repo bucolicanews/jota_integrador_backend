@@ -46,6 +46,7 @@ import { SuporteModule } from './suporte/suporte.module';
 import { PontoEletronicoModule } from './ponto-eletronico/ponto-eletronico.module';
 import { DasModule } from './das/das.module';
 import { CreditosAvulsosModule } from './creditos-avulsos/creditos-avulsos.module';
+import { PlanosRevendaCreditosAvulsosModule } from './planos-revenda-creditos-avulsos/planos-revenda-creditos-avulsos.module';
 
 @Module({
   imports: [
@@ -104,6 +105,7 @@ import { CreditosAvulsosModule } from './creditos-avulsos/creditos-avulsos.modul
     PontoEletronicoModule,
     DasModule,
     CreditosAvulsosModule,
+    PlanosRevendaCreditosAvulsosModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

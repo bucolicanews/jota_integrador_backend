@@ -1,4 +1,4 @@
-import { Controller, ForbiddenException, Get, Inject, NotFoundException, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Inject, NotFoundException, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
 import { UsuarioAtual } from '../../auth/apresentacao/decorators/usuario-atual.decorator';
 import { PapeisGuard } from '../../auth/apresentacao/guards/papeis.guard';
 import { SupabaseAuthGuard } from '../../auth/apresentacao/guards/supabase-auth.guard';
@@ -8,8 +8,10 @@ import { ExigirModulo } from '../../common/modulos/exigir-modulo.decorator';
 import { ModulosGuard } from '../../common/modulos/modulos.guard';
 import { EMPRESAS_REPOSITORIO, Empresa, EmpresasRepositorioPort } from '../../empresas/aplicacao/portas/empresas-repositorio.port';
 import { DasListado, ListarDasUseCase } from '../aplicacao/casos-de-uso/listar-das.usecase';
+import { GerarSegundaViaDasUseCase } from '../aplicacao/casos-de-uso/gerar-segunda-via-das.usecase';
 import { ObterUrlPdfDasUseCase } from '../aplicacao/casos-de-uso/obter-url-pdf-das.usecase';
 import { SincronizarDasEmpresaUseCase } from '../aplicacao/casos-de-uso/sincronizar-das-empresa.usecase';
+import { GerarSegundaViaDasDto } from './dto/gerar-segunda-via-das.dto';
 
 @Controller('empresas/:empresaId/das')
 @UseGuards(SupabaseAuthGuard, PapeisGuard, ModulosGuard)
@@ -20,6 +22,7 @@ export class DasController {
     private readonly listarDas: ListarDasUseCase,
     private readonly obterUrlPdf: ObterUrlPdfDasUseCase,
     private readonly sincronizarDasEmpresa: SincronizarDasEmpresaUseCase,
+    private readonly gerarSegundaVia: GerarSegundaViaDasUseCase,
   ) {}
 
   @Get()
@@ -39,6 +42,21 @@ export class DasController {
   ): Promise<{ url: string; expiraEmSegundos: number }> {
     await this.exigirPosse(empresaId, usuarioAtual);
     return this.obterUrlPdf.executar(empresaId, dasId);
+  }
+
+  /**
+   * Boleto real (código de barras), sob demanda -- sempre gera de novo no SERPRO (nunca
+   * reusa um PDF salvo antes), diferente de `GET :dasId/url` (o Extrato, que é cacheado).
+   */
+  @Post(':dasId/segunda-via')
+  async segundaVia(
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @Param('dasId', ParseUUIDPipe) dasId: string,
+    @Body() dto: GerarSegundaViaDasDto,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ url: string; expiraEmSegundos: number }> {
+    await this.exigirPosse(empresaId, usuarioAtual);
+    return this.gerarSegundaVia.executar(empresaId, dasId, dto.dataConsolidacao);
   }
 
   /** Sync manual sob demanda -- complementa o cron diário, sem precisar esperar por ele. */

@@ -10,15 +10,21 @@ import {
 interface Linha {
   id: string;
   empresa_id: string;
-  pacote_id: string;
+  pacote_id: string | null;
+  quantidade_creditos: number;
   valor_total: number;
+  contador_id: string | null;
+  plano_revenda_id: string | null;
+  platform_amount: number | null;
+  seller_amount: number | null;
   pagbank_order_id: string | null;
   pix_code: string | null;
   pix_qr_url: string | null;
   status: StatusPagamentoCreditoAvulso;
 }
 
-const COLUNAS = 'id, empresa_id, pacote_id, valor_total, pagbank_order_id, pix_code, pix_qr_url, status';
+const COLUNAS =
+  'id, empresa_id, pacote_id, quantidade_creditos, valor_total, contador_id, plano_revenda_id, platform_amount, seller_amount, pagbank_order_id, pix_code, pix_qr_url, status';
 
 @Injectable()
 export class PagamentosCreditosAvulsosRepositorioSupabase implements PagamentosCreditosAvulsosRepositorioPort {
@@ -27,7 +33,16 @@ export class PagamentosCreditosAvulsosRepositorioSupabase implements PagamentosC
   async criar(dados: DadosNovoPagamentoCreditoAvulso): Promise<PagamentoCreditoAvulso> {
     const { data, error } = await this.supabase.admin
       .from('pagamentos_creditos_avulsos')
-      .insert({ empresa_id: dados.empresaId, pacote_id: dados.pacoteId, valor_total: dados.valorTotal })
+      .insert({
+        empresa_id: dados.empresaId,
+        pacote_id: dados.pacoteId ?? null,
+        quantidade_creditos: dados.quantidadeCreditos,
+        valor_total: dados.valorTotal,
+        contador_id: dados.contadorId ?? null,
+        plano_revenda_id: dados.planoRevendaId ?? null,
+        platform_amount: dados.platformAmount ?? null,
+        seller_amount: dados.sellerAmount ?? null,
+      })
       .select(COLUNAS)
       .single();
     if (error || !data) throw new InternalServerErrorException(`Falha ao criar pagamento de crédito avulso: ${error?.message}`);
@@ -81,7 +96,12 @@ export class PagamentosCreditosAvulsosRepositorioSupabase implements PagamentosC
       id: linha.id,
       empresaId: linha.empresa_id,
       pacoteId: linha.pacote_id,
+      quantidadeCreditos: linha.quantidade_creditos,
       valorTotal: Number(linha.valor_total),
+      contadorId: linha.contador_id,
+      planoRevendaId: linha.plano_revenda_id,
+      platformAmount: linha.platform_amount !== null ? Number(linha.platform_amount) : null,
+      sellerAmount: linha.seller_amount !== null ? Number(linha.seller_amount) : null,
       pagbankOrderId: linha.pagbank_order_id,
       pixCode: linha.pix_code,
       pixQrUrl: linha.pix_qr_url,

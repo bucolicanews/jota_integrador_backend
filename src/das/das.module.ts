@@ -3,6 +3,7 @@ import { CreditosModule } from '../creditos/creditos.module';
 import { EmpresasModule } from '../empresas/empresas.module';
 import { PlanosModule } from '../planos/planos.module';
 import { SerproModule } from '../serpro/serpro.module';
+import { GerarSegundaViaDasUseCase } from './aplicacao/casos-de-uso/gerar-segunda-via-das.usecase';
 import { ListarDasUseCase } from './aplicacao/casos-de-uso/listar-das.usecase';
 import { ObterUrlPdfDasUseCase } from './aplicacao/casos-de-uso/obter-url-pdf-das.usecase';
 import { SincronizarDasEmpresaUseCase } from './aplicacao/casos-de-uso/sincronizar-das-empresa.usecase';
@@ -29,6 +30,7 @@ import { StorageDasService } from './infraestrutura/storage-das.service';
     VerificarCotaIncluidaUseCase,
     ListarDasUseCase,
     ObterUrlPdfDasUseCase,
+    GerarSegundaViaDasUseCase,
     DasSincronizacaoCron,
   ],
 })

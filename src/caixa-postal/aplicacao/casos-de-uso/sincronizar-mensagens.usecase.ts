@@ -90,7 +90,10 @@ export class SincronizarMensagensUseCase {
         idSistema: ID_SISTEMA_CAIXA_POSTAL,
         idServico: ID_SERVICO_LISTA_MENSAGENS,
         contribuinteCnpj: empresa.cnpj,
-        dados: JSON.stringify({ statusLeitura: '0', indicadorPagina: '0', ponteiroPagina: '00000000000000' }),
+        // ponteiroPagina exige exatamente 24 dígitos (confirmado contra produção em
+        // 2026-10-21 -- SERPRO rejeitava com "deve ter tamanho igual a 24"; o valor
+        // antigo tinha só 14 zeros).
+        dados: JSON.stringify({ statusLeitura: '0', indicadorPagina: '0', ponteiroPagina: '0'.repeat(24) }),
         // Só tem efeito em ambiente trial -- esse cenário de demonstração específico do
         // SERPRO exige 99999999999999, diferente do padrão (dominio/serpro.ts explica o porquê).
         documentoTrial: '99999999999999',

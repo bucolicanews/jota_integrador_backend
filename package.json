@@ -27,6 +27,7 @@
     "helmet": "^8.0.0",
     "node-forge": "^1.4.0",
     "papaparse": "^5.7.0",
+    "pdfjs-dist": "^3.11.174",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "stripe": "^22.6.1"

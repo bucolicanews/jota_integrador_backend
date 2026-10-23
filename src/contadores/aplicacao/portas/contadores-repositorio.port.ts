@@ -51,6 +51,15 @@ export interface ContadoresRepositorioPort {
   ): Promise<void>;
   /** Colado manualmente pelo contador (sem OAuth) -- necessário pra receber a parte dele no split PagBank. */
   atualizarPagbankAccountId(id: string, pagbankAccountId: string): Promise<void>;
+  /**
+   * Lista em português o que impede excluir este contador -- carteira não vazia, login
+   * ativo, qualquer atividade comercial/financeira (própria ou da empresa interna dele).
+   * Vazio = seguro excluir. Deliberadamente não é um simples boolean -- o admin precisa
+   * saber O QUE resolver antes de tentar de novo.
+   */
+  verificarImpedimentosExclusao(id: string): Promise<string[]>;
+  /** Só chamar depois de `verificarImpedimentosExclusao` devolver vazio -- apaga o contador e a empresa interna dele (se existir), nunca a carteira de clientes (porque aí já teria bloqueado antes). */
+  remover(id: string): Promise<void>;
 }
 
 export const CONTADORES_REPOSITORIO = Symbol('CONTADORES_REPOSITORIO');

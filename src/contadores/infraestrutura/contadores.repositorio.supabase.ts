@@ -184,6 +184,106 @@ export class ContadoresRepositorioSupabase implements ContadoresRepositorioPort 
     }
   }
 
+  /**
+   * Checa carteira de clientes, login, atividade comercial/financeira do próprio
+   * contador e da empresa interna dele -- nenhuma dessas tabelas tem FK com ON DELETE
+   * CASCADE pra contadores/empresas (de propósito, ver docs/SEGURANCA.md), então excluir
+   * sem checar antes só devolveria um 500 de violação de FK no meio do caminho.
+   */
+  async verificarImpedimentosExclusao(id: string): Promise<string[]> {
+    const impedimentos: string[] = [];
+
+    const { count: totalClientes } = await this.supabase.admin
+      .from('empresas')
+      .select('id', { count: 'exact', head: true })
+      .eq('contador_id', id)
+      .eq('tipo', 'cliente');
+    if ((totalClientes ?? 0) > 0) {
+      impedimentos.push(`Carteira não está vazia (${totalClientes} empresa(s) cliente) -- transfira ou remova antes`);
+    }
+
+    const { count: totalLogins } = await this.supabase.admin
+      .from('usuarios')
+      .select('id', { count: 'exact', head: true })
+      .eq('contador_id', id);
+    if ((totalLogins ?? 0) > 0) {
+      impedimentos.push(`Existe(m) ${totalLogins} login(s) vinculado(s) a este contador`);
+    }
+
+    const tabelasAtividade: Array<{ tabela: string; rotulo: string }> = [
+      { tabela: 'assinaturas', rotulo: 'assinatura' },
+      { tabela: 'licencas_modulo', rotulo: 'licença de módulo' },
+      { tabela: 'cobrancas_honorarios', rotulo: 'cobrança de honorário' },
+      { tabela: 'faturas', rotulo: 'fatura' },
+      { tabela: 'planos_revenda_creditos', rotulo: 'plano de revenda de créditos' },
+      { tabela: 'planos_revenda_pacote', rotulo: 'plano de revenda de pacote' },
+      { tabela: 'pagamentos_assinatura_creditos', rotulo: 'pagamento de assinatura' },
+      { tabela: 'pagamentos_ativacao_licenca', rotulo: 'pagamento de ativação de licença' },
+      { tabela: 'consultas_serpro', rotulo: 'consulta ao SERPRO' },
+      { tabela: 'creditos_movimentos', rotulo: 'movimento de crédito' },
+      { tabela: 'suporte_tickets', rotulo: 'ticket de suporte' },
+      { tabela: 'ponto_registros', rotulo: 'registro de ponto' },
+      { tabela: 'ponto_ferias', rotulo: 'férias' },
+    ];
+    for (const { tabela, rotulo } of tabelasAtividade) {
+      const { count } = await this.supabase.admin.from(tabela).select('id', { count: 'exact', head: true }).eq('contador_id', id);
+      if ((count ?? 0) > 0) {
+        impedimentos.push(`Existe(m) ${count} registro(s) de ${rotulo} vinculado(s) a este contador`);
+      }
+    }
+
+    const empresaInterna = await this.buscarEmpresaInternaId(id);
+    if (empresaInterna) {
+      const tabelasBookkeeping: Array<{ tabela: string; coluna: string; rotulo: string }> = [
+        { tabela: 'lancamentos_contabeis', coluna: 'empresa_id', rotulo: 'lançamento contábil' },
+        { tabela: 'contratos_gerados', coluna: 'empresa_id', rotulo: 'contrato' },
+        { tabela: 'contas_pagar', coluna: 'empresa_id', rotulo: 'conta a pagar' },
+        { tabela: 'contas_receber', coluna: 'empresa_id', rotulo: 'conta a receber' },
+      ];
+      for (const { tabela, coluna, rotulo } of tabelasBookkeeping) {
+        const { count } = await this.supabase.admin.from(tabela).select('id', { count: 'exact', head: true }).eq(coluna, empresaInterna);
+        if ((count ?? 0) > 0) {
+          impedimentos.push(`A empresa interna deste contador tem ${count} ${rotulo}(ns) registrado(s)`);
+        }
+      }
+    }
+
+    return impedimentos;
+  }
+
+  /** Só chamar depois de `verificarImpedimentosExclusao` devolver vazio. */
+  async remover(id: string): Promise<void> {
+    const empresaInterna = await this.buscarEmpresaInternaId(id);
+
+    // Preserva o rastro de auditoria (dados antigos ficam no JSON do log) sem deixar um
+    // FK pendurado numa linha que vai deixar de existir -- contador_id é nullable.
+    await this.supabase.admin.from('logs_auditoria').update({ contador_id: null }).eq('contador_id', id);
+
+    if (empresaInterna) {
+      await this.supabase.admin.from('configuracao_contratos').delete().eq('empresa_id', empresaInterna);
+      await this.supabase.admin.from('plano_contas').delete().eq('empresa_id', empresaInterna);
+      const { error: erroEmpresa } = await this.supabase.admin.from('empresas').delete().eq('id', empresaInterna);
+      if (erroEmpresa) {
+        throw new InternalServerErrorException(`Falha ao excluir empresa interna do contador: ${erroEmpresa.message}`);
+      }
+    }
+
+    const { error } = await this.supabase.admin.from('contadores').delete().eq('id', id);
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao excluir contador: ${error.message}`);
+    }
+  }
+
+  private async buscarEmpresaInternaId(contadorId: string): Promise<string | null> {
+    const { data } = await this.supabase.admin
+      .from('empresas')
+      .select('id')
+      .eq('contador_id', contadorId)
+      .eq('tipo', 'interna_contador')
+      .maybeSingle();
+    return data?.id ?? null;
+  }
+
   private mapear(linha: LinhaContador): Contador {
     return {
       id: linha.id,

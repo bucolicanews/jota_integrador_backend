@@ -154,6 +154,18 @@ export class DasRepositorioSupabase implements DasRepositorioPort {
     if (error) throw new InternalServerErrorException(`Falha ao atualizar PDF do DAS: ${error.message}`);
   }
 
+  async atualizarSegundaVia(
+    id: string,
+    dados: { valorDas: number | null; vencimento: string | null; pdfSegundaViaStorageRef: string },
+  ): Promise<void> {
+    const campos: Record<string, unknown> = { pdf_segunda_via_storage_ref: dados.pdfSegundaViaStorageRef };
+    if (dados.valorDas !== null) campos.valor_das = dados.valorDas;
+    if (dados.vencimento !== null) campos.vencimento = dados.vencimento;
+
+    const { error } = await this.supabase.admin.from('declaracoes_pgdas').update(campos).eq('id', id);
+    if (error) throw new InternalServerErrorException(`Falha ao gravar 2ª via do DAS: ${error.message}`);
+  }
+
   private mapearMei(linha: LinhaDasMei): DasItem {
     return {
       id: linha.id,

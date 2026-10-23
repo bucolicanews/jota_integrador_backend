@@ -4,6 +4,17 @@ export interface RespostaSerpro {
   corpo: unknown;
 }
 
+/**
+ * As 5 "funcionalidades" (path) do Integra Contador -- o envelope da requisição é
+ * IDÊNTICO nas 5, só o path muda (confirmado contra a doc oficial em 2026-10-21, depois
+ * de um 400 real "Esse serviço acionado não é uma funcionalidade do tipo CONSULTAR" ao
+ * chamar GERARDAS12 como se fosse Consultar). Default 'Consultar' preserva o
+ * comportamento de todo chamador existente (CAIXAPOSTAL, CCMEI, CONSDECLARACAO13/
+ * CONSEXTRATO16 são todos Consultar de verdade) -- só quem precisa de outra
+ * funcionalidade (ex: Emitir) passa explicitamente.
+ */
+export type FuncionalidadeSerpro = 'Consultar' | 'Apoiar' | 'Declarar' | 'Emitir' | 'Monitorar';
+
 export interface ParametrosConsultaSerpro {
   idSistema: string;
   idServico: string;
@@ -11,6 +22,8 @@ export interface ParametrosConsultaSerpro {
   dados?: string;
   /** Só tem efeito em ambiente trial -- ver comentário de `montarEnvelope` (dominio/serpro.ts) sobre por que os cenários de demonstração exigem CNPJs fixos diferentes entre si. */
   documentoTrial?: string;
+  /** @default 'Consultar' */
+  funcionalidade?: FuncionalidadeSerpro;
 }
 
 /**

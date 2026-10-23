@@ -90,6 +90,13 @@ export class AssinaturasRepositorioSupabase implements AssinaturasRepositorioPor
     }
   }
 
+  async atualizarFimEm(id: string, fimEm: string): Promise<void> {
+    const { error } = await this.supabase.admin.from('assinaturas').update({ fim_em: fimEm }).eq('id', id);
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao atualizar validade da assinatura: ${error.message}`);
+    }
+  }
+
   private mapear(linha: Linha): Assinatura {
     return {
       id: linha.id,

@@ -7,6 +7,7 @@ import { AtualizarContadorUseCase } from './aplicacao/casos-de-uso/atualizar-con
 import { BloquearContadorUseCase } from './aplicacao/casos-de-uso/bloquear-contador.usecase';
 import { CorrigirCnpjCpfContadorUseCase } from './aplicacao/casos-de-uso/corrigir-cnpj-cpf-contador.usecase';
 import { CriarContadorUseCase } from './aplicacao/casos-de-uso/criar-contador.usecase';
+import { DeletarContadorUseCase } from './aplicacao/casos-de-uso/deletar-contador.usecase';
 import { DesbloquearContadorUseCase } from './aplicacao/casos-de-uso/desbloquear-contador.usecase';
 import { ListarContadoresUseCase } from './aplicacao/casos-de-uso/listar-contadores.usecase';
 import { ObterContadorUseCase } from './aplicacao/casos-de-uso/obter-contador.usecase';
@@ -27,6 +28,7 @@ import { ContadoresRepositorioSupabase } from './infraestrutura/contadores.repos
     BloquearContadorUseCase,
     DesbloquearContadorUseCase,
     CorrigirCnpjCpfContadorUseCase,
+    DeletarContadorUseCase,
   ],
   // Exportado seguindo o mesmo padrão de EmpresasModule -- nenhum outro módulo precisa
   // ainda, mas mantém consistência caso surja (ex: validar contador existe antes de

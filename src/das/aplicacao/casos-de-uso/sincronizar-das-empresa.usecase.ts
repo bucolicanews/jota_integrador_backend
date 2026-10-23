@@ -1,4 +1,10 @@
-import { BadRequestException, ForbiddenException, Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Inject, Injectable, Logger } from '@nestjs/common';
+// Build "legacy" (sem depender de DOM/Worker do browser) -- a engine "normal" do pdfjs-dist
+// pressupõe ambiente de navegador. Versão vendorizada e antiga dentro do pacote pdf-parse
+// (pdf.js v1.10.100, de 2017) quebrava com "bad XRef entry" em PDFs reais do SERPRO
+// (confirmado contra produção em 2026-10-21) -- pdfjs-dist mantido pela Mozilla reconstrói
+// a tabela xref corrompida automaticamente, por isso a troca.
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.js';
 import { DebitarCreditosUseCase } from '../../../creditos/aplicacao/casos-de-uso/debitar-creditos.usecase';
 import { EstornarCreditosUseCase } from '../../../creditos/aplicacao/casos-de-uso/estornar-creditos.usecase';
 import { custoDaOperacao } from '../../../creditos/dominio/credito';
@@ -68,6 +74,8 @@ interface ResultadoSincronizacao {
  */
 @Injectable()
 export class SincronizarDasEmpresaUseCase {
+  private readonly logger = new Logger(SincronizarDasEmpresaUseCase.name);
+
   constructor(
     @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,
     @Inject(VERIFICAR_ACESSO_SERPRO) private readonly verificarAcesso: VerificarAcessoSerproPort,
@@ -173,7 +181,7 @@ export class SincronizarDasEmpresaUseCase {
       });
       if (!respostaExtrato.sucesso) continue;
 
-      const extrato = this.extrairExtrato(respostaExtrato.corpo);
+      const extrato = await this.extrairExtrato(respostaExtrato.corpo);
       if (!extrato) continue;
 
       const pdfStorageRef = extrato.pdfBase64
@@ -184,11 +192,10 @@ export class SincronizarDasEmpresaUseCase {
         empresaId: empresa.id,
         competencia: declaracao.competencia,
         numeroDas: declaracao.numeroDas,
-        // valor estruturado não confirmado em nenhum serviço PGDASD (CONSEXTRATO16 só
-        // devolve {numeroDas, extrato:{nomeArquivo,pdf}} -- confirmado contra o trial) --
-        // null em vez de fabricar 0, o PDF tem o valor impresso.
-        valorDas: null,
-        vencimento: vencimentoPadrao(declaracao.competencia),
+        // Extraído do texto do PDF (confirmado contra produção) -- cai pra null/regra
+        // padrão se o PDF não tiver o formato esperado (ex: situação sem DAS gerado).
+        valorDas: extrato.valorDas,
+        vencimento: extrato.vencimento ?? vencimentoPadrao(declaracao.competencia),
         pdfStorageRef,
         // CONSDECLARACAO13 já informa isso direto (indiceDas.dasPago) -- confirmado
         // contra o trial, sem precisar de PAGTOWEB pra Simples Nacional.
@@ -370,15 +377,57 @@ export class SincronizarDasEmpresaUseCase {
    * `{numeroDas, extrato:{nomeArquivo, pdf}}` -- SEM valor/vencimento estruturado (só o
    * PDF em base64, que tem o valor impresso visualmente).
    */
-  private extrairExtrato(corpo: unknown): { pdfBase64: string | null } | null {
+  private async extrairExtrato(corpo: unknown): Promise<{ pdfBase64: string | null; vencimento: string | null; valorDas: number | null } | null> {
     try {
       const corpoObj = corpo as { dados?: string };
       if (!corpoObj?.dados) return null;
       const parsed = JSON.parse(corpoObj.dados) as { extrato?: { pdf?: string } };
       if (!parsed.extrato) return null;
-      return { pdfBase64: parsed.extrato.pdf ?? null };
+      const pdfBase64 = parsed.extrato.pdf ?? null;
+
+      const { vencimento, valorDas } = pdfBase64 ? await this.extrairVencimentoEValorDoPdf(pdfBase64) : { vencimento: null, valorDas: null };
+
+      return { pdfBase64, vencimento, valorDas };
     } catch {
       return null;
+    }
+  }
+
+  /**
+   * O "Extrato do Simples Nacional" (CONSEXTRATO16) tem vencimento/valor reais impressos
+   * no próprio texto do PDF (seção 6, "Informações sobre DAS Gerado") -- confirmado
+   * contra o SERPRO de produção em 2026-10-21, diferente do que o trial fazia parecer
+   * (lá o JSON nunca tinha esse dado estruturado). Melhor esforço: se o layout mudar ou o
+   * PDF vier diferente (ex: MEI, ou uma situação sem DAS gerado), devolve null em vez de
+   * quebrar o sync inteiro -- vencimentoPadrao()/null continuam cobrindo esse caso.
+   */
+  private async extrairVencimentoEValorDoPdf(pdfBase64: string): Promise<{ vencimento: string | null; valorDas: number | null }> {
+    try {
+      const dados = new Uint8Array(Buffer.from(pdfBase64, 'base64'));
+      const documento = await pdfjsLib.getDocument({ data: dados }).promise;
+      let texto = '';
+      for (let pagina = 1; pagina <= documento.numPages; pagina++) {
+        const pageData = await documento.getPage(pagina);
+        const conteudo = await pageData.getTextContent();
+        texto += conteudo.items.map((item) => ('str' in item ? item.str : '')).join('');
+      }
+      await documento.destroy();
+
+      const matchVencimento = texto.match(/Data de Vencimento:\s*\n?\s*(\d{2})\/(\d{2})\/(\d{4})/);
+      const vencimento = matchVencimento ? `${matchVencimento[3]}-${matchVencimento[2]}-${matchVencimento[1]}` : null;
+
+      // Formato de moeda BR preciso (não [\d.,]+ genérico) -- evita engolir o número do
+      // próximo título ("...Total 1.266,636.1) Discriminação..." sem isso).
+      const VALOR_BR = String.raw`\d{1,3}(?:\.\d{3})*,\d{2}`;
+      const matchValor = texto.match(
+        new RegExp(`Principal\\s*${VALOR_BR}\\s*Multa\\s*${VALOR_BR}\\s*Juros\\s*${VALOR_BR}\\s*Total\\s*(${VALOR_BR})`),
+      );
+      const valorDas = matchValor ? Number(matchValor[1].replace(/\./g, '').replace(',', '.')) : null;
+
+      return { vencimento, valorDas: valorDas !== null && !Number.isNaN(valorDas) ? valorDas : null };
+    } catch (erro) {
+      this.logger.warn(`Falha ao extrair vencimento/valor do PDF do extrato: ${(erro as Error).message}`);
+      return { vencimento: null, valorDas: null };
     }
   }
 

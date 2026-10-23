@@ -3,8 +3,16 @@ export type StatusPagamentoCreditoAvulso = 'pendente' | 'pago' | 'falhou';
 export interface PagamentoCreditoAvulso {
   id: string;
   empresaId: string;
-  pacoteId: string;
+  /** Null = compra em quantidade livre, sem pacote do catálogo. */
+  pacoteId: string | null;
+  /** Congelado no momento da ordem -- pacote.quantidadeCreditos ou quantidade livre digitada, sempre preenchido. */
+  quantidadeCreditos: number;
   valorTotal: number;
+  /** Preenchidos juntos só quando a compra passa pelo plano de revenda de um contador -- null = compra direta da plataforma, sem split. */
+  contadorId: string | null;
+  planoRevendaId: string | null;
+  platformAmount: number | null;
+  sellerAmount: number | null;
   pagbankOrderId: string | null;
   pixCode: string | null;
   pixQrUrl: string | null;
@@ -13,8 +21,13 @@ export interface PagamentoCreditoAvulso {
 
 export interface DadosNovoPagamentoCreditoAvulso {
   empresaId: string;
-  pacoteId: string;
+  pacoteId?: string | null;
+  quantidadeCreditos: number;
   valorTotal: number;
+  contadorId?: string | null;
+  planoRevendaId?: string | null;
+  platformAmount?: number | null;
+  sellerAmount?: number | null;
 }
 
 export interface PagamentosCreditosAvulsosRepositorioPort {

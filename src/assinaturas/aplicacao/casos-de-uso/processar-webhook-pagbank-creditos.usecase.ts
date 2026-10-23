@@ -5,6 +5,7 @@ import { CriarContratoUseCase } from '../../../contratos/aplicacao/casos-de-uso/
 import { CONTRATOS_REPOSITORIO, ContratosRepositorioPort } from '../../../contratos/aplicacao/portas/contratos-repositorio.port';
 import { EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../../../empresas/aplicacao/portas/empresas-repositorio.port';
 import { PLANOS_REPOSITORIO, PlanosRepositorioPort } from '../../../planos/aplicacao/portas/planos-repositorio.port';
+import { proximoFimPeriodo } from '../../dominio/assinatura';
 import {
   ASSINATURAS_REPOSITORIO,
   AssinaturasRepositorioPort,
@@ -85,13 +86,16 @@ export class ProcessarWebhookPagbankCreditosUseCase {
       if (atual.status !== 'ativa') {
         await this.assinaturasRepositorio.atualizarStatus(atual.id, 'ativa');
       }
+      const fimAtual = atual.fimEm ? new Date(atual.fimEm) : null;
+      await this.assinaturasRepositorio.atualizarFimEm(atual.id, proximoFimPeriodo(fimAtual, plano.periodicidade).toISOString());
     } else {
-      await this.assinaturasRepositorio.criar({
+      const nova = await this.assinaturasRepositorio.criar({
         contadorId: pagamento.contadorId,
         empresaId: pagamento.empresaId,
         planoId: pagamento.planoId,
         planoRevendaId: pagamento.planoRevendaId,
       });
+      await this.assinaturasRepositorio.atualizarFimEm(nova.id, proximoFimPeriodo(null, plano.periodicidade).toISOString());
     }
   }
 

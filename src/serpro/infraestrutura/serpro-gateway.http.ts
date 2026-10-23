@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AmbienteSerpro, EnvelopeSerpro, montarEnvelope } from '../dominio/serpro';
 import {
+  FuncionalidadeSerpro,
   ParametrosConsultaSerpro,
   RespostaSerpro,
   SerproGatewayPort,
@@ -37,7 +38,7 @@ export class SerproGatewayHttp implements SerproGatewayPort {
       documentoTrial: params.documentoTrial,
     });
 
-    return this.executarComRetryDeAuth(envelope, ambiente);
+    return this.executarComRetryDeAuth(envelope, ambiente, params.funcionalidade ?? 'Consultar');
   }
 
   private ambienteConfigurado(): AmbienteSerpro {
@@ -63,6 +64,7 @@ export class SerproGatewayHttp implements SerproGatewayPort {
   private async executarComRetryDeAuth(
     envelope: EnvelopeSerpro,
     ambiente: AmbienteSerpro,
+    funcionalidade: FuncionalidadeSerpro,
     jaTentouRenovar = false,
   ): Promise<RespostaSerpro> {
     const token = await this.authService.obterToken(ambiente);
@@ -76,7 +78,7 @@ export class SerproGatewayHttp implements SerproGatewayPort {
       headers.jwt_token = token.jwtToken;
     }
 
-    const resposta = await fetch(`${urlBase}/Consultar`, {
+    const resposta = await fetch(`${urlBase}/${funcionalidade}`, {
       method: 'POST',
       headers,
       body: JSON.stringify(envelope),
@@ -85,7 +87,7 @@ export class SerproGatewayHttp implements SerproGatewayPort {
     if (resposta.status === 401 && !jaTentouRenovar) {
       this.logger.warn('SERPRO retornou 401 -- reautenticando e tentando novamente uma vez');
       this.authService.invalidarCache();
-      return this.executarComRetryDeAuth(envelope, ambiente, true);
+      return this.executarComRetryDeAuth(envelope, ambiente, funcionalidade, true);
     }
 
     // Nunca logar o corpo bruto aqui (pode conter dado fiscal sensível) -- só status.

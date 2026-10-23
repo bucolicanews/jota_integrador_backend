@@ -38,6 +38,15 @@ export interface DasRepositorioPort {
   listarPendentesComNumeroDocumento(empresaId: string, regime: RegimeDas): Promise<DasItem[]>;
   marcarComoPago(id: string, regime: RegimeDas, pagoEm: string): Promise<void>;
   atualizarPdfStorageRef(id: string, regime: RegimeDas, pdfStorageRef: string): Promise<void>;
+  /**
+   * Resultado da 2ª via real (GERARDAS12, só PGDASD) -- sobrescreve valor/vencimento com
+   * o dado estruturado mais confiável (vindo direto do JSON, não de regex em texto de
+   * PDF) e grava o PDF do boleto separado do Extrato.
+   */
+  atualizarSegundaVia(
+    id: string,
+    dados: { valorDas: number | null; vencimento: string | null; pdfSegundaViaStorageRef: string },
+  ): Promise<void>;
 }
 
 export const DAS_REPOSITORIO = Symbol('DAS_REPOSITORIO');

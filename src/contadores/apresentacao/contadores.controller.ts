@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Param,
@@ -20,6 +21,7 @@ import { AtualizarContadorUseCase } from '../aplicacao/casos-de-uso/atualizar-co
 import { BloquearContadorUseCase } from '../aplicacao/casos-de-uso/bloquear-contador.usecase';
 import { CorrigirCnpjCpfContadorUseCase } from '../aplicacao/casos-de-uso/corrigir-cnpj-cpf-contador.usecase';
 import { CriarContadorUseCase } from '../aplicacao/casos-de-uso/criar-contador.usecase';
+import { DeletarContadorUseCase } from '../aplicacao/casos-de-uso/deletar-contador.usecase';
 import { DesbloquearContadorUseCase } from '../aplicacao/casos-de-uso/desbloquear-contador.usecase';
 import { ListarContadoresUseCase } from '../aplicacao/casos-de-uso/listar-contadores.usecase';
 import { ObterContadorUseCase } from '../aplicacao/casos-de-uso/obter-contador.usecase';
@@ -40,6 +42,7 @@ export class ContadoresController {
     private readonly bloquearContador: BloquearContadorUseCase,
     private readonly desbloquearContador: DesbloquearContadorUseCase,
     private readonly corrigirCnpjCpfContador: CorrigirCnpjCpfContadorUseCase,
+    private readonly deletarContador: DeletarContadorUseCase,
   ) {}
 
   @Post()
@@ -118,6 +121,21 @@ export class ContadoresController {
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
   ): Promise<{ ok: true }> {
     await this.desbloquearContador.executar(id, usuarioAtual.id);
+    return { ok: true };
+  }
+
+  /**
+   * Exclusão definitiva -- diferente de bloquear (reversível), só é permitida quando o
+   * contador não tem nenhum rastro de uso real (ver DeletarContadorUseCase). Existe pra
+   * corrigir cadastro feito errado, não pra "desligar" quem já operou.
+   */
+  @Delete(':id')
+  @Papeis(Papel.SUPER_ADMIN)
+  async deletar(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ ok: true }> {
+    await this.deletarContador.executar(id, usuarioAtual.id);
     return { ok: true };
   }
 

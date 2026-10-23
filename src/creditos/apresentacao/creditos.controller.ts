@@ -15,9 +15,11 @@ import { AjustarCreditosDto } from './dto/ajustar-creditos.dto';
 
 /**
  * Créditos SERPRO são por EMPRESA-CLIENTE (não mais por contador) -- cada empresa tem o
- * próprio saldo/plano. O contador que é dono da empresa gerencia diretamente (incluir,
- * ajustar, retirar créditos), sem precisar passar pela plataforma -- mudança de
- * 2026-10-14 (ver [[project_jota_integrador]]).
+ * próprio saldo/plano. Leitura (saldo/extrato) é liberada pra plataforma, contador dono
+ * e a própria empresa. Ajuste manual avulso (creditar/debitar fora de pagamento ou
+ * cota do plano) é EXCLUSIVO da plataforma (SUPER_ADMIN/ADMIN_FINANCEIRO) -- revertido
+ * em 2026-10-21 a decisão anterior (2026-10-14) que também deixava o contador fazer
+ * esse ajuste direto; contador e empresa nunca inserem/retiram crédito de forma avulsa.
  */
 @Controller('empresas/:empresaId/creditos')
 @UseGuards(SupabaseAuthGuard, PapeisGuard)
@@ -49,7 +51,7 @@ export class CreditosController {
   }
 
   @Post('creditar')
-  @Papeis(Papel.SUPER_ADMIN, Papel.ADMIN_FINANCEIRO, Papel.CONTADOR_DONO, Papel.OPERADOR_CONTADOR)
+  @Papeis(Papel.SUPER_ADMIN, Papel.ADMIN_FINANCEIRO)
   async creditar(
     @Param('empresaId', ParseUUIDPipe) empresaId: string,
     @Body() dto: AjustarCreditosDto,
@@ -60,7 +62,7 @@ export class CreditosController {
   }
 
   @Post('debitar')
-  @Papeis(Papel.SUPER_ADMIN, Papel.ADMIN_FINANCEIRO, Papel.CONTADOR_DONO, Papel.OPERADOR_CONTADOR)
+  @Papeis(Papel.SUPER_ADMIN, Papel.ADMIN_FINANCEIRO)
   async debitar(
     @Param('empresaId', ParseUUIDPipe) empresaId: string,
     @Body() dto: AjustarCreditosDto,
