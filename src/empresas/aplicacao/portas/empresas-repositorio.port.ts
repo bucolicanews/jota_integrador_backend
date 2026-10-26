@@ -41,6 +41,8 @@ export interface EmpresasRepositorioPort {
   pertenceAoContador(empresaId: string, contadorId: string): Promise<boolean>;
   /** Empresas-cliente ativas (não bloqueadas) num dos regimes informados -- usado pelo cron de sincronização de DAS. */
   listarAtivasPorRegime(regimes: RegimeTributario[]): Promise<Empresa[]>;
+  /** Empresas-cliente ativas (não bloqueadas) em Modo A (procuração eletrônica) -- usado pelo cron de sincronização de procuração. */
+  listarAtivasComProcuracao(): Promise<Empresa[]>;
   atualizar(id: string, dados: DadosAtualizacaoEmpresa): Promise<void>;
   /** Correção pontual de CNPJ já cadastrado errado -- fora de `atualizar()` de propósito (ação sensível, sempre auditada, nunca parte de um PATCH genérico). */
   atualizarCnpj(id: string, cnpj: string): Promise<void>;

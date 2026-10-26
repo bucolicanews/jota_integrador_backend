@@ -95,6 +95,8 @@ export class DasRepositorioSupabase implements DasRepositorioPort {
       valor: dados.valor,
       vencimento: dados.vencimento,
       pdf_storage_ref: dados.pdfStorageRef,
+      status: dados.dasPago ? 'pago' : 'pendente',
+      pago_em: dados.dasPago ? new Date().toISOString() : null,
     });
 
     if (erroInsert && erroInsert.code !== '23505') {

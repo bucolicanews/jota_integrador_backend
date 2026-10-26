@@ -1,4 +1,4 @@
-import { Body, Controller, ForbiddenException, Get, Inject, NotFoundException, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Inject, NotFoundException, Param, ParseUUIDPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { UsuarioAtual } from '../../auth/apresentacao/decorators/usuario-atual.decorator';
 import { PapeisGuard } from '../../auth/apresentacao/guards/papeis.guard';
 import { SupabaseAuthGuard } from '../../auth/apresentacao/guards/supabase-auth.guard';
@@ -10,8 +10,10 @@ import { EMPRESAS_REPOSITORIO, Empresa, EmpresasRepositorioPort } from '../../em
 import { DasListado, ListarDasUseCase } from '../aplicacao/casos-de-uso/listar-das.usecase';
 import { GerarSegundaViaDasUseCase } from '../aplicacao/casos-de-uso/gerar-segunda-via-das.usecase';
 import { ObterUrlPdfDasUseCase } from '../aplicacao/casos-de-uso/obter-url-pdf-das.usecase';
+import { EstimarSincronizacaoDasUseCase, ResultadoEstimativa } from '../aplicacao/casos-de-uso/estimar-sincronizacao-das.usecase';
 import { SincronizarDasEmpresaUseCase } from '../aplicacao/casos-de-uso/sincronizar-das-empresa.usecase';
 import { GerarSegundaViaDasDto } from './dto/gerar-segunda-via-das.dto';
+import { SincronizarDasDto } from './dto/sincronizar-das.dto';
 
 @Controller('empresas/:empresaId/das')
 @UseGuards(SupabaseAuthGuard, PapeisGuard, ModulosGuard)
@@ -22,6 +24,7 @@ export class DasController {
     private readonly listarDas: ListarDasUseCase,
     private readonly obterUrlPdf: ObterUrlPdfDasUseCase,
     private readonly sincronizarDasEmpresa: SincronizarDasEmpresaUseCase,
+    private readonly estimarSincronizacao: EstimarSincronizacaoDasUseCase,
     private readonly gerarSegundaVia: GerarSegundaViaDasUseCase,
   ) {}
 
@@ -59,14 +62,27 @@ export class DasController {
     return this.gerarSegundaVia.executar(empresaId, dasId, dto.dataConsolidacao);
   }
 
+  /** Prévia de custo em créditos ANTES de sincronizar -- nunca chama o SERPRO/debita crédito, só leitura. */
+  @Get('sincronizar/estimativa')
+  async estimativaSincronizar(
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @Query('competenciaInicio') competenciaInicio: string | undefined,
+    @Query('competenciaFim') competenciaFim: string | undefined,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<ResultadoEstimativa> {
+    await this.exigirPosse(empresaId, usuarioAtual);
+    return this.estimarSincronizacao.executar(empresaId, { competenciaInicio, competenciaFim });
+  }
+
   /** Sync manual sob demanda -- complementa o cron diário, sem precisar esperar por ele. */
   @Post('sincronizar')
   async sincronizar(
     @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @Body() dto: SincronizarDasDto,
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
   ): Promise<{ competenciasNovas: number; pagamentosAtualizados: number }> {
     await this.exigirPosse(empresaId, usuarioAtual);
-    return this.sincronizarDasEmpresa.executar(empresaId);
+    return this.sincronizarDasEmpresa.executar(empresaId, dto);
   }
 
   private async exigirPosse(empresaId: string, usuarioAtual: UsuarioAutenticado): Promise<void> {

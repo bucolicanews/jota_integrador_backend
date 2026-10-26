@@ -122,6 +122,21 @@ export class EmpresasRepositorioSupabase implements EmpresasRepositorioPort {
     return (data as LinhaEmpresa[]).map((linha) => this.mapear(linha));
   }
 
+  async listarAtivasComProcuracao(): Promise<Empresa[]> {
+    const { data, error } = await this.supabase.admin
+      .from('empresas')
+      .select(COLUNAS_SELECT)
+      .eq('tipo', 'cliente')
+      .eq('status', 'ativo')
+      .eq('bloqueado', false)
+      .eq('modo_acesso_serpro', 'procuracao');
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao listar empresas com procuração: ${error.message}`);
+    }
+    return (data as LinhaEmpresa[]).map((linha) => this.mapear(linha));
+  }
+
   async pertenceAoContador(empresaId: string, contadorId: string): Promise<boolean> {
     const { data, error } = await this.supabase.admin
       .from('empresas')

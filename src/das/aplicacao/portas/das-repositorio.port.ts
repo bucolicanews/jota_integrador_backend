@@ -9,6 +9,8 @@ export interface DadosUpsertDasMei {
   valor: number | null;
   vencimento: string;
   pdfStorageRef: string | null;
+  /** true quando o SERPRO respondeu `[Aviso-PGMEI-23018]` ("já foi efetuado pagamento... não será gerado DAS") -- sem isso, toda sincronização futura tentaria de novo e cobraria crédito de novo pela mesma competência já resolvida. */
+  dasPago: boolean;
 }
 
 export interface DadosUpsertDasSimplesNacional {

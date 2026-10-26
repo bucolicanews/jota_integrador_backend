@@ -15,6 +15,7 @@ export const CUSTO_POR_OPERACAO: Record<string, number> = {
   RELATORIO: 2,
   CCMEI: 1,
   CONSULTA_PAGAMENTO_DAS: 1,
+  PROCURACOES: 1,
 };
 
 export function custoDaOperacao(tipoOperacao: string): number {

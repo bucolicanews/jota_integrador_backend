@@ -21,12 +21,12 @@ import {
   CONSULTAS_SERPRO_REPOSITORIO,
   ConsultasSerproRepositorioPort,
 } from '../../../serpro/aplicacao/portas/consultas-serpro-repositorio.port';
-import { SERPRO_GATEWAY, SerproGatewayPort } from '../../../serpro/aplicacao/portas/serpro-gateway.port';
+import { FuncionalidadeSerpro, SERPRO_GATEWAY, SerproGatewayPort } from '../../../serpro/aplicacao/portas/serpro-gateway.port';
 import {
   VERIFICAR_ACESSO_SERPRO,
   VerificarAcessoSerproPort,
 } from '../../../serpro/aplicacao/portas/verificar-acesso-serpro.port';
-import { RegimeDas, competenciaParaAAAAMM, vencimentoPadrao } from '../../dominio/das';
+import { RegimeDas, competenciaParaAAAAMM, competenciasNoIntervalo, janelaPadraoCompetencias, vencimentoPadrao } from '../../dominio/das';
 import { StorageDasService } from '../../infraestrutura/storage-das.service';
 import { DAS_REPOSITORIO, DasRepositorioPort } from '../portas/das-repositorio.port';
 import { VerificarCotaIncluidaUseCase } from './verificar-cota-incluida.usecase';
@@ -45,12 +45,17 @@ const CUSTO_MEI = 'DAS';
 const CUSTO_SIMPLES_NACIONAL = 'PGDAS';
 const CUSTO_PAGAMENTO = 'CONSULTA_PAGAMENTO_DAS';
 
-/** Janela de competências verificadas por sync -- mês atual + 2 anteriores (mesmo raciocínio de "sem paginação automática" do caixa_postal: cobrir tudo historicamente custaria crédito sem limite). */
-const MESES_JANELA_SINCRONIZACAO = 3;
+/** Janela de competências verificadas por sync -- mês atual + 2 anteriores (mesmo raciocínio de "sem paginação automática" do caixa_postal: cobrir tudo historicamente custaria crédito sem limite). Exportada -- EstimarSincronizacaoDasUseCase usa o mesmo default quando o usuário não escolhe intervalo. */
+export const MESES_JANELA_SINCRONIZACAO = 3;
 
 interface ResultadoSincronizacao {
   competenciasNovas: number;
   pagamentosAtualizados: number;
+}
+
+export interface FiltroCompetenciaSincronizacao {
+  competenciaInicio?: string;
+  competenciaFim?: string;
 }
 
 /**
@@ -66,11 +71,18 @@ interface ResultadoSincronizacao {
  *   base64 (via CONSEXTRATO16). `valorDas` fica `null` até existir uma fonte
  *   estruturada confirmada; `vencimento` usa `vencimentoPadrao()` (regra legal
  *   aproximada: dia 20 do mês seguinte).
- * - `GERARDASPDF21`/`extrairDasMei` e `PAGAMENTOS71`/`extrairPagamentos`: **NÃO
- *   confirmados** -- toda tentativa real contra o trial (3 CNPJs de demonstração
- *   diferentes testados) devolveu "Dados inválidos". O parser é a melhor inferência a
- *   partir da doc, mas o shape de sucesso nunca foi observado de verdade. Antes de
- *   confiar em produção, repetir o teste real (ver docs/SEGURANCA.md §3) e ajustar.
+ * - `GERARDASPDF21`/`extrairDasMei`: CONFIRMADO contra produção real em 2026-10-26
+ *   (CNPJ 49100380000125) -- duas correções nesse dia: (1) é funcionalidade `Emitir`,
+ *   não `Consultar` (SERPRO rejeitava com HTTP 400 "[EntradaIncorreta-ICGERENCIADOR-017]
+ *   Esse serviço acionado não é uma funcionalidade do tipo CONSULTAR"); (2) `dados` da
+ *   resposta é um ARRAY `[{cnpjCompleto, razaoSocial, pdf}]`, não um objeto com
+ *   `detalhamento` -- não tem `numeroDocumento`/`codigoDeBarras`/`valor` estruturado
+ *   nenhum, só o PDF em base64 (mesma limitação de CONSEXTRATO16).
+ * - `PAGAMENTOS71`/`extrairPagamentos`: **NÃO confirmado** -- toda tentativa real contra
+ *   o trial (3 CNPJs de demonstração diferentes testados) devolveu "Dados inválidos". O
+ *   parser é a melhor inferência a partir da doc, mas o shape de sucesso nunca foi
+ *   observado de verdade. Antes de confiar em produção, repetir o teste real (ver
+ *   docs/SEGURANCA.md §3) e ajustar.
  */
 @Injectable()
 export class SincronizarDasEmpresaUseCase {
@@ -89,7 +101,7 @@ export class SincronizarDasEmpresaUseCase {
     private readonly verificarCotaIncluida: VerificarCotaIncluidaUseCase,
   ) {}
 
-  async executar(empresaId: string): Promise<ResultadoSincronizacao> {
+  async executar(empresaId: string, filtro?: FiltroCompetenciaSincronizacao): Promise<ResultadoSincronizacao> {
     const empresa = await this.empresasRepositorio.buscarPorId(empresaId);
     if (!empresa) {
       throw new ForbiddenException('Empresa não encontrada');
@@ -110,19 +122,19 @@ export class SincronizarDasEmpresaUseCase {
 
     const competenciasNovas =
       empresa.regimeTributario === 'mei'
-        ? await this.sincronizarMei(empresa, assinatura.planoId)
-        : await this.sincronizarSimplesNacional(empresa, assinatura.planoId);
+        ? await this.sincronizarMei(empresa, assinatura.planoId, filtro)
+        : await this.sincronizarSimplesNacional(empresa, assinatura.planoId, filtro);
 
     const pagamentosAtualizados = await this.verificarPagamentos(empresa, assinatura.planoId);
 
     return { competenciasNovas, pagamentosAtualizados };
   }
 
-  private async sincronizarMei(empresa: Empresa, planoId: string | null): Promise<number> {
+  private async sincronizarMei(empresa: Empresa, planoId: string | null, filtro?: FiltroCompetenciaSincronizacao): Promise<number> {
     const existentes = new Set((await this.dasRepositorio.listarPorEmpresa(empresa.id, 'mei')).map((item) => item.competencia));
 
     let novas = 0;
-    for (const competencia of this.ultimasCompetencias()) {
+    for (const competencia of this.competenciasParaSincronizar(filtro)) {
       if (existentes.has(competencia)) continue;
 
       const resposta = await this.chamarServico(empresa, planoId, {
@@ -131,11 +143,36 @@ export class SincronizarDasEmpresaUseCase {
         dados: JSON.stringify({ periodoApuracao: competenciaParaAAAAMM(competencia) }),
         custoOperacao: CUSTO_MEI,
         motivo: `Sincronizar DAS MEI -- competência ${competencia}`,
+        // GERARDASPDF21 é funcionalidade Emitir, não Consultar (confirmado contra produção
+        // em 2026-10-26: sem isso o SERPRO rejeita com HTTP 400
+        // "[EntradaIncorreta-ICGERENCIADOR-017] Esse serviço acionado não é uma
+        // funcionalidade do tipo CONSULTAR"). Mesmo ajuste que GERARDAS12 (Simples
+        // Nacional) já tinha em gerar-segunda-via-das.usecase.ts.
+        funcionalidade: 'Emitir',
       });
       if (!resposta.sucesso) continue; // já estornado/registrado dentro de chamarServico; segue tentando os outros meses.
 
       const dasGerado = this.extrairDasMei(resposta.corpo, competencia);
-      if (!dasGerado) continue;
+      if (!dasGerado) {
+        // Confirmado contra produção em 2026-10-26: SERPRO pode responder sucesso sem PDF
+        // quando o PA já foi pago ([Aviso-PGMEI-23018], "Já foi efetuado pagamento para
+        // este PA. Não será gerado DAS"). Sem gravar isso, toda sincronização futura
+        // tentaria de novo e cobraria crédito de novo pela mesma competência resolvida.
+        if (this.indicaPagamentoJaEfetuado(resposta.corpo)) {
+          await this.dasRepositorio.upsertMei({
+            empresaId: empresa.id,
+            competencia,
+            numeroDocumento: null,
+            codigoBarras: null,
+            valor: null,
+            vencimento: vencimentoPadrao(competencia),
+            pdfStorageRef: null,
+            dasPago: true,
+          });
+          novas++;
+        }
+        continue;
+      }
 
       const pdfStorageRef = dasGerado.pdfBase64 ? await this.storage.armazenar(empresa.id, competencia, dasGerado.pdfBase64) : null;
 
@@ -147,13 +184,24 @@ export class SincronizarDasEmpresaUseCase {
         valor: dasGerado.valor,
         vencimento: dasGerado.vencimento,
         pdfStorageRef,
+        dasPago: false,
       });
       novas++;
     }
     return novas;
   }
 
-  private async sincronizarSimplesNacional(empresa: Empresa, planoId: string | null): Promise<number> {
+  /** `[Aviso-PGMEI-23018]` -- confirmado contra produção (texto: "Já foi efetuado pagamento para este PA. Não será gerado DAS"). */
+  private indicaPagamentoJaEfetuado(corpo: unknown): boolean {
+    const mensagens = (corpo as { mensagens?: Array<{ codigo?: string }> } | null)?.mensagens ?? [];
+    return mensagens.some((m) => m.codigo === '[Aviso-PGMEI-23018]');
+  }
+
+  private async sincronizarSimplesNacional(
+    empresa: Empresa,
+    planoId: string | null,
+    filtro?: FiltroCompetenciaSincronizacao,
+  ): Promise<number> {
     const respostaDeclaracoes = await this.chamarServico(empresa, planoId, {
       idSistema: ID_SISTEMA_PGDASD,
       idServico: ID_SERVICO_CONSULTAR_DECLARACOES,
@@ -163,13 +211,13 @@ export class SincronizarDasEmpresaUseCase {
     });
     if (!respostaDeclaracoes.sucesso) return 0;
 
-    const declaracoes = this.extrairDeclaracoes(respostaDeclaracoes.corpo);
+    const declaracoesNoIntervalo = this.filtrarPorIntervalo(this.extrairDeclaracoes(respostaDeclaracoes.corpo), filtro);
     const existentes = new Set(
       (await this.dasRepositorio.listarPorEmpresa(empresa.id, 'simples_nacional')).map((item) => item.competencia),
     );
 
     let novas = 0;
-    for (const declaracao of declaracoes) {
+    for (const declaracao of declaracoesNoIntervalo) {
       if (existentes.has(declaracao.competencia)) continue;
 
       const respostaExtrato = await this.chamarServico(empresa, planoId, {
@@ -237,22 +285,37 @@ export class SincronizarDasEmpresaUseCase {
     return atualizados;
   }
 
-  /** Mês atual + os `MESES_JANELA_SINCRONIZACAO - 1` anteriores, como datas (AAAA-MM-01) -- mais recente primeiro. */
-  private ultimasCompetencias(): string[] {
-    const hoje = new Date();
-    const competencias: string[] = [];
-    for (let i = 0; i < MESES_JANELA_SINCRONIZACAO; i++) {
-      const data = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
-      competencias.push(data.toISOString().slice(0, 10));
+  /** Sem filtro = janela fixa de hoje (cron e chamada manual sem intervalo escolhido); com filtro = intervalo exato do usuário. */
+  private competenciasParaSincronizar(filtro?: FiltroCompetenciaSincronizacao): string[] {
+    if (filtro?.competenciaInicio && filtro?.competenciaFim) {
+      return competenciasNoIntervalo(filtro.competenciaInicio, filtro.competenciaFim);
     }
-    return competencias;
+    return this.ultimasCompetencias();
+  }
+
+  /** Só filtra quando o usuário escolheu intervalo -- sem filtro, mantém TODAS as declarações retornadas (comportamento atual). */
+  private filtrarPorIntervalo<T extends { competencia: string }>(itens: T[], filtro?: FiltroCompetenciaSincronizacao): T[] {
+    if (!filtro?.competenciaInicio || !filtro?.competenciaFim) return itens;
+    const validas = new Set(competenciasNoIntervalo(filtro.competenciaInicio, filtro.competenciaFim));
+    return itens.filter((item) => validas.has(item.competencia));
+  }
+
+  private ultimasCompetencias(): string[] {
+    return janelaPadraoCompetencias(MESES_JANELA_SINCRONIZACAO);
   }
 
   /** Saga completa (cota incluída -> débito -> chamada -> estorno-se-falhar -> log) -- reusada por toda chamada SERPRO deste usecase. */
   private async chamarServico(
     empresa: Empresa,
     planoId: string | null,
-    params: { idSistema: string; idServico: string; dados: string; custoOperacao: string; motivo: string },
+    params: {
+      idSistema: string;
+      idServico: string;
+      dados: string;
+      custoOperacao: string;
+      motivo: string;
+      funcionalidade?: FuncionalidadeSerpro;
+    },
   ): Promise<{ sucesso: boolean; corpo: unknown }> {
     // Dentro da cota incluída no plano (ex: "1 PGDASD/mês"), a consulta não debita do pool
     // fungível de créditos -- fora dela, segue o fluxo normal de débito/estorno.
@@ -271,6 +334,7 @@ export class SincronizarDasEmpresaUseCase {
         idServico: params.idServico,
         contribuinteCnpj: empresa.cnpj,
         dados: params.dados,
+        funcionalidade: params.funcionalidade,
       });
       sucesso = resposta.sucesso;
       corpo = resposta.corpo;
@@ -302,14 +366,10 @@ export class SincronizarDasEmpresaUseCase {
   }
 
   /**
-   * `corpo.dados` é string com JSON aninhado (mesmo formato confirmado em
-   * caixa_postal/CCMEI/CONSDECLARACAO13). IMPORTANTE: este parser é a melhor inferência
-   * a partir da documentação (`detalhamento[]`/`pdf`) -- toda tentativa real contra o
-   * ambiente trial (3 CNPJs de demonstração testados: 00000000000000, 99999999999999,
-   * 00000000000100) devolveu "Dados inválidos", então o shape de SUCESSO nunca foi
-   * confirmado de verdade (diferente de CONSDECLARACAO13/CONSEXTRATO16 abaixo, que
-   * foram). Ajustar aqui antes de confiar em produção -- ver nota de risco no topo do
-   * arquivo.
+   * `corpo.dados` é string com JSON aninhado contendo um ARRAY `[{cnpjCompleto,
+   * razaoSocial, pdf}]` (CONFIRMADO contra produção real em 2026-10-26) -- sem
+   * `numeroDocumento`/`codigoDeBarras`/`valor` estruturado nenhum, só o PDF em base64
+   * (mesma limitação de CONSEXTRATO16/Simples Nacional).
    */
   private extrairDasMei(
     corpo: unknown,
@@ -318,18 +378,15 @@ export class SincronizarDasEmpresaUseCase {
     try {
       const corpoObj = corpo as { dados?: string };
       if (!corpoObj?.dados) return null;
-      const parsed = JSON.parse(corpoObj.dados) as {
-        pdf?: string;
-        detalhamento?: Array<{ numeroDocumento?: string; codigoDeBarras?: string; valor?: number; dataVencimento?: string }>;
-      };
-      const detalhe = parsed.detalhamento?.[0];
-      if (!detalhe && !parsed.pdf) return null;
+      const parsed = JSON.parse(corpoObj.dados) as Array<{ cnpjCompleto?: string; razaoSocial?: string; pdf?: string }>;
+      const item = Array.isArray(parsed) ? parsed[0] : undefined;
+      if (!item?.pdf) return null;
       return {
-        pdfBase64: parsed.pdf ?? null,
-        numeroDocumento: detalhe?.numeroDocumento ?? null,
-        codigoBarras: detalhe?.codigoDeBarras ?? null,
-        valor: detalhe?.valor ?? null,
-        vencimento: detalhe?.dataVencimento ?? vencimentoPadrao(competencia),
+        pdfBase64: item.pdf,
+        numeroDocumento: null,
+        codigoBarras: null,
+        valor: null,
+        vencimento: vencimentoPadrao(competencia),
       };
     } catch {
       return null;

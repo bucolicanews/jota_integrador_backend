@@ -10,11 +10,12 @@ import {
 
 /**
  * Só chamado por papel de plataforma (RBAC no controller + RLS `procuracoes_insert`/
- * `_update` exigindo `eh_plataforma()`, docs/BANCO_DE_DADOS.md §2) -- é a plataforma que
- * sincroniza manualmente o status vindo do e-CAC/gov.br. Sync automático via o serviço
- * `PROCURACOES` do SERPRO (docs/SEGURANCA.md §2) fica de fora deste corte: o contrato
- * exato desse endpoint ainda não foi confirmado contra a doc oficial (mesma cautela já
- * aplicada ao Modo B -- "não assumir, validar") -- pendência explícita, não um esquecimento.
+ * `_update` exigindo `eh_plataforma()`, docs/BANCO_DE_DADOS.md §2) -- override manual do
+ * status vindo do e-CAC/gov.br, pra quando a plataforma precisa corrigir algo fora do
+ * ciclo do sync automático. Sync automático via o serviço `PROCURACOES`/`OBTERPROCURACAO41`
+ * do SERPRO (confirmado contra produção real em 2026-10-26) roda pelo cron
+ * `ProcuracaoSincronizacaoCron`/`SincronizarProcuracaoUseCase` -- este use case aqui não
+ * foi substituído, continua sendo o caminho manual/corretivo.
  */
 @Injectable()
 export class AtualizarStatusProcuracaoUseCase {

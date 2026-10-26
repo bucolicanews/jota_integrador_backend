@@ -8,6 +8,7 @@ import {
   Param,
   ParseUUIDPipe,
   Patch,
+  Post,
   UseGuards,
 } from '@nestjs/common';
 import { Papeis } from '../../auth/apresentacao/decorators/papeis.decorator';
@@ -25,6 +26,7 @@ import {
 } from '../../empresas/aplicacao/portas/empresas-repositorio.port';
 import { AtualizarStatusProcuracaoUseCase } from '../aplicacao/casos-de-uso/atualizar-status-procuracao.usecase';
 import { ObterProcuracaoUseCase } from '../aplicacao/casos-de-uso/obter-procuracao.usecase';
+import { SincronizarProcuracaoUseCase } from '../aplicacao/casos-de-uso/sincronizar-procuracao.usecase';
 import { Procuracao } from '../aplicacao/portas/procuracoes-repositorio.port';
 import { AtualizarStatusProcuracaoDto } from './dto/atualizar-status-procuracao.dto';
 
@@ -36,6 +38,7 @@ export class ProcuracoesController {
     @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,
     private readonly obterProcuracao: ObterProcuracaoUseCase,
     private readonly atualizarStatusProcuracao: AtualizarStatusProcuracaoUseCase,
+    private readonly sincronizarProcuracao: SincronizarProcuracaoUseCase,
   ) {}
 
   @Get()
@@ -64,6 +67,18 @@ export class ProcuracoesController {
       { status: dto.status, outorgadaEm: dto.outorgadaEm, expiraEm: dto.expiraEm },
       usuarioAtual.id,
     );
+  }
+
+  /** Sincronização sob demanda (contador/empresário) -- complementa o cron diário, sem esperar por ele. Mesmo mecanismo que o cron chama. */
+  @Post('sincronizar')
+  async sincronizar(
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<Procuracao> {
+    const empresa = await this.buscarEmpresaOuFalhar(empresaId);
+    this.exigirPosse(usuarioAtual, empresa);
+
+    return this.sincronizarProcuracao.executar(empresaId);
   }
 
   private async buscarEmpresaOuFalhar(empresaId: string): Promise<Empresa> {

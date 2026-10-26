@@ -9,8 +9,12 @@ import {
   ConsultasSerproRepositorioPort,
 } from '../../../serpro/aplicacao/portas/consultas-serpro-repositorio.port';
 
-/** Início do período corrente (UTC) conforme a granularidade da cota -- semanal começa na segunda-feira ISO. */
-function inicioDoPeriodo(periodo: PeriodoConsultaIncluida): Date {
+/**
+ * Início do período corrente (UTC) conforme a granularidade da cota -- semanal começa na
+ * segunda-feira ISO. Exportada -- reusada por EstimarSincronizacaoDasUseCase (mesma conta
+ * de "quanto já foi usado nesse período", sem duplicar a regra de data).
+ */
+export function inicioDoPeriodo(periodo: PeriodoConsultaIncluida): Date {
   const agora = new Date();
   const ano = agora.getUTCFullYear();
 
