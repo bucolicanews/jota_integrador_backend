@@ -1,6 +1,5 @@
 import { ArrayUnique, IsArray, IsBoolean, IsDateString, IsIn, IsNumber, IsOptional, IsString, Min, MinLength } from 'class-validator';
-import { Periodicidade } from '../../dominio/plano';
-import { MODULOS_LICENCIAVEIS } from '../../../pacotes-modulos/dominio/pacote-modulos';
+import { MODULOS_LICENCIAVEIS, Periodicidade } from '../../dominio/plano';
 
 export class CriarPlanoDto {
   @IsString()
@@ -11,8 +10,9 @@ export class CriarPlanoDto {
   @IsString()
   descricao?: string | null;
 
-  // Vitrine informativa (o que o plano anuncia) -- não gate de acesso, ver comment da
-  // coluna planos.modulos na migration 20260913000004.
+  // Gate de acesso real (empresa_tem_modulo/empresa_modulos_liberados) -- toda empresa
+  // com assinatura ativa deste plano tem esses módulos liberados de verdade (unificado em
+  // 20261026000002_eliminar_licencas_modulo.sql, eliminando o sistema de licenças separado).
   @IsOptional()
   @IsArray()
   @ArrayUnique()

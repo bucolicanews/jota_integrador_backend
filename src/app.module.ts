@@ -12,6 +12,7 @@ import { AuditoriaModule } from './common/auditoria/auditoria.module';
 import { CofreModule } from './common/cofre/cofre.module';
 import { AuthModule } from './auth/auth.module';
 import { EmpresasModule } from './empresas/empresas.module';
+import { CadastroEmpresaModule } from './cadastro-empresa/cadastro-empresa.module';
 import { ContadoresModule } from './contadores/contadores.module';
 import { SerproModule } from './serpro/serpro.module';
 import { CreditosModule } from './creditos/creditos.module';
@@ -36,10 +37,7 @@ import { DescricoesExtratoModule } from './descricoes-extrato/descricoes-extrato
 import { IdentificadoresExtratoModule } from './identificadores-extrato/identificadores-extrato.module';
 import { ContratosModule } from './contratos/contratos.module';
 import { DocumentosSocietariosModule } from './documentos-societarios/documentos-societarios.module';
-import { PacotesModulosModule } from './pacotes-modulos/pacotes-modulos.module';
-import { LicencasModuloModule } from './licencas-modulo/licencas-modulo.module';
 import { CustosSerproModule } from './custos-serpro/custos-serpro.module';
-import { PlanosRevendaPacoteModule } from './planos-revenda-pacote/planos-revenda-pacote.module';
 import { PlanosModule } from './planos/planos.module';
 import { PlanosRevendaCreditosModule } from './planos-revenda-creditos/planos-revenda-creditos.module';
 import { SuporteModule } from './suporte/suporte.module';
@@ -71,6 +69,7 @@ import { PlanosRevendaCreditosAvulsosModule } from './planos-revenda-creditos-av
     CofreModule,
     AuthModule,
     EmpresasModule,
+    CadastroEmpresaModule,
     ContadoresModule,
     CreditosModule,
     SerproModule,
@@ -95,10 +94,7 @@ import { PlanosRevendaCreditosAvulsosModule } from './planos-revenda-creditos-av
     IdentificadoresExtratoModule,
     ContratosModule,
     DocumentosSocietariosModule,
-    PacotesModulosModule,
-    LicencasModuloModule,
     CustosSerproModule,
-    PlanosRevendaPacoteModule,
     PlanosModule,
     PlanosRevendaCreditosModule,
     SuporteModule,

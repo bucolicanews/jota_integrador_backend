@@ -11,6 +11,8 @@ export interface Empresa {
   modoAcessoSerpro: ModoAcessoSerpro;
   status: StatusEmpresa;
   bloqueado: boolean;
+  /** Nome do plano de crédito SERPRO ativo -- só populado em `listarPorContador` (Carteira de Empresas), null nos demais métodos. */
+  planoNome: string | null;
 }
 
 export interface DadosNovaEmpresa {

@@ -77,7 +77,36 @@ export class EmpresasRepositorioSupabase implements EmpresasRepositorioPort {
     if (error) {
       throw new InternalServerErrorException(`Falha ao listar empresas: ${error.message}`);
     }
-    return (data as LinhaEmpresa[]).map((linha) => this.mapear(linha));
+
+    const empresas = (data as LinhaEmpresa[]).map((linha) => this.mapear(linha));
+    return this.anexarPlanoAtivo(empresas);
+  }
+
+  /** Carteira de Empresas mostra o plano de crédito ativo de cada empresa -- 1 query em lote, não N+1. */
+  private async anexarPlanoAtivo(empresas: Empresa[]): Promise<Empresa[]> {
+    if (empresas.length === 0) return empresas;
+
+    const { data, error } = await this.supabase.admin
+      .from('assinaturas')
+      .select('empresa_id, planos(nome)')
+      .eq('status', 'ativa')
+      .in(
+        'empresa_id',
+        empresas.map((e) => e.id),
+      );
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao buscar plano das empresas: ${error.message}`);
+    }
+
+    const nomePorEmpresa = new Map<string, string | null>(
+      (data as Array<{ empresa_id: string; planos: { nome: string }[] | { nome: string } | null }>).map((linha) => {
+        const plano = Array.isArray(linha.planos) ? linha.planos[0] : linha.planos;
+        return [linha.empresa_id, plano?.nome ?? null];
+      }),
+    );
+
+    return empresas.map((empresa) => ({ ...empresa, planoNome: nomePorEmpresa.get(empresa.id) ?? null }));
   }
 
   async buscarEmpresaInternaDoContador(contadorId: string): Promise<Empresa | null> {
@@ -235,6 +264,7 @@ export class EmpresasRepositorioSupabase implements EmpresasRepositorioPort {
       modoAcessoSerpro: linha.modo_acesso_serpro,
       status: linha.status,
       bloqueado: linha.bloqueado,
+      planoNome: null,
     };
   }
 }

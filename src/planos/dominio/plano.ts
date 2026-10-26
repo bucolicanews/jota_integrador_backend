@@ -1,6 +1,19 @@
-import { MODULOS_LICENCIAVEIS } from '../../pacotes-modulos/dominio/pacote-modulos';
-
 export type Periodicidade = 'mensal' | 'anual';
+
+/**
+ * Catálogo de módulos liberáveis -- antes vivia em pacotes-modulos/ (sistema de licença
+ * eliminado em 2026-10-26, unificado em planos.modulos). Núcleo (lançamentos, plano de
+ * contas, CP/CR, clientes, fornecedores, históricos) nunca entra aqui -- sempre liberado.
+ */
+export const MODULOS_LICENCIAVEIS = [
+  'contratos',
+  'documentos_societarios',
+  'conciliacao_bancaria',
+  'protocolos',
+  'bancos',
+  'relatorios',
+  'fiscal',
+] as const;
 
 /** Regra de negócio pura -- mesmo que o CHECK do banco já garanta, revalidar aqui (Zero Trust, docs/SEGURANCA.md). */
 export function validarDadosPlano(preco: number, gratuito: boolean, modulos: string[]): void {
