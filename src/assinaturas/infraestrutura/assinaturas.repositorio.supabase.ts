@@ -17,9 +17,10 @@ interface Linha {
   status: StatusAssinatura;
   inicio_em: string;
   fim_em: string | null;
+  planos: { nome: string }[] | { nome: string } | null;
 }
 
-const COLUNAS = 'id, contador_id, empresa_id, plano_id, plano_revenda_id, status, inicio_em, fim_em';
+const COLUNAS = 'id, contador_id, empresa_id, plano_id, plano_revenda_id, status, inicio_em, fim_em, planos(nome)';
 
 @Injectable()
 export class AssinaturasRepositorioSupabase implements AssinaturasRepositorioPort {
@@ -40,11 +41,15 @@ export class AssinaturasRepositorioSupabase implements AssinaturasRepositorioPor
   }
 
   async buscarAtivaPorEmpresa(empresaId: string): Promise<Assinatura | null> {
+    // fim_em nulo OU ainda no futuro -- checagem por data em tempo real (não depende do
+    // cron AssinaturasVencimentoCron já ter rodado, zero atraso no gate de acesso).
+    const agora = new Date().toISOString();
     const { data, error } = await this.supabase.admin
       .from('assinaturas')
       .select(COLUNAS)
       .eq('empresa_id', empresaId)
       .eq('status', 'ativa')
+      .or(`fim_em.is.null,fim_em.gte.${agora}`)
       .maybeSingle();
 
     if (error) {
@@ -90,19 +95,36 @@ export class AssinaturasRepositorioSupabase implements AssinaturasRepositorioPor
     }
   }
 
-  async atualizarFimEm(id: string, fimEm: string): Promise<void> {
+  async atualizarFimEm(id: string, fimEm: string | null): Promise<void> {
     const { error } = await this.supabase.admin.from('assinaturas').update({ fim_em: fimEm }).eq('id', id);
     if (error) {
       throw new InternalServerErrorException(`Falha ao atualizar validade da assinatura: ${error.message}`);
     }
   }
 
+  async marcarVencidas(): Promise<number> {
+    const agora = new Date().toISOString();
+    const { data, error } = await this.supabase.admin
+      .from('assinaturas')
+      .update({ status: 'vencida' })
+      .eq('status', 'ativa')
+      .lt('fim_em', agora)
+      .select('id');
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao marcar assinaturas vencidas: ${error.message}`);
+    }
+    return data?.length ?? 0;
+  }
+
   private mapear(linha: Linha): Assinatura {
+    const plano = Array.isArray(linha.planos) ? linha.planos[0] : linha.planos;
     return {
       id: linha.id,
       contadorId: linha.contador_id,
       empresaId: linha.empresa_id,
       planoId: linha.plano_id,
+      planoNome: plano?.nome ?? null,
       planoRevendaId: linha.plano_revenda_id,
       status: linha.status,
       inicioEm: linha.inicio_em,

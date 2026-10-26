@@ -1,16 +1,18 @@
-import { Body, Controller, ForbiddenException, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
 import { UsuarioAtual } from '../../auth/apresentacao/decorators/usuario-atual.decorator';
 import { PapeisGuard } from '../../auth/apresentacao/guards/papeis.guard';
 import { SupabaseAuthGuard } from '../../auth/apresentacao/guards/supabase-auth.guard';
 import { UsuarioAutenticado } from '../../auth/apresentacao/tipos/requisicao-autenticada';
 import { ehPapelDePlataforma } from '../../auth/dominio/papel';
 import { AtivarAssinaturaManualUseCase } from '../aplicacao/casos-de-uso/ativar-assinatura-manual.usecase';
+import { AtualizarVencimentoAssinaturaUseCase } from '../aplicacao/casos-de-uso/atualizar-vencimento-assinatura.usecase';
 import { BloquearAssinaturaUseCase } from '../aplicacao/casos-de-uso/bloquear-assinatura.usecase';
 import { CancelarAssinaturaCreditoUseCase } from '../aplicacao/casos-de-uso/cancelar-assinatura-credito.usecase';
 import { IniciarPagamentoAssinaturaCreditosUseCase, ResultadoIniciarPagamentoAssinaturaCreditos } from '../aplicacao/casos-de-uso/iniciar-pagamento-assinatura-creditos.usecase';
 import { ObterAssinaturaAtualUseCase } from '../aplicacao/casos-de-uso/obter-assinatura-atual.usecase';
 import { Assinatura } from '../aplicacao/portas/assinaturas-repositorio.port';
 import { AtivarAssinaturaManualDto } from './dto/ativar-assinatura-manual.dto';
+import { AtualizarVencimentoAssinaturaDto } from './dto/atualizar-vencimento-assinatura.dto';
 import { IniciarPagamentoAssinaturaDto } from './dto/iniciar-pagamento-assinatura.dto';
 
 /**
@@ -27,6 +29,7 @@ export class AssinaturasController {
     private readonly bloquear: BloquearAssinaturaUseCase,
     private readonly cancelar: CancelarAssinaturaCreditoUseCase,
     private readonly iniciarPagamento: IniciarPagamentoAssinaturaCreditosUseCase,
+    private readonly atualizarVencimento: AtualizarVencimentoAssinaturaUseCase,
   ) {}
 
   @Get()
@@ -90,8 +93,26 @@ export class AssinaturasController {
       empresaId,
       planoId: dto.planoId,
       metodo: dto.metodo,
+      cardEncrypted: dto.cardEncrypted,
+      installments: dto.installments,
       customerEmail: dto.customerEmail,
       customerTelefoneE164: dto.customerTelefoneE164 ?? null,
+    });
+  }
+
+  @Patch('vencimento')
+  async atualizarVencimentoRota(
+    @Param('contadorId', ParseUUIDPipe) contadorId: string,
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @Body() dto: AtualizarVencimentoAssinaturaDto,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<Assinatura> {
+    this.exigirPosse(usuarioAtual, contadorId);
+    return this.atualizarVencimento.executar({
+      usuarioId: usuarioAtual.id,
+      contadorId,
+      empresaId,
+      fimEm: dto.fimEm ?? null,
     });
   }
 
