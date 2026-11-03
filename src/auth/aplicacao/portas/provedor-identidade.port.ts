@@ -15,9 +15,37 @@ export interface IdentidadeValidada extends ClaimsIdentidade {
  * de `usuarios` (docs/BANCO_DE_DADOS.md §1) porque são sistemas diferentes: aqui é
  * identidade/sessão (auth.users), lá é perfil de domínio (usuarios).
  */
+export interface ResultadoCriarUsuarioComConvite {
+  id: string;
+  /**
+   * true quando o e-mail já existia no provedor (identidade órfã de uma tentativa
+   * anterior que não terminou de criar o perfil, ex: convite aceito mas
+   * CriarUsuarioUseCase falhou no meio) -- não é erro por si, quem chama decide o que
+   * fazer (reaproveitar o id só se não existir perfil em `usuarios` pra esse e-mail).
+   */
+  jaExistiaNoProvedor: boolean;
+}
+
 export interface ProvedorIdentidadePort {
-  /** Cria a identidade (auth.users) e envia convite por e-mail -- retorna o id (= usuarios.id). */
-  criarUsuarioComConvite(email: string): Promise<string>;
+  /**
+   * Cria a identidade (auth.users) e envia convite por e-mail -- retorna o id
+   * (= usuarios.id). Se o e-mail já existir no provedor, NÃO lança: devolve o id
+   * existente com `jaExistiaNoProvedor: true`, sem reenviar convite (generateLink não
+   * envia e-mail, só recupera o id).
+   */
+  criarUsuarioComConvite(email: string): Promise<ResultadoCriarUsuarioComConvite>;
+
+  /**
+   * Gera um link de acesso (tipo `recovery`) pro e-mail informado -- usado tanto pra
+   * "primeiro acesso" (depois de `criarUsuarioComConvite`, já que o e-mail do convite
+   * pode nunca chegar -- SMTP não configurado/instável) quanto pra "reenviar link" de um
+   * usuário já existente que perdeu o acesso. SEMPRE `recovery`, nunca `invite`: só
+   * `recovery` dispara o evento `PASSWORD_RECOVERY` no client-side (`onAuthStateChange`),
+   * que o frontend usa pra forçar a tela de "defina sua senha" antes de liberar o resto
+   * do app -- `invite` cai como `SIGNED_IN` comum, sem esse gancho. Requer que o usuário
+   * já exista no provedor (chamar depois de `criarUsuarioComConvite`, nunca antes).
+   */
+  gerarLinkAcesso(email: string): Promise<string>;
 
   /**
    * Sincroniza papel/contador_id/empresa_id no app_metadata do usuário no provedor.

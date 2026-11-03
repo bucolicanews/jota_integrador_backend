@@ -1,16 +1,24 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   ForbiddenException,
   Get,
+  Header,
   Inject,
   NotFoundException,
   Param,
   ParseUUIDPipe,
   Patch,
   Post,
+  Res,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
+import { memoryStorage } from 'multer';
 import { UsuarioAtual } from '../../auth/apresentacao/decorators/usuario-atual.decorator';
 import { PapeisGuard } from '../../auth/apresentacao/guards/papeis.guard';
 import { SupabaseAuthGuard } from '../../auth/apresentacao/guards/supabase-auth.guard';
@@ -24,10 +32,14 @@ import {
 import { AlterarAtivaContaContabilUseCase } from '../aplicacao/casos-de-uso/alterar-ativa-conta-contabil.usecase';
 import { AtualizarContaContabilUseCase } from '../aplicacao/casos-de-uso/atualizar-conta-contabil.usecase';
 import { CriarContaContabilUseCase } from '../aplicacao/casos-de-uso/criar-conta-contabil.usecase';
+import { ExportarPlanoContasUseCase } from '../aplicacao/casos-de-uso/exportar-plano-contas.usecase';
+import { ImportarPlanoContasUseCase } from '../aplicacao/casos-de-uso/importar-plano-contas.usecase';
 import { ListarContasContabeisUseCase } from '../aplicacao/casos-de-uso/listar-contas-contabeis.usecase';
-import { PlanoConta } from '../aplicacao/portas/plano-contas-repositorio.port';
+import { PlanoConta, ResultadoImportacaoPlanoContas } from '../aplicacao/portas/plano-contas-repositorio.port';
 import { AtualizarContaContabilDto } from './dto/atualizar-conta-contabil.dto';
 import { CriarContaContabilDto } from './dto/criar-conta-contabil.dto';
+
+const TAMANHO_MAXIMO_ARQUIVO = 5 * 1024 * 1024; // 5MB -- CSV de plano de contas, generoso o suficiente
 
 @Controller('empresas/:empresaId/plano-contas')
 @UseGuards(SupabaseAuthGuard, PapeisGuard)
@@ -38,6 +50,8 @@ export class PlanoContasController {
     private readonly listarContas: ListarContasContabeisUseCase,
     private readonly atualizarConta: AtualizarContaContabilUseCase,
     private readonly alterarAtiva: AlterarAtivaContaContabilUseCase,
+    private readonly importarPlanoContas: ImportarPlanoContasUseCase,
+    private readonly exportarPlanoContas: ExportarPlanoContasUseCase,
   ) {}
 
   @Get()
@@ -110,6 +124,38 @@ export class PlanoContasController {
 
     await this.alterarAtiva.executar(contaId, true);
     return { ok: true };
+  }
+
+  @Post('importar')
+  @UseInterceptors(FileInterceptor('arquivo', { storage: memoryStorage(), limits: { fileSize: TAMANHO_MAXIMO_ARQUIVO } }))
+  async importar(
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @UploadedFile() arquivo: Express.Multer.File | undefined,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<ResultadoImportacaoPlanoContas> {
+    const empresa = await this.buscarEmpresaOuFalhar(empresaId);
+    this.exigirPosseDeContador(usuarioAtual, empresa);
+
+    if (!arquivo) {
+      throw new BadRequestException('Arquivo CSV (campo "arquivo") é obrigatório');
+    }
+
+    return this.importarPlanoContas.executar(empresaId, arquivo.buffer.toString('utf-8'));
+  }
+
+  @Get('exportar')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  async exportar(
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<string> {
+    const empresa = await this.buscarEmpresaOuFalhar(empresaId);
+    this.exigirPosse(usuarioAtual, empresa);
+
+    const csv = await this.exportarPlanoContas.executar(empresaId);
+    res.setHeader('Content-Disposition', `attachment; filename="plano-contas-${empresaId}.csv"`);
+    return csv;
   }
 
   private async buscarEmpresaOuFalhar(empresaId: string): Promise<Empresa> {

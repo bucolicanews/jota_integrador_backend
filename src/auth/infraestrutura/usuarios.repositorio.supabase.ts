@@ -63,6 +63,23 @@ export class UsuariosRepositorioSupabase implements UsuariosRepositorioPort {
     return this.mapear(data as unknown as LinhaUsuario);
   }
 
+  async buscarPorEmail(email: string): Promise<Usuario | null> {
+    const { data, error } = await this.supabase.admin
+      .from('usuarios')
+      .select('id, nome, email, contador_id, empresa_id, mfa_habilitado, status, bloqueado, papeis(nome)')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao buscar usuário por e-mail: ${error.message}`);
+    }
+    if (!data) {
+      return null;
+    }
+
+    return this.mapear(data as unknown as LinhaUsuario);
+  }
+
   async atualizarPapelEVinculo(
     id: string,
     papelId: string,

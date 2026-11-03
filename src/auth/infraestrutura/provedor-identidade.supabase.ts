@@ -5,6 +5,7 @@ import {
   ClaimsIdentidade,
   IdentidadeValidada,
   ProvedorIdentidadePort,
+  ResultadoCriarUsuarioComConvite,
 } from '../aplicacao/portas/provedor-identidade.port';
 import { Papel } from '../dominio/papel';
 
@@ -20,14 +21,55 @@ export class ProvedorIdentidadeSupabase implements ProvedorIdentidadePort {
     private readonly config: ConfigService,
   ) {}
 
-  async criarUsuarioComConvite(email: string): Promise<string> {
+  async criarUsuarioComConvite(email: string): Promise<ResultadoCriarUsuarioComConvite> {
     const { data, error } = await this.supabase.admin.auth.admin.inviteUserByEmail(email);
 
-    if (error || !data.user) {
+    if (!error && data.user) {
+      return { id: data.user.id, jaExistiaNoProvedor: false };
+    }
+
+    const jaExiste =
+      error?.code === 'email_exists' || /already.*registered/i.test(error?.message ?? '');
+    if (!jaExiste) {
       throw new InternalServerErrorException(`Falha ao convidar usuário: ${error?.message}`);
     }
 
-    return data.user.id;
+    // E-mail já existe no provedor -- recupera o id sem reenviar convite. `generateLink`
+    // nunca envia e-mail, só devolve o link/usuário (mesma chamada usada em
+    // gerarLinkAcesso), então é seguro usar aqui só como consulta.
+    const { data: linkData, error: linkError } = await this.supabase.admin.auth.admin.generateLink({
+      type: 'recovery',
+      email,
+    });
+    if (linkError || !linkData?.user) {
+      throw new InternalServerErrorException(
+        `E-mail já cadastrado no provedor, mas falha ao recuperar o id: ${linkError?.message}`,
+      );
+    }
+
+    return { id: linkData.user.id, jaExistiaNoProvedor: true };
+  }
+
+  async gerarLinkAcesso(email: string): Promise<string> {
+    // Primeira origem de APP_ALLOWED_ORIGINS -- único frontend desta API (ver CORS em
+    // main.ts). Sem isso, o Supabase usa o `site_url` do projeto (pode nem apontar pro
+    // domínio certo em produção) como destino do link.
+    const origemFrontend = this.config
+      .getOrThrow<string>('APP_ALLOWED_ORIGINS')
+      .split(',')[0]
+      .trim();
+
+    const { data, error } = await this.supabase.admin.auth.admin.generateLink({
+      type: 'recovery',
+      email,
+      options: { redirectTo: `${origemFrontend}/definir-senha` },
+    });
+
+    if (error || !data?.properties?.action_link) {
+      throw new InternalServerErrorException(`Falha ao gerar link de acesso: ${error?.message}`);
+    }
+
+    return data.properties.action_link;
   }
 
   async sincronizarClaims(id: string, claims: ClaimsIdentidade): Promise<void> {

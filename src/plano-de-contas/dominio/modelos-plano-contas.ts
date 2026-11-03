@@ -1,0 +1,296 @@
+import { LinhaImportacaoPlanoConta } from '../aplicacao/portas/plano-contas-repositorio.port';
+
+export type ModeloPlanoContas = 'comercio' | 'servico' | 'terceiro_setor';
+
+export const MODELOS_PLANO_CONTAS_INFO: Record<ModeloPlanoContas, string> = {
+  comercio: 'Comércio (completo)',
+  servico: 'Prestação de Serviço (completo)',
+  terceiro_setor: 'Terceiro Setor -- ONGs e Associações (comércio e serviço)',
+};
+
+/** Linha resumida pra declarar os modelos sem repetir os 4 booleanos toda hora. */
+interface Conta {
+  codigo: string;
+  nome: string;
+  grupo: LinhaImportacaoPlanoConta['grupo'];
+  sintetica: boolean;
+  codigoPai: string | null;
+  caixaBanco?: boolean;
+  aReceber?: boolean;
+  aPagar?: boolean;
+}
+
+function linha(c: Conta): LinhaImportacaoPlanoConta {
+  return {
+    codigo: c.codigo,
+    nome: c.nome,
+    grupo: c.grupo,
+    sintetica: c.sintetica,
+    codigoPai: c.codigoPai,
+    contaCaixaBanco: c.caixaBanco ?? false,
+    contaAReceber: c.aReceber ?? false,
+    contaAPagar: c.aPagar ?? false,
+  };
+}
+
+// ============================================================
+// COMÉRCIO (completo)
+// ============================================================
+const COMERCIO: LinhaImportacaoPlanoConta[] = [
+  linha({ codigo: '1', nome: 'ATIVO', grupo: 'ativo', sintetica: true, codigoPai: null }),
+  linha({ codigo: '1.1', nome: 'Ativo Circulante', grupo: 'ativo', sintetica: true, codigoPai: '1' }),
+  linha({ codigo: '1.1.01', nome: 'Caixa', grupo: 'ativo', sintetica: false, codigoPai: '1.1', caixaBanco: true }),
+  linha({ codigo: '1.1.02', nome: 'Bancos Conta Movimento', grupo: 'ativo', sintetica: false, codigoPai: '1.1', caixaBanco: true }),
+  linha({ codigo: '1.1.03', nome: 'Aplicações Financeiras de Liquidez Imediata', grupo: 'ativo', sintetica: false, codigoPai: '1.1' }),
+  linha({ codigo: '1.1.04', nome: 'Clientes a Receber', grupo: 'ativo', sintetica: false, codigoPai: '1.1', aReceber: true }),
+  linha({ codigo: '1.1.05', nome: '(-) Provisão para Devedores Duvidosos', grupo: 'ativo', sintetica: false, codigoPai: '1.1' }),
+  linha({ codigo: '1.1.06', nome: 'Estoque de Mercadorias para Revenda', grupo: 'ativo', sintetica: false, codigoPai: '1.1' }),
+  linha({ codigo: '1.1.07', nome: 'Adiantamento a Fornecedores', grupo: 'ativo', sintetica: false, codigoPai: '1.1' }),
+  linha({ codigo: '1.1.08', nome: 'Impostos a Recuperar (ICMS/PIS/COFINS)', grupo: 'ativo', sintetica: false, codigoPai: '1.1' }),
+  linha({ codigo: '1.1.09', nome: 'Despesas Antecipadas', grupo: 'ativo', sintetica: false, codigoPai: '1.1' }),
+  linha({ codigo: '1.2', nome: 'Ativo Não Circulante', grupo: 'ativo', sintetica: true, codigoPai: '1' }),
+  linha({ codigo: '1.2.01', nome: 'Imóveis', grupo: 'ativo', sintetica: false, codigoPai: '1.2' }),
+  linha({ codigo: '1.2.02', nome: 'Veículos', grupo: 'ativo', sintetica: false, codigoPai: '1.2' }),
+  linha({ codigo: '1.2.03', nome: 'Máquinas e Equipamentos', grupo: 'ativo', sintetica: false, codigoPai: '1.2' }),
+  linha({ codigo: '1.2.04', nome: 'Móveis e Utensílios', grupo: 'ativo', sintetica: false, codigoPai: '1.2' }),
+  linha({ codigo: '1.2.05', nome: '(-) Depreciação Acumulada', grupo: 'ativo', sintetica: false, codigoPai: '1.2' }),
+  linha({ codigo: '1.2.06', nome: 'Intangível (Software/Marcas)', grupo: 'ativo', sintetica: false, codigoPai: '1.2' }),
+
+  linha({ codigo: '2', nome: 'PASSIVO', grupo: 'passivo', sintetica: true, codigoPai: null }),
+  linha({ codigo: '2.1', nome: 'Passivo Circulante', grupo: 'passivo', sintetica: true, codigoPai: '2' }),
+  linha({ codigo: '2.1.01', nome: 'Fornecedores a Pagar', grupo: 'passivo', sintetica: false, codigoPai: '2.1', aPagar: true }),
+  linha({ codigo: '2.1.02', nome: 'Salários e Ordenados a Pagar', grupo: 'passivo', sintetica: false, codigoPai: '2.1', aPagar: true }),
+  linha({ codigo: '2.1.03', nome: 'Encargos Sociais a Recolher (FGTS/INSS)', grupo: 'passivo', sintetica: false, codigoPai: '2.1', aPagar: true }),
+  linha({ codigo: '2.1.04', nome: 'Impostos e Contribuições a Recolher', grupo: 'passivo', sintetica: false, codigoPai: '2.1', aPagar: true }),
+  linha({ codigo: '2.1.05', nome: 'Empréstimos e Financiamentos -- Curto Prazo', grupo: 'passivo', sintetica: false, codigoPai: '2.1', aPagar: true }),
+  linha({ codigo: '2.1.06', nome: 'Adiantamento de Clientes', grupo: 'passivo', sintetica: false, codigoPai: '2.1' }),
+  linha({ codigo: '2.1.07', nome: 'Outras Contas a Pagar', grupo: 'passivo', sintetica: false, codigoPai: '2.1', aPagar: true }),
+  linha({ codigo: '2.2', nome: 'Passivo Não Circulante', grupo: 'passivo', sintetica: true, codigoPai: '2' }),
+  linha({ codigo: '2.2.01', nome: 'Empréstimos e Financiamentos -- Longo Prazo', grupo: 'passivo', sintetica: false, codigoPai: '2.2' }),
+
+  linha({ codigo: '3', nome: 'PATRIMÔNIO LÍQUIDO', grupo: 'patrimonio_liquido', sintetica: true, codigoPai: null }),
+  linha({ codigo: '3.1', nome: 'Capital Social', grupo: 'patrimonio_liquido', sintetica: false, codigoPai: '3' }),
+  linha({ codigo: '3.2', nome: 'Reservas de Lucros', grupo: 'patrimonio_liquido', sintetica: false, codigoPai: '3' }),
+  linha({ codigo: '3.3', nome: 'Lucros/Prejuízos Acumulados', grupo: 'patrimonio_liquido', sintetica: false, codigoPai: '3' }),
+
+  linha({ codigo: '4', nome: 'RECEITAS', grupo: 'receita', sintetica: true, codigoPai: null }),
+  linha({ codigo: '4.1', nome: 'Receita Bruta', grupo: 'receita', sintetica: true, codigoPai: '4' }),
+  linha({ codigo: '4.1.01', nome: 'Receita de Venda de Mercadorias', grupo: 'receita', sintetica: false, codigoPai: '4.1' }),
+  linha({ codigo: '4.2', nome: 'Deduções da Receita', grupo: 'receita', sintetica: true, codigoPai: '4' }),
+  linha({ codigo: '4.2.01', nome: '(-) Devoluções de Vendas', grupo: 'receita', sintetica: false, codigoPai: '4.2' }),
+  linha({ codigo: '4.2.02', nome: '(-) Abatimentos sobre Vendas', grupo: 'receita', sintetica: false, codigoPai: '4.2' }),
+  linha({ codigo: '4.2.03', nome: '(-) ICMS sobre Vendas', grupo: 'receita', sintetica: false, codigoPai: '4.2' }),
+  linha({ codigo: '4.2.04', nome: '(-) PIS sobre Vendas', grupo: 'receita', sintetica: false, codigoPai: '4.2' }),
+  linha({ codigo: '4.2.05', nome: '(-) COFINS sobre Vendas', grupo: 'receita', sintetica: false, codigoPai: '4.2' }),
+  linha({ codigo: '4.2.06', nome: '(-) Simples Nacional sobre Vendas', grupo: 'receita', sintetica: false, codigoPai: '4.2' }),
+  linha({ codigo: '4.3', nome: 'Outras Receitas', grupo: 'receita', sintetica: true, codigoPai: '4' }),
+  linha({ codigo: '4.3.01', nome: 'Receitas Financeiras', grupo: 'receita', sintetica: false, codigoPai: '4.3' }),
+  linha({ codigo: '4.3.02', nome: 'Outras Receitas Operacionais', grupo: 'receita', sintetica: false, codigoPai: '4.3' }),
+
+  linha({ codigo: '5', nome: 'CUSTOS', grupo: 'custo', sintetica: true, codigoPai: null }),
+  linha({ codigo: '5.1', nome: 'Custo da Mercadoria Vendida (CMV)', grupo: 'custo', sintetica: false, codigoPai: '5' }),
+  linha({ codigo: '5.2', nome: 'Frete sobre Compras', grupo: 'custo', sintetica: false, codigoPai: '5' }),
+
+  linha({ codigo: '6', nome: 'DESPESAS', grupo: 'despesa', sintetica: true, codigoPai: null }),
+  linha({ codigo: '6.1', nome: 'Despesas com Pessoal', grupo: 'despesa', sintetica: true, codigoPai: '6' }),
+  linha({ codigo: '6.1.01', nome: 'Salários e Ordenados', grupo: 'despesa', sintetica: false, codigoPai: '6.1' }),
+  linha({ codigo: '6.1.02', nome: 'Encargos Sociais', grupo: 'despesa', sintetica: false, codigoPai: '6.1' }),
+  linha({ codigo: '6.1.03', nome: 'Benefícios (Vale Transporte/Alimentação)', grupo: 'despesa', sintetica: false, codigoPai: '6.1' }),
+  linha({ codigo: '6.1.04', nome: 'Pró-labore', grupo: 'despesa', sintetica: false, codigoPai: '6.1' }),
+  linha({ codigo: '6.2', nome: 'Despesas Administrativas', grupo: 'despesa', sintetica: true, codigoPai: '6' }),
+  linha({ codigo: '6.2.01', nome: 'Aluguel', grupo: 'despesa', sintetica: false, codigoPai: '6.2' }),
+  linha({ codigo: '6.2.02', nome: 'Água, Luz, Telefone e Internet', grupo: 'despesa', sintetica: false, codigoPai: '6.2' }),
+  linha({ codigo: '6.2.03', nome: 'Material de Escritório', grupo: 'despesa', sintetica: false, codigoPai: '6.2' }),
+  linha({ codigo: '6.2.04', nome: 'Honorários Contábeis', grupo: 'despesa', sintetica: false, codigoPai: '6.2' }),
+  linha({ codigo: '6.2.05', nome: 'Depreciação', grupo: 'despesa', sintetica: false, codigoPai: '6.2' }),
+  linha({ codigo: '6.2.06', nome: 'Manutenção e Conservação', grupo: 'despesa', sintetica: false, codigoPai: '6.2' }),
+  linha({ codigo: '6.3', nome: 'Despesas Comerciais', grupo: 'despesa', sintetica: true, codigoPai: '6' }),
+  linha({ codigo: '6.3.01', nome: 'Marketing e Publicidade', grupo: 'despesa', sintetica: false, codigoPai: '6.3' }),
+  linha({ codigo: '6.3.02', nome: 'Comissões sobre Vendas', grupo: 'despesa', sintetica: false, codigoPai: '6.3' }),
+  linha({ codigo: '6.3.03', nome: 'Embalagens', grupo: 'despesa', sintetica: false, codigoPai: '6.3' }),
+  linha({ codigo: '6.4', nome: 'Despesas Financeiras', grupo: 'despesa', sintetica: true, codigoPai: '6' }),
+  linha({ codigo: '6.4.01', nome: 'Juros Passivos', grupo: 'despesa', sintetica: false, codigoPai: '6.4' }),
+  linha({ codigo: '6.4.02', nome: 'Taxas Bancárias', grupo: 'despesa', sintetica: false, codigoPai: '6.4' }),
+  linha({ codigo: '6.4.03', nome: 'Multas', grupo: 'despesa', sintetica: false, codigoPai: '6.4' }),
+  linha({ codigo: '6.5', nome: 'Despesas Tributárias', grupo: 'despesa', sintetica: true, codigoPai: '6' }),
+  linha({ codigo: '6.5.01', nome: 'IRPJ e CSLL', grupo: 'despesa', sintetica: false, codigoPai: '6.5' }),
+  linha({ codigo: '6.5.02', nome: 'Simples Nacional (DAS)', grupo: 'despesa', sintetica: false, codigoPai: '6.5' }),
+  linha({ codigo: '6.5.03', nome: 'Taxas e Licenças', grupo: 'despesa', sintetica: false, codigoPai: '6.5' }),
+];
+
+// ============================================================
+// PRESTAÇÃO DE SERVIÇO (completo)
+// ============================================================
+const SERVICO: LinhaImportacaoPlanoConta[] = [
+  linha({ codigo: '1', nome: 'ATIVO', grupo: 'ativo', sintetica: true, codigoPai: null }),
+  linha({ codigo: '1.1', nome: 'Ativo Circulante', grupo: 'ativo', sintetica: true, codigoPai: '1' }),
+  linha({ codigo: '1.1.01', nome: 'Caixa', grupo: 'ativo', sintetica: false, codigoPai: '1.1', caixaBanco: true }),
+  linha({ codigo: '1.1.02', nome: 'Bancos Conta Movimento', grupo: 'ativo', sintetica: false, codigoPai: '1.1', caixaBanco: true }),
+  linha({ codigo: '1.1.03', nome: 'Aplicações Financeiras de Liquidez Imediata', grupo: 'ativo', sintetica: false, codigoPai: '1.1' }),
+  linha({ codigo: '1.1.04', nome: 'Clientes a Receber (Serviços Prestados)', grupo: 'ativo', sintetica: false, codigoPai: '1.1', aReceber: true }),
+  linha({ codigo: '1.1.05', nome: '(-) Provisão para Devedores Duvidosos', grupo: 'ativo', sintetica: false, codigoPai: '1.1' }),
+  linha({ codigo: '1.1.06', nome: 'Impostos Retidos a Compensar (IRRF/INSS/PIS/COFINS/CSLL)', grupo: 'ativo', sintetica: false, codigoPai: '1.1' }),
+  linha({ codigo: '1.1.07', nome: 'Adiantamento a Fornecedores/Prestadores', grupo: 'ativo', sintetica: false, codigoPai: '1.1' }),
+  linha({ codigo: '1.1.08', nome: 'Despesas Antecipadas', grupo: 'ativo', sintetica: false, codigoPai: '1.1' }),
+  linha({ codigo: '1.2', nome: 'Ativo Não Circulante', grupo: 'ativo', sintetica: true, codigoPai: '1' }),
+  linha({ codigo: '1.2.01', nome: 'Máquinas e Equipamentos', grupo: 'ativo', sintetica: false, codigoPai: '1.2' }),
+  linha({ codigo: '1.2.02', nome: 'Veículos', grupo: 'ativo', sintetica: false, codigoPai: '1.2' }),
+  linha({ codigo: '1.2.03', nome: 'Móveis e Utensílios', grupo: 'ativo', sintetica: false, codigoPai: '1.2' }),
+  linha({ codigo: '1.2.04', nome: 'Computadores e Periféricos', grupo: 'ativo', sintetica: false, codigoPai: '1.2' }),
+  linha({ codigo: '1.2.05', nome: '(-) Depreciação Acumulada', grupo: 'ativo', sintetica: false, codigoPai: '1.2' }),
+  linha({ codigo: '1.2.06', nome: 'Intangível (Software/Licenças)', grupo: 'ativo', sintetica: false, codigoPai: '1.2' }),
+
+  linha({ codigo: '2', nome: 'PASSIVO', grupo: 'passivo', sintetica: true, codigoPai: null }),
+  linha({ codigo: '2.1', nome: 'Passivo Circulante', grupo: 'passivo', sintetica: true, codigoPai: '2' }),
+  linha({ codigo: '2.1.01', nome: 'Fornecedores/Prestadores a Pagar', grupo: 'passivo', sintetica: false, codigoPai: '2.1', aPagar: true }),
+  linha({ codigo: '2.1.02', nome: 'Salários e Ordenados a Pagar', grupo: 'passivo', sintetica: false, codigoPai: '2.1', aPagar: true }),
+  linha({ codigo: '2.1.03', nome: 'Encargos Sociais a Recolher (FGTS/INSS)', grupo: 'passivo', sintetica: false, codigoPai: '2.1', aPagar: true }),
+  linha({ codigo: '2.1.04', nome: 'Impostos e Contribuições a Recolher (ISS/PIS/COFINS/CSLL/IRPJ/Simples)', grupo: 'passivo', sintetica: false, codigoPai: '2.1', aPagar: true }),
+  linha({ codigo: '2.1.05', nome: 'Empréstimos e Financiamentos -- Curto Prazo', grupo: 'passivo', sintetica: false, codigoPai: '2.1', aPagar: true }),
+  linha({ codigo: '2.1.06', nome: 'Adiantamento de Clientes', grupo: 'passivo', sintetica: false, codigoPai: '2.1' }),
+  linha({ codigo: '2.1.07', nome: 'Outras Contas a Pagar', grupo: 'passivo', sintetica: false, codigoPai: '2.1', aPagar: true }),
+  linha({ codigo: '2.2', nome: 'Passivo Não Circulante', grupo: 'passivo', sintetica: true, codigoPai: '2' }),
+  linha({ codigo: '2.2.01', nome: 'Empréstimos e Financiamentos -- Longo Prazo', grupo: 'passivo', sintetica: false, codigoPai: '2.2' }),
+
+  linha({ codigo: '3', nome: 'PATRIMÔNIO LÍQUIDO', grupo: 'patrimonio_liquido', sintetica: true, codigoPai: null }),
+  linha({ codigo: '3.1', nome: 'Capital Social', grupo: 'patrimonio_liquido', sintetica: false, codigoPai: '3' }),
+  linha({ codigo: '3.2', nome: 'Reservas de Lucros', grupo: 'patrimonio_liquido', sintetica: false, codigoPai: '3' }),
+  linha({ codigo: '3.3', nome: 'Lucros/Prejuízos Acumulados', grupo: 'patrimonio_liquido', sintetica: false, codigoPai: '3' }),
+
+  linha({ codigo: '4', nome: 'RECEITAS', grupo: 'receita', sintetica: true, codigoPai: null }),
+  linha({ codigo: '4.1', nome: 'Receita Bruta', grupo: 'receita', sintetica: true, codigoPai: '4' }),
+  linha({ codigo: '4.1.01', nome: 'Receita de Prestação de Serviços', grupo: 'receita', sintetica: false, codigoPai: '4.1' }),
+  linha({ codigo: '4.2', nome: 'Deduções da Receita', grupo: 'receita', sintetica: true, codigoPai: '4' }),
+  linha({ codigo: '4.2.01', nome: '(-) ISS sobre Serviços', grupo: 'receita', sintetica: false, codigoPai: '4.2' }),
+  linha({ codigo: '4.2.02', nome: '(-) PIS sobre Serviços', grupo: 'receita', sintetica: false, codigoPai: '4.2' }),
+  linha({ codigo: '4.2.03', nome: '(-) COFINS sobre Serviços', grupo: 'receita', sintetica: false, codigoPai: '4.2' }),
+  linha({ codigo: '4.2.04', nome: '(-) Simples Nacional sobre Serviços', grupo: 'receita', sintetica: false, codigoPai: '4.2' }),
+  linha({ codigo: '4.2.05', nome: '(-) Cancelamentos/Abatimentos sobre Serviços', grupo: 'receita', sintetica: false, codigoPai: '4.2' }),
+  linha({ codigo: '4.3', nome: 'Outras Receitas', grupo: 'receita', sintetica: true, codigoPai: '4' }),
+  linha({ codigo: '4.3.01', nome: 'Receitas Financeiras', grupo: 'receita', sintetica: false, codigoPai: '4.3' }),
+  linha({ codigo: '4.3.02', nome: 'Outras Receitas Operacionais', grupo: 'receita', sintetica: false, codigoPai: '4.3' }),
+
+  linha({ codigo: '5', nome: 'CUSTOS', grupo: 'custo', sintetica: true, codigoPai: null }),
+  linha({ codigo: '5.1', nome: 'Custo dos Serviços Prestados (Mão de Obra Direta)', grupo: 'custo', sintetica: false, codigoPai: '5' }),
+  linha({ codigo: '5.2', nome: 'Materiais e Insumos Aplicados nos Serviços', grupo: 'custo', sintetica: false, codigoPai: '5' }),
+  linha({ codigo: '5.3', nome: 'Subcontratação de Serviços de Terceiros', grupo: 'custo', sintetica: false, codigoPai: '5' }),
+
+  linha({ codigo: '6', nome: 'DESPESAS', grupo: 'despesa', sintetica: true, codigoPai: null }),
+  linha({ codigo: '6.1', nome: 'Despesas com Pessoal', grupo: 'despesa', sintetica: true, codigoPai: '6' }),
+  linha({ codigo: '6.1.01', nome: 'Salários e Ordenados', grupo: 'despesa', sintetica: false, codigoPai: '6.1' }),
+  linha({ codigo: '6.1.02', nome: 'Encargos Sociais', grupo: 'despesa', sintetica: false, codigoPai: '6.1' }),
+  linha({ codigo: '6.1.03', nome: 'Benefícios (Vale Transporte/Alimentação)', grupo: 'despesa', sintetica: false, codigoPai: '6.1' }),
+  linha({ codigo: '6.1.04', nome: 'Pró-labore', grupo: 'despesa', sintetica: false, codigoPai: '6.1' }),
+  linha({ codigo: '6.2', nome: 'Despesas Administrativas', grupo: 'despesa', sintetica: true, codigoPai: '6' }),
+  linha({ codigo: '6.2.01', nome: 'Aluguel', grupo: 'despesa', sintetica: false, codigoPai: '6.2' }),
+  linha({ codigo: '6.2.02', nome: 'Água, Luz, Telefone e Internet', grupo: 'despesa', sintetica: false, codigoPai: '6.2' }),
+  linha({ codigo: '6.2.03', nome: 'Material de Escritório', grupo: 'despesa', sintetica: false, codigoPai: '6.2' }),
+  linha({ codigo: '6.2.04', nome: 'Honorários Contábeis', grupo: 'despesa', sintetica: false, codigoPai: '6.2' }),
+  linha({ codigo: '6.2.05', nome: 'Depreciação', grupo: 'despesa', sintetica: false, codigoPai: '6.2' }),
+  linha({ codigo: '6.2.06', nome: 'Softwares e Assinaturas', grupo: 'despesa', sintetica: false, codigoPai: '6.2' }),
+  linha({ codigo: '6.3', nome: 'Despesas Comerciais', grupo: 'despesa', sintetica: true, codigoPai: '6' }),
+  linha({ codigo: '6.3.01', nome: 'Marketing e Publicidade', grupo: 'despesa', sintetica: false, codigoPai: '6.3' }),
+  linha({ codigo: '6.3.02', nome: 'Comissões sobre Serviços', grupo: 'despesa', sintetica: false, codigoPai: '6.3' }),
+  linha({ codigo: '6.3.03', nome: 'Viagens e Representação', grupo: 'despesa', sintetica: false, codigoPai: '6.3' }),
+  linha({ codigo: '6.4', nome: 'Despesas Financeiras', grupo: 'despesa', sintetica: true, codigoPai: '6' }),
+  linha({ codigo: '6.4.01', nome: 'Juros Passivos', grupo: 'despesa', sintetica: false, codigoPai: '6.4' }),
+  linha({ codigo: '6.4.02', nome: 'Taxas Bancárias', grupo: 'despesa', sintetica: false, codigoPai: '6.4' }),
+  linha({ codigo: '6.4.03', nome: 'Multas', grupo: 'despesa', sintetica: false, codigoPai: '6.4' }),
+  linha({ codigo: '6.5', nome: 'Despesas Tributárias', grupo: 'despesa', sintetica: true, codigoPai: '6' }),
+  linha({ codigo: '6.5.01', nome: 'IRPJ e CSLL', grupo: 'despesa', sintetica: false, codigoPai: '6.5' }),
+  linha({ codigo: '6.5.02', nome: 'Simples Nacional (DAS)', grupo: 'despesa', sintetica: false, codigoPai: '6.5' }),
+  linha({ codigo: '6.5.03', nome: 'Taxas e Licenças', grupo: 'despesa', sintetica: false, codigoPai: '6.5' }),
+];
+
+// ============================================================
+// TERCEIRO SETOR -- ONGs e Associações (comércio e serviço acessórios)
+// ============================================================
+const TERCEIRO_SETOR: LinhaImportacaoPlanoConta[] = [
+  linha({ codigo: '1', nome: 'ATIVO', grupo: 'ativo', sintetica: true, codigoPai: null }),
+  linha({ codigo: '1.1', nome: 'Ativo Circulante', grupo: 'ativo', sintetica: true, codigoPai: '1' }),
+  linha({ codigo: '1.1.01', nome: 'Caixa', grupo: 'ativo', sintetica: false, codigoPai: '1.1', caixaBanco: true }),
+  linha({ codigo: '1.1.02', nome: 'Bancos Conta Movimento', grupo: 'ativo', sintetica: false, codigoPai: '1.1', caixaBanco: true }),
+  linha({ codigo: '1.1.03', nome: 'Aplicações Financeiras (Recursos Vinculados a Projetos)', grupo: 'ativo', sintetica: false, codigoPai: '1.1' }),
+  linha({ codigo: '1.1.04', nome: 'Contas a Receber -- Convênios e Subvenções', grupo: 'ativo', sintetica: false, codigoPai: '1.1', aReceber: true }),
+  linha({ codigo: '1.1.05', nome: 'Contas a Receber -- Mensalidades de Associados', grupo: 'ativo', sintetica: false, codigoPai: '1.1', aReceber: true }),
+  linha({ codigo: '1.1.06', nome: 'Contas a Receber -- Atividade Econômica Acessória', grupo: 'ativo', sintetica: false, codigoPai: '1.1', aReceber: true }),
+  linha({ codigo: '1.1.07', nome: 'Estoque de Mercadorias (Atividade Acessória)', grupo: 'ativo', sintetica: false, codigoPai: '1.1' }),
+  linha({ codigo: '1.1.08', nome: 'Adiantamentos a Fornecedores/Terceiros', grupo: 'ativo', sintetica: false, codigoPai: '1.1' }),
+  linha({ codigo: '1.1.09', nome: 'Despesas Antecipadas', grupo: 'ativo', sintetica: false, codigoPai: '1.1' }),
+  linha({ codigo: '1.2', nome: 'Ativo Não Circulante', grupo: 'ativo', sintetica: true, codigoPai: '1' }),
+  linha({ codigo: '1.2.01', nome: 'Imóveis', grupo: 'ativo', sintetica: false, codigoPai: '1.2' }),
+  linha({ codigo: '1.2.02', nome: 'Veículos', grupo: 'ativo', sintetica: false, codigoPai: '1.2' }),
+  linha({ codigo: '1.2.03', nome: 'Máquinas e Equipamentos', grupo: 'ativo', sintetica: false, codigoPai: '1.2' }),
+  linha({ codigo: '1.2.04', nome: 'Móveis e Utensílios', grupo: 'ativo', sintetica: false, codigoPai: '1.2' }),
+  linha({ codigo: '1.2.05', nome: '(-) Depreciação Acumulada', grupo: 'ativo', sintetica: false, codigoPai: '1.2' }),
+  linha({ codigo: '1.2.06', nome: 'Intangível', grupo: 'ativo', sintetica: false, codigoPai: '1.2' }),
+
+  linha({ codigo: '2', nome: 'PASSIVO', grupo: 'passivo', sintetica: true, codigoPai: null }),
+  linha({ codigo: '2.1', nome: 'Passivo Circulante', grupo: 'passivo', sintetica: true, codigoPai: '2' }),
+  linha({ codigo: '2.1.01', nome: 'Fornecedores a Pagar', grupo: 'passivo', sintetica: false, codigoPai: '2.1', aPagar: true }),
+  linha({ codigo: '2.1.02', nome: 'Salários e Ordenados a Pagar', grupo: 'passivo', sintetica: false, codigoPai: '2.1', aPagar: true }),
+  linha({ codigo: '2.1.03', nome: 'Encargos Sociais a Recolher (FGTS/INSS)', grupo: 'passivo', sintetica: false, codigoPai: '2.1', aPagar: true }),
+  linha({ codigo: '2.1.04', nome: 'Impostos e Contribuições a Recolher', grupo: 'passivo', sintetica: false, codigoPai: '2.1', aPagar: true }),
+  linha({ codigo: '2.1.05', nome: 'Recursos de Convênios/Subvenções a Aplicar', grupo: 'passivo', sintetica: false, codigoPai: '2.1', aPagar: true }),
+  linha({ codigo: '2.1.06', nome: 'Empréstimos e Financiamentos -- Curto Prazo', grupo: 'passivo', sintetica: false, codigoPai: '2.1', aPagar: true }),
+  linha({ codigo: '2.1.07', nome: 'Outras Contas a Pagar', grupo: 'passivo', sintetica: false, codigoPai: '2.1', aPagar: true }),
+  linha({ codigo: '2.2', nome: 'Passivo Não Circulante', grupo: 'passivo', sintetica: true, codigoPai: '2' }),
+  linha({ codigo: '2.2.01', nome: 'Empréstimos e Financiamentos -- Longo Prazo', grupo: 'passivo', sintetica: false, codigoPai: '2.2' }),
+
+  linha({ codigo: '3', nome: 'PATRIMÔNIO SOCIAL', grupo: 'patrimonio_liquido', sintetica: true, codigoPai: null }),
+  linha({ codigo: '3.1', nome: 'Patrimônio Social', grupo: 'patrimonio_liquido', sintetica: false, codigoPai: '3' }),
+  linha({ codigo: '3.2', nome: 'Fundos e Reservas de Projetos', grupo: 'patrimonio_liquido', sintetica: false, codigoPai: '3' }),
+  linha({ codigo: '3.3', nome: 'Superávit/Déficit Acumulado do Exercício', grupo: 'patrimonio_liquido', sintetica: false, codigoPai: '3' }),
+
+  linha({ codigo: '4', nome: 'RECEITAS', grupo: 'receita', sintetica: true, codigoPai: null }),
+  linha({ codigo: '4.1', nome: 'Receitas com Restrição', grupo: 'receita', sintetica: true, codigoPai: '4' }),
+  linha({ codigo: '4.1.01', nome: 'Subvenções e Convênios Públicos', grupo: 'receita', sintetica: false, codigoPai: '4.1' }),
+  linha({ codigo: '4.1.02', nome: 'Convênios e Parcerias Privadas', grupo: 'receita', sintetica: false, codigoPai: '4.1' }),
+  linha({ codigo: '4.1.03', nome: 'Doações Vinculadas a Projetos', grupo: 'receita', sintetica: false, codigoPai: '4.1' }),
+  linha({ codigo: '4.2', nome: 'Receitas sem Restrição', grupo: 'receita', sintetica: true, codigoPai: '4' }),
+  linha({ codigo: '4.2.01', nome: 'Doações Livres', grupo: 'receita', sintetica: false, codigoPai: '4.2' }),
+  linha({ codigo: '4.2.02', nome: 'Contribuições/Mensalidades de Associados', grupo: 'receita', sintetica: false, codigoPai: '4.2' }),
+  linha({ codigo: '4.2.03', nome: 'Receita de Atividade Econômica Acessória -- Comércio', grupo: 'receita', sintetica: false, codigoPai: '4.2' }),
+  linha({ codigo: '4.2.04', nome: 'Receita de Atividade Econômica Acessória -- Serviços', grupo: 'receita', sintetica: false, codigoPai: '4.2' }),
+  linha({ codigo: '4.3', nome: 'Deduções da Receita', grupo: 'receita', sintetica: true, codigoPai: '4' }),
+  linha({ codigo: '4.3.01', nome: '(-) Impostos sobre Atividade Econômica Acessória', grupo: 'receita', sintetica: false, codigoPai: '4.3' }),
+  linha({ codigo: '4.4', nome: 'Outras Receitas', grupo: 'receita', sintetica: true, codigoPai: '4' }),
+  linha({ codigo: '4.4.01', nome: 'Receitas Financeiras', grupo: 'receita', sintetica: false, codigoPai: '4.4' }),
+  linha({ codigo: '4.4.02', nome: 'Receitas de Eventos e Captação de Recursos', grupo: 'receita', sintetica: false, codigoPai: '4.4' }),
+
+  linha({ codigo: '5', nome: 'CUSTOS', grupo: 'custo', sintetica: true, codigoPai: null }),
+  linha({ codigo: '5.1', nome: 'Custo da Mercadoria Vendida (Atividade Acessória)', grupo: 'custo', sintetica: false, codigoPai: '5' }),
+  linha({ codigo: '5.2', nome: 'Custo dos Serviços Prestados (Atividade Acessória)', grupo: 'custo', sintetica: false, codigoPai: '5' }),
+
+  linha({ codigo: '6', nome: 'DESPESAS', grupo: 'despesa', sintetica: true, codigoPai: null }),
+  linha({ codigo: '6.1', nome: 'Despesas com Projetos e Programas', grupo: 'despesa', sintetica: true, codigoPai: '6' }),
+  linha({ codigo: '6.1.01', nome: 'Pessoal Alocado a Projetos', grupo: 'despesa', sintetica: false, codigoPai: '6.1' }),
+  linha({ codigo: '6.1.02', nome: 'Materiais e Insumos de Projetos', grupo: 'despesa', sintetica: false, codigoPai: '6.1' }),
+  linha({ codigo: '6.1.03', nome: 'Serviços de Terceiros -- Projetos', grupo: 'despesa', sintetica: false, codigoPai: '6.1' }),
+  linha({ codigo: '6.1.04', nome: 'Viagens e Deslocamentos de Projetos', grupo: 'despesa', sintetica: false, codigoPai: '6.1' }),
+  linha({ codigo: '6.2', nome: 'Despesas com Pessoal (Administrativo)', grupo: 'despesa', sintetica: true, codigoPai: '6' }),
+  linha({ codigo: '6.2.01', nome: 'Salários e Ordenados', grupo: 'despesa', sintetica: false, codigoPai: '6.2' }),
+  linha({ codigo: '6.2.02', nome: 'Encargos Sociais', grupo: 'despesa', sintetica: false, codigoPai: '6.2' }),
+  linha({ codigo: '6.2.03', nome: 'Benefícios', grupo: 'despesa', sintetica: false, codigoPai: '6.2' }),
+  linha({ codigo: '6.3', nome: 'Despesas Administrativas', grupo: 'despesa', sintetica: true, codigoPai: '6' }),
+  linha({ codigo: '6.3.01', nome: 'Aluguel', grupo: 'despesa', sintetica: false, codigoPai: '6.3' }),
+  linha({ codigo: '6.3.02', nome: 'Água, Luz, Telefone e Internet', grupo: 'despesa', sintetica: false, codigoPai: '6.3' }),
+  linha({ codigo: '6.3.03', nome: 'Material de Escritório', grupo: 'despesa', sintetica: false, codigoPai: '6.3' }),
+  linha({ codigo: '6.3.04', nome: 'Honorários Contábeis e Jurídicos', grupo: 'despesa', sintetica: false, codigoPai: '6.3' }),
+  linha({ codigo: '6.3.05', nome: 'Depreciação', grupo: 'despesa', sintetica: false, codigoPai: '6.3' }),
+  linha({ codigo: '6.4', nome: 'Despesas com Captação de Recursos', grupo: 'despesa', sintetica: true, codigoPai: '6' }),
+  linha({ codigo: '6.4.01', nome: 'Eventos de Captação', grupo: 'despesa', sintetica: false, codigoPai: '6.4' }),
+  linha({ codigo: '6.4.02', nome: 'Marketing Institucional', grupo: 'despesa', sintetica: false, codigoPai: '6.4' }),
+  linha({ codigo: '6.5', nome: 'Despesas Financeiras', grupo: 'despesa', sintetica: true, codigoPai: '6' }),
+  linha({ codigo: '6.5.01', nome: 'Juros Passivos', grupo: 'despesa', sintetica: false, codigoPai: '6.5' }),
+  linha({ codigo: '6.5.02', nome: 'Taxas Bancárias', grupo: 'despesa', sintetica: false, codigoPai: '6.5' }),
+  linha({ codigo: '6.6', nome: 'Despesas Tributárias', grupo: 'despesa', sintetica: true, codigoPai: '6' }),
+  linha({ codigo: '6.6.01', nome: 'Impostos sobre Atividade Econômica Acessória', grupo: 'despesa', sintetica: false, codigoPai: '6.6' }),
+  linha({ codigo: '6.6.02', nome: 'Taxas e Licenças', grupo: 'despesa', sintetica: false, codigoPai: '6.6' }),
+];
+
+export const MODELOS_PLANO_CONTAS: Record<ModeloPlanoContas, LinhaImportacaoPlanoConta[]> = {
+  comercio: COMERCIO,
+  servico: SERVICO,
+  terceiro_setor: TERCEIRO_SETOR,
+};

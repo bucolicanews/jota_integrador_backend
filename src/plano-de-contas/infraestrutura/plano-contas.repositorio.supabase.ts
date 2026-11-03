@@ -4,8 +4,10 @@ import { GrupoContaContabil } from '../dominio/plano-conta';
 import {
   DadosAtualizacaoContaContabil,
   DadosNovaContaContabil,
+  LinhaImportacaoPlanoConta,
   PlanoConta,
   PlanoContasRepositorioPort,
+  ResultadoImportacaoPlanoContas,
 } from '../aplicacao/portas/plano-contas-repositorio.port';
 
 interface LinhaPlanoConta {
@@ -102,6 +104,84 @@ export class PlanoContasRepositorioSupabase implements PlanoContasRepositorioPor
     if (error) {
       throw new InternalServerErrorException(`Falha ao alterar status da conta contábil: ${error.message}`);
     }
+  }
+
+  async importarLote(empresaId: string, linhas: LinhaImportacaoPlanoConta[]): Promise<ResultadoImportacaoPlanoContas> {
+    const { data: existentes, error: erroExistentes } = await this.supabase.admin
+      .from('plano_contas')
+      .select('id, codigo, ativa')
+      .eq('empresa_id', empresaId);
+
+    if (erroExistentes) {
+      throw new InternalServerErrorException(`Falha ao ler plano de contas atual: ${erroExistentes.message}`);
+    }
+
+    const existentesPorCodigo = new Map((existentes ?? []).map((linha) => [linha.codigo as string, linha]));
+
+    // Passo 1: upsert sem conta_pai_id -- o pai pode ainda não ter id (conta nova no
+    // mesmo arquivo), resolve isso no passo 2.
+    const linhasParaUpsert = linhas.map((linha) => ({
+      empresa_id: empresaId,
+      codigo: linha.codigo,
+      nome: linha.nome,
+      grupo: linha.grupo,
+      sintetica: linha.sintetica,
+      conta_caixa_banco: linha.contaCaixaBanco,
+      conta_a_receber: linha.contaAReceber,
+      conta_a_pagar: linha.contaAPagar,
+      ativa: true,
+    }));
+
+    const { data: upsertadas, error: erroUpsert } = await this.supabase.admin
+      .from('plano_contas')
+      .upsert(linhasParaUpsert, { onConflict: 'empresa_id,codigo' })
+      .select('id, codigo');
+
+    if (erroUpsert) {
+      throw new InternalServerErrorException(`Falha ao importar plano de contas: ${erroUpsert.message}`);
+    }
+
+    const idPorCodigo = new Map((upsertadas ?? []).map((linha) => [linha.codigo as string, linha.id as string]));
+
+    // Passo 2: resolve conta_pai_id agora que todo código do arquivo tem id.
+    const atualizacoesPai = linhas
+      .filter((linha) => linha.codigoPai)
+      .map((linha) => ({ id: idPorCodigo.get(linha.codigo), paiId: idPorCodigo.get(linha.codigoPai as string) }))
+      .filter((item) => item.id && item.paiId);
+
+    for (const item of atualizacoesPai) {
+      const { error: erroPai } = await this.supabase.admin
+        .from('plano_contas')
+        .update({ conta_pai_id: item.paiId })
+        .eq('id', item.id);
+      if (erroPai) {
+        throw new InternalServerErrorException(`Falha ao vincular conta pai: ${erroPai.message}`);
+      }
+    }
+
+    // Passo 3: desativa (nunca apaga) quem estava ativo e não veio neste arquivo.
+    const codigosDoArquivo = new Set(linhas.map((linha) => linha.codigo));
+    const codigosParaDesativar = [...existentesPorCodigo.values()]
+      .filter((linha) => linha.ativa && !codigosDoArquivo.has(linha.codigo as string))
+      .map((linha) => linha.id as string);
+
+    if (codigosParaDesativar.length > 0) {
+      const { error: erroDesativar } = await this.supabase.admin
+        .from('plano_contas')
+        .update({ ativa: false })
+        .in('id', codigosParaDesativar);
+      if (erroDesativar) {
+        throw new InternalServerErrorException(`Falha ao desativar contas fora do novo plano: ${erroDesativar.message}`);
+      }
+    }
+
+    const criadas = linhas.filter((linha) => !existentesPorCodigo.has(linha.codigo)).length;
+
+    return {
+      criadas,
+      atualizadas: linhas.length - criadas,
+      desativadas: codigosParaDesativar.length,
+    };
   }
 
   private mapear(linha: LinhaPlanoConta): PlanoConta {
