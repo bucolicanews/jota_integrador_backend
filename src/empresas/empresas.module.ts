@@ -32,6 +32,8 @@ import { EmpresasRepositorioSupabase } from './infraestrutura/empresas.repositor
   // OPERADOR_EMPRESA pra uma empresa da carteira do contador (limitação v1 documentada
   // em AuthController -- ver commit do módulo de autenticação). ListarEmpresasUseCase
   // também exportado -- ListarUsuariosUseCase reusa ele pra resolver a carteira do contador.
-  exports: [EMPRESAS_REPOSITORIO, ListarEmpresasUseCase],
+  // CriarEmpresaUseCase exportado -- CadastroEmpresaModule reusa ele como primeiro passo
+  // do orquestrador (empresa+plano+login), sem duplicar a lógica de criação aqui.
+  exports: [EMPRESAS_REPOSITORIO, ListarEmpresasUseCase, CriarEmpresaUseCase],
 })
 export class EmpresasModule {}

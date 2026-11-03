@@ -24,7 +24,6 @@ import { AtualizarEmpresaUseCase } from '../aplicacao/casos-de-uso/atualizar-emp
 import { AtualizarModoAcessoSerproUseCase } from '../aplicacao/casos-de-uso/atualizar-modo-acesso-serpro.usecase';
 import { BloquearEmpresaUseCase } from '../aplicacao/casos-de-uso/bloquear-empresa.usecase';
 import { CorrigirCnpjEmpresaUseCase } from '../aplicacao/casos-de-uso/corrigir-cnpj-empresa.usecase';
-import { CriarEmpresaUseCase } from '../aplicacao/casos-de-uso/criar-empresa.usecase';
 import { TransferirCarteiraEmpresaUseCase } from '../aplicacao/casos-de-uso/transferir-carteira-empresa.usecase';
 import { DesbloquearEmpresaUseCase } from '../aplicacao/casos-de-uso/desbloquear-empresa.usecase';
 import { ListarEmpresasUseCase } from '../aplicacao/casos-de-uso/listar-empresas.usecase';
@@ -36,13 +35,11 @@ import { AtualizarModoAcessoSerproDto } from './dto/atualizar-modo-acesso-serpro
 import { BloquearEmpresaDto } from './dto/bloquear-empresa.dto';
 import { CorrigirCnpjEmpresaDto } from './dto/corrigir-cnpj-empresa.dto';
 import { TransferirCarteiraEmpresaDto } from './dto/transferir-carteira-empresa.dto';
-import { CriarEmpresaDto } from './dto/criar-empresa.dto';
 
 @Controller('empresas')
 @UseGuards(SupabaseAuthGuard, PapeisGuard)
 export class EmpresasController {
   constructor(
-    private readonly criarEmpresa: CriarEmpresaUseCase,
     private readonly listarEmpresas: ListarEmpresasUseCase,
     private readonly obterEmpresa: ObterEmpresaUseCase,
     private readonly obterEmpresaInterna: ObterEmpresaInternaUseCase,
@@ -55,27 +52,10 @@ export class EmpresasController {
     private readonly supabase: SupabaseService,
   ) {}
 
-  @Post()
-  @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO)
-  async criar(
-    @Body() dto: CriarEmpresaDto,
-    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
-  ): Promise<Empresa> {
-    const contadorId = usuarioAtual.papel === Papel.SUPER_ADMIN ? dto.contadorId : usuarioAtual.contadorId;
-
-    if (!contadorId) {
-      throw new BadRequestException('contadorId é obrigatório');
-    }
-
-    return this.criarEmpresa.executar({
-      contadorId,
-      razaoSocial: dto.razaoSocial,
-      nomeFantasia: dto.nomeFantasia ?? null,
-      cnpj: dto.cnpj,
-      regimeTributario: dto.regimeTributario ?? null,
-      modoAcessoSerpro: dto.modoAcessoSerpro,
-    });
-  }
+  // POST / (criar empresa) mudou de dono -- agora é CadastroEmpresaController, que exige
+  // plano+cobrança+login do cliente junto (obrigatório, ver CadastrarEmpresaComPlanoUseCase).
+  // Continua sendo a mesma rota pública `POST /empresas`, só que noutro módulo (Nest roteia
+  // por path+método, não por módulo -- não precisa os dois controllers concordarem nisso).
 
   @Get()
   @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO, Papel.OPERADOR_CONTADOR)

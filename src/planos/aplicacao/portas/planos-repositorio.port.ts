@@ -27,6 +27,7 @@ export interface DadosAtualizacaoPlano {
   descricao?: string | null;
   modulos?: string[];
   preco?: number;
+  periodicidade?: Periodicidade;
   ativo?: boolean;
   dataValidade?: string | null;
   gratuito?: boolean;

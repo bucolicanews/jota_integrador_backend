@@ -82,6 +82,7 @@ export class PlanosRepositorioSupabase implements PlanosRepositorioPort {
     if (dados.descricao !== undefined) campos.descricao = dados.descricao;
     if (dados.modulos !== undefined) campos.modulos = dados.modulos;
     if (dados.preco !== undefined) campos.preco = dados.preco;
+    if (dados.periodicidade !== undefined) campos.periodicidade = dados.periodicidade;
     if (dados.ativo !== undefined) campos.ativo = dados.ativo;
     if (dados.dataValidade !== undefined) campos.data_validade = dados.dataValidade;
     if (dados.gratuito !== undefined) campos.gratuito = dados.gratuito;
