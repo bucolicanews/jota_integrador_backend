@@ -16,8 +16,11 @@ interface LinhaUsuario {
   mfa_habilitado: boolean;
   status: 'ativo' | 'inativo';
   bloqueado: boolean;
+  avatar_ref: string | null;
   papeis: { nome: Papel } | { nome: Papel }[] | null;
 }
+
+const COLUNAS_SELECT = 'id, nome, email, contador_id, empresa_id, mfa_habilitado, status, bloqueado, avatar_ref, papeis(nome)';
 
 @Injectable()
 export class UsuariosRepositorioSupabase implements UsuariosRepositorioPort {
@@ -36,7 +39,7 @@ export class UsuariosRepositorioSupabase implements UsuariosRepositorioPort {
         contador_id: dados.contadorId,
         empresa_id: dados.empresaId,
       })
-      .select('id, nome, email, contador_id, empresa_id, mfa_habilitado, status, bloqueado, papeis(nome)')
+      .select(COLUNAS_SELECT)
       .single();
 
     if (error || !data) {
@@ -49,7 +52,7 @@ export class UsuariosRepositorioSupabase implements UsuariosRepositorioPort {
   async buscarPorId(id: string): Promise<Usuario | null> {
     const { data, error } = await this.supabase.admin
       .from('usuarios')
-      .select('id, nome, email, contador_id, empresa_id, mfa_habilitado, status, bloqueado, papeis(nome)')
+      .select(COLUNAS_SELECT)
       .eq('id', id)
       .maybeSingle();
 
@@ -66,7 +69,7 @@ export class UsuariosRepositorioSupabase implements UsuariosRepositorioPort {
   async buscarPorEmail(email: string): Promise<Usuario | null> {
     const { data, error } = await this.supabase.admin
       .from('usuarios')
-      .select('id, nome, email, contador_id, empresa_id, mfa_habilitado, status, bloqueado, papeis(nome)')
+      .select(COLUNAS_SELECT)
       .eq('email', email)
       .maybeSingle();
 
@@ -125,10 +128,18 @@ export class UsuariosRepositorioSupabase implements UsuariosRepositorioPort {
     }
   }
 
+  async atualizarAvatarRef(id: string, avatarRef: string | null): Promise<void> {
+    const { error } = await this.supabase.admin.from('usuarios').update({ avatar_ref: avatarRef }).eq('id', id);
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao atualizar foto de perfil: ${error.message}`);
+    }
+  }
+
   async listar(filtro: { contadorId: string | null; empresaIds: string[] }): Promise<Usuario[]> {
     let consulta = this.supabase.admin
       .from('usuarios')
-      .select('id, nome, email, contador_id, empresa_id, mfa_habilitado, status, bloqueado, papeis(nome)')
+      .select(COLUNAS_SELECT)
       .order('nome', { ascending: true });
 
     if (filtro.contadorId && filtro.empresaIds.length > 0) {
@@ -180,6 +191,7 @@ export class UsuariosRepositorioSupabase implements UsuariosRepositorioPort {
       mfaHabilitado: linha.mfa_habilitado,
       status: linha.status,
       bloqueado: linha.bloqueado,
+      avatarUrl: linha.avatar_ref,
     };
   }
 }

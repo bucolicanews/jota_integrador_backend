@@ -8,6 +8,7 @@ import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.js';
 import { DebitarCreditosUseCase } from '../../../creditos/aplicacao/casos-de-uso/debitar-creditos.usecase';
 import { EstornarCreditosUseCase } from '../../../creditos/aplicacao/casos-de-uso/estornar-creditos.usecase';
 import { custoDaOperacao } from '../../../creditos/dominio/credito';
+import { SaldoInsuficienteError } from '../../../creditos/aplicacao/portas/creditos-repositorio.port';
 import {
   ASSINATURAS_REPOSITORIO,
   AssinaturasRepositorioPort,
@@ -321,7 +322,14 @@ export class SincronizarDasEmpresaUseCase {
     // fungível de créditos -- fora dela, segue o fluxo normal de débito/estorno.
     const dentroDaCota = await this.verificarCotaIncluida.executar(empresa.id, planoId, params.idSistema);
     if (!dentroDaCota) {
-      await this.debitarCreditos.executar(empresa.contadorId, empresa.id, params.custoOperacao, params.motivo);
+      try {
+        await this.debitarCreditos.executar(empresa.contadorId, empresa.id, params.custoOperacao, params.motivo);
+      } catch (erro) {
+        if (erro instanceof SaldoInsuficienteError) {
+          throw new ForbiddenException('Saldo de créditos insuficiente pra consultar o SERPRO');
+        }
+        throw erro;
+      }
     }
 
     let sucesso = false;

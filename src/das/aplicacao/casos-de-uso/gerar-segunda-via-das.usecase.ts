@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundEx
 import { DebitarCreditosUseCase } from '../../../creditos/aplicacao/casos-de-uso/debitar-creditos.usecase';
 import { EstornarCreditosUseCase } from '../../../creditos/aplicacao/casos-de-uso/estornar-creditos.usecase';
 import { custoDaOperacao } from '../../../creditos/dominio/credito';
+import { SaldoInsuficienteError } from '../../../creditos/aplicacao/portas/creditos-repositorio.port';
 import {
   ASSINATURAS_REPOSITORIO,
   AssinaturasRepositorioPort,
@@ -107,7 +108,14 @@ export class GerarSegundaViaDasUseCase {
     const dataConsolidacao = dataAlvo.toISOString().slice(0, 10).replace(/-/g, '');
     const dentroDaCota = await this.verificarCotaIncluida.executar(empresaId, assinatura.planoId, ID_SISTEMA_PGDASD);
     if (!dentroDaCota) {
-      await this.debitarCreditos.executar(empresa.contadorId, empresaId, CUSTO_SIMPLES_NACIONAL, `Gerar 2ª via do DAS -- competência ${item.competencia}`);
+      try {
+        await this.debitarCreditos.executar(empresa.contadorId, empresaId, CUSTO_SIMPLES_NACIONAL, `Gerar 2ª via do DAS -- competência ${item.competencia}`);
+      } catch (erro) {
+        if (erro instanceof SaldoInsuficienteError) {
+          throw new ForbiddenException('Saldo de créditos insuficiente pra gerar a 2ª via do DAS');
+        }
+        throw erro;
+      }
     }
 
     let sucesso = false;

@@ -12,19 +12,25 @@ import {
   Post,
   Put,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import {
   EMPRESAS_REPOSITORIO,
   EmpresasRepositorioPort,
 } from '../../empresas/aplicacao/portas/empresas-repositorio.port';
 import { ESCOPO_POR_PAPEL, Papel } from '../dominio/papel';
+import { AtualizarAvatarProprioUseCase } from '../aplicacao/casos-de-uso/atualizar-avatar-proprio.usecase';
 import { AtualizarNomeProprioUseCase } from '../aplicacao/casos-de-uso/atualizar-nome-proprio.usecase';
 import { AtualizarPapelUsuarioUseCase } from '../aplicacao/casos-de-uso/atualizar-papel-usuario.usecase';
 import { BloquearUsuarioUseCase } from '../aplicacao/casos-de-uso/bloquear-usuario.usecase';
 import { ConcederPermissaoUseCase } from '../aplicacao/casos-de-uso/conceder-permissao.usecase';
-import { CriarUsuarioUseCase } from '../aplicacao/casos-de-uso/criar-usuario.usecase';
+import { CriarUsuarioUseCase, ResultadoCriarUsuario } from '../aplicacao/casos-de-uso/criar-usuario.usecase';
 import { DesbloquearUsuarioUseCase } from '../aplicacao/casos-de-uso/desbloquear-usuario.usecase';
+import { GerarLinkAcessoUseCase } from '../aplicacao/casos-de-uso/gerar-link-acesso.usecase';
 import { ListarPermissoesUsuarioUseCase, PermissoesDoUsuario } from '../aplicacao/casos-de-uso/listar-permissoes-usuario.usecase';
 import { ListarUsuariosUseCase } from '../aplicacao/casos-de-uso/listar-usuarios.usecase';
 import { LogoutGlobalUseCase } from '../aplicacao/casos-de-uso/logout-global.usecase';
@@ -47,9 +53,11 @@ export class AuthController {
   constructor(
     private readonly criarUsuario: CriarUsuarioUseCase,
     private readonly atualizarNomeProprio: AtualizarNomeProprioUseCase,
+    private readonly atualizarAvatarProprio: AtualizarAvatarProprioUseCase,
     private readonly atualizarPapelUsuario: AtualizarPapelUsuarioUseCase,
     private readonly bloquearUsuario: BloquearUsuarioUseCase,
     private readonly desbloquearUsuario: DesbloquearUsuarioUseCase,
+    private readonly gerarLinkAcesso: GerarLinkAcessoUseCase,
     private readonly obterPerfil: ObterPerfilUseCase,
     private readonly logoutGlobal: LogoutGlobalUseCase,
     private readonly listarPermissoesUsuario: ListarPermissoesUsuarioUseCase,
@@ -71,6 +79,23 @@ export class AuthController {
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
   ): Promise<Usuario> {
     return this.atualizarNomeProprio.executar(usuarioAtual.id, dto.nome);
+  }
+
+  /** Auto-serviço: qualquer papel autenticado troca a própria foto de perfil. 2MB, JPG/PNG/WEBP. */
+  @Post('me/avatar')
+  @UseInterceptors(FileInterceptor('arquivo', { storage: memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } }))
+  async atualizarMeuAvatar(
+    @UploadedFile() arquivo: Express.Multer.File | undefined,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<Usuario> {
+    if (!arquivo) {
+      throw new BadRequestException('Arquivo da imagem (campo "arquivo") é obrigatório');
+    }
+    return this.atualizarAvatarProprio.executar(usuarioAtual.id, {
+      buffer: arquivo.buffer,
+      mimetype: arquivo.mimetype,
+      size: arquivo.size,
+    });
   }
 
   /** Une "meus funcionários" (escopo contador) + "funcionários dos clientes" (escopo empresa) numa lista só -- o frontend agrupa visualmente por vínculo. */
@@ -106,7 +131,7 @@ export class AuthController {
   async criar(
     @Body() dto: CriarUsuarioDto,
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
-  ): Promise<Usuario> {
+  ): Promise<ResultadoCriarUsuario> {
     const vinculo = await this.resolverVinculoPermitido(
       usuarioAtual,
       dto.papel,
@@ -121,6 +146,19 @@ export class AuthController {
       contadorId: vinculo.contadorId,
       empresaId: vinculo.empresaId,
     });
+  }
+
+  /** Reemite o link pra um usuário que já existe -- nunca recebeu o convite, perdeu, etc. */
+  @Post('usuarios/:id/link-acesso')
+  @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
+  async reemitirLinkAcesso(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ linkAcesso: string }> {
+    const alvo = await this.obterPerfil.executar(id);
+    this.exigirAutoridadeSobre(usuarioAtual, alvo);
+
+    return this.gerarLinkAcesso.executar(id);
   }
 
   @Patch('usuarios/:id/papel')

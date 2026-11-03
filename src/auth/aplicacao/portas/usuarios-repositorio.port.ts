@@ -10,6 +10,12 @@ export interface Usuario {
   mfaHabilitado: boolean;
   status: 'ativo' | 'inativo';
   bloqueado: boolean;
+  /**
+   * Antes de passar por ObterPerfilUseCase/AtualizarAvatarProprioUseCase isso é o `avatar_ref`
+   * crú (path no bucket) ou null -- esses dois usecases resolvem pra signed URL antes de
+   * devolver ao controller. Nunca expor o valor crú pro frontend.
+   */
+  avatarUrl: string | null;
 }
 
 export interface DadosNovoUsuario {
@@ -41,6 +47,7 @@ export interface UsuariosRepositorioPort {
   marcarBloqueio(id: string, bloqueado: boolean, motivo: string | null, executadoPorId: string): Promise<void>;
   buscarIdPapelPorNome(nomePapel: Papel): Promise<string>;
   atualizarNome(id: string, nome: string): Promise<void>;
+  atualizarAvatarRef(id: string, avatarRef: string | null): Promise<void>;
 }
 
 export const USUARIOS_REPOSITORIO = Symbol('USUARIOS_REPOSITORIO');

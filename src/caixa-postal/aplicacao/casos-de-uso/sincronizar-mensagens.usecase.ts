@@ -2,6 +2,7 @@ import { ForbiddenException, Inject, Injectable, InternalServerErrorException } 
 import { DebitarCreditosUseCase } from '../../../creditos/aplicacao/casos-de-uso/debitar-creditos.usecase';
 import { EstornarCreditosUseCase } from '../../../creditos/aplicacao/casos-de-uso/estornar-creditos.usecase';
 import { custoDaOperacao } from '../../../creditos/dominio/credito';
+import { SaldoInsuficienteError } from '../../../creditos/aplicacao/portas/creditos-repositorio.port';
 import {
   ASSINATURAS_REPOSITORIO,
   AssinaturasRepositorioPort,
@@ -74,12 +75,19 @@ export class SincronizarMensagensUseCase {
       throw new ForbiddenException('Empresa sem plano de créditos ativo -- contate seu contador');
     }
 
-    await this.debitarCreditos.executar(
-      empresa.contadorId,
-      empresaId,
-      CUSTO_OPERACAO,
-      `Sincronizar Caixa Postal -- empresa ${empresaId}`,
-    );
+    try {
+      await this.debitarCreditos.executar(
+        empresa.contadorId,
+        empresaId,
+        CUSTO_OPERACAO,
+        `Sincronizar Caixa Postal -- empresa ${empresaId}`,
+      );
+    } catch (erro) {
+      if (erro instanceof SaldoInsuficienteError) {
+        throw new ForbiddenException('Saldo de créditos insuficiente pra sincronizar o Caixa Postal');
+      }
+      throw erro;
+    }
 
     let sucesso = false;
     let codigoErro: string | null = null;
