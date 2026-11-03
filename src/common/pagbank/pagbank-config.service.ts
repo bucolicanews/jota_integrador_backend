@@ -30,7 +30,18 @@ export class PagbankConfigService {
     private readonly config: ConfigService,
   ) {}
 
-  async obterConfiguracaoSplit(): Promise<ConfiguracaoSplitPagBank> {
+  /**
+   * @param webhookPath Segmento final da rota do webhook DESTE produto (ex: 'creditos-avulsos',
+   * 'licencas-modulo', 'licencas-modulo-atacado', 'assinatura-creditos') -- precisa bater
+   * exatamente com o `@Post(...)` do controller que vai receber a notificação. Obrigatório
+   * em todo usecase que INICIA uma cobrança (vai dentro de `webhook_url` pro PagBank); cada
+   * produto tem seu próprio controller/rota, nunca reusar o path de outro produto (já
+   * aconteceu -- os 4 produtos liam uma única PAGBANK_WEBHOOK_URL fixa, então 3 deles
+   * notificavam o handler errado e o pagamento nunca confirmava). Opcional só pra quem
+   * NÃO cria cobrança (processamento de webhook já recebido, consulta de config) e por
+   * isso nunca lê `webhookUrl` de volta.
+   */
+  async obterConfiguracaoSplit(webhookPath?: string): Promise<ConfiguracaoSplitPagBank> {
     const { data, error } = await this.supabase.admin
       .from('configuracoes_plataforma')
       .select('pagbank_account_id, pagbank_sandbox, pagbank_split_habilitado')
@@ -46,8 +57,8 @@ export class PagbankConfigService {
     // (nome usado no projeto irmão serer_delivery) -- qualquer um dos dois.
     const token = this.config.get<string>('PAGBANK_PLATFORM_TOKEN') ?? this.config.get<string>('PAGBANK_TOKEN') ?? '';
     const sandbox = linha.pagbank_sandbox;
-    const webhookUrl =
-      this.config.get<string>('PAGBANK_WEBHOOK_URL') ?? 'http://localhost:3002/webhooks/pagbank/licencas-modulo';
+    const baseUrl = this.config.get<string>('PAGBANK_WEBHOOK_BASE_URL') ?? 'http://localhost:3002';
+    const webhookUrl = `${baseUrl}/webhooks/pagbank/${webhookPath ?? 'nao-aplicavel'}`;
 
     return {
       client: new PagBankClient(token, sandbox),

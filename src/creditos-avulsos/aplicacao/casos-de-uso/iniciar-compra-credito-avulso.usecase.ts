@@ -117,7 +117,7 @@ export class IniciarCompraCreditoAvulsoUseCase {
       throw new NotFoundException('Pacote de crédito não encontrado ou não está mais disponível');
     }
 
-    const { client, webhookUrl } = await this.pagbankConfig.obterConfiguracaoSplit();
+    const { client, webhookUrl } = await this.pagbankConfig.obterConfiguracaoSplit('creditos-avulsos');
 
     const pagamento = await this.pagamentosRepositorio.criar({
       empresaId: dados.empresaId,
@@ -181,7 +181,7 @@ export class IniciarCompraCreditoAvulsoUseCase {
       throw new BadRequestException('O contador precisa cadastrar a conta PagBank antes de vender crédito avulso com split');
     }
 
-    const { client, webhookUrl, splitHabilitado, platformAccountId } = await this.pagbankConfig.obterConfiguracaoSplit();
+    const { client, webhookUrl, splitHabilitado, platformAccountId } = await this.pagbankConfig.obterConfiguracaoSplit('creditos-avulsos');
     if (!splitHabilitado) {
       throw new BadRequestException('Pagamentos com split estão temporariamente indisponíveis -- tente comprar direto da plataforma enquanto isso');
     }
@@ -252,7 +252,7 @@ export class IniciarCompraCreditoAvulsoUseCase {
     const { valorPorCredito } = await this.configuracaoRepositorio.obter();
     const valorTotal = Math.round(quantidade * valorPorCredito * 100) / 100;
 
-    const { client, webhookUrl } = await this.pagbankConfig.obterConfiguracaoSplit();
+    const { client, webhookUrl } = await this.pagbankConfig.obterConfiguracaoSplit('creditos-avulsos');
 
     const pagamento = await this.pagamentosRepositorio.criar({
       empresaId: dados.empresaId,
