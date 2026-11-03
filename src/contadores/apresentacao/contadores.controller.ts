@@ -18,6 +18,7 @@ import { SupabaseAuthGuard } from '../../auth/apresentacao/guards/supabase-auth.
 import { UsuarioAutenticado } from '../../auth/apresentacao/tipos/requisicao-autenticada';
 import { ehPapelDePlataforma, Papel } from '../../auth/dominio/papel';
 import { AtualizarContadorUseCase } from '../aplicacao/casos-de-uso/atualizar-contador.usecase';
+import { AtualizarModulosLiberadosContadorUseCase } from '../aplicacao/casos-de-uso/atualizar-modulos-liberados-contador.usecase';
 import { BloquearContadorUseCase } from '../aplicacao/casos-de-uso/bloquear-contador.usecase';
 import { CorrigirCnpjCpfContadorUseCase } from '../aplicacao/casos-de-uso/corrigir-cnpj-cpf-contador.usecase';
 import { CriarContadorUseCase } from '../aplicacao/casos-de-uso/criar-contador.usecase';
@@ -28,6 +29,7 @@ import { ObterContadorUseCase } from '../aplicacao/casos-de-uso/obter-contador.u
 import { Contador } from '../aplicacao/portas/contadores-repositorio.port';
 import { AtualizarContadorDto } from './dto/atualizar-contador.dto';
 import { BloquearContadorDto } from './dto/bloquear-contador.dto';
+import { AtualizarModulosLiberadosContadorDto } from './dto/atualizar-modulos-liberados-contador.dto';
 import { CorrigirCnpjCpfContadorDto } from './dto/corrigir-cnpj-cpf-contador.dto';
 import { CriarContadorDto } from './dto/criar-contador.dto';
 
@@ -43,6 +45,7 @@ export class ContadoresController {
     private readonly desbloquearContador: DesbloquearContadorUseCase,
     private readonly corrigirCnpjCpfContador: CorrigirCnpjCpfContadorUseCase,
     private readonly deletarContador: DeletarContadorUseCase,
+    private readonly atualizarModulosLiberados: AtualizarModulosLiberadosContadorUseCase,
   ) {}
 
   @Post()
@@ -101,6 +104,16 @@ export class ContadoresController {
     this.exigirPosse(usuarioAtual, id);
     await this.corrigirCnpjCpfContador.executar(id, dto.cnpjCpf, usuarioAtual.id);
     return { ok: true };
+  }
+
+  /** Só plataforma -- controla o que o escritório PRÓPRIO do contador pode usar, nunca empresa-cliente da carteira. */
+  @Patch(':id/modulos')
+  @Papeis(Papel.SUPER_ADMIN, Papel.ADMIN_FINANCEIRO, Papel.ADMIN_SUPORTE)
+  async atualizarModulos(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AtualizarModulosLiberadosContadorDto,
+  ): Promise<Contador> {
+    return this.atualizarModulosLiberados.executar(id, dto.modulos);
   }
 
   @Post(':id/bloquear')

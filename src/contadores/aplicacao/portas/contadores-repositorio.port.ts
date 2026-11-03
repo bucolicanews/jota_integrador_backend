@@ -9,12 +9,9 @@ export interface Contador {
   tipo: TipoContador;
   status: StatusContador;
   bloqueado: boolean;
-  stripeCustomerId: string | null;
-  stripeAccountId: string | null;
-  stripeChargesEnabled: boolean;
-  stripePayoutsEnabled: boolean;
-  stripeDetailsSubmitted: boolean;
   pagbankAccountId: string | null;
+  /** Módulos que o escritório PRÓPRIO do contador (empresa interna_contador) pode usar -- nunca afeta empresa-cliente da carteira. */
+  modulosLiberados: string[];
 }
 
 export interface DadosNovoContador {
@@ -40,17 +37,10 @@ export interface ContadoresRepositorioPort {
   /** Correção pontual de CPF/CNPJ já cadastrado errado -- fora de `atualizar()` de propósito (ação sensível, sempre auditada). */
   atualizarCnpjCpf(id: string, cnpjCpf: string): Promise<void>;
   marcarBloqueio(id: string, bloqueado: boolean, motivo: string | null, executadoPorId: string): Promise<void>;
-  /** Só o backend chama (nunca vindo de um DTO de update genérico) -- setado ao criar o Stripe Customer na primeira assinatura. */
-  atualizarStripeCustomerId(id: string, stripeCustomerId: string): Promise<void>;
-  /** Setado ao criar a conta Stripe Connect Express (onboarding de honorários). */
-  atualizarStripeAccountId(id: string, stripeAccountId: string): Promise<void>;
-  /** Só via webhook `account.updated` assinado (docs/SEGURANCA.md §7) -- nunca por endpoint que o frontend chama direto. */
-  atualizarStatusStripeConnect(
-    id: string,
-    status: { chargesEnabled: boolean; payoutsEnabled: boolean; detailsSubmitted: boolean },
-  ): Promise<void>;
   /** Colado manualmente pelo contador (sem OAuth) -- necessário pra receber a parte dele no split PagBank. */
   atualizarPagbankAccountId(id: string, pagbankAccountId: string): Promise<void>;
+  /** Só admin edita -- controla o que o escritório PRÓPRIO do contador pode usar, nunca empresa-cliente. */
+  atualizarModulosLiberados(id: string, modulos: string[]): Promise<void>;
   /**
    * Lista em português o que impede excluir este contador -- carteira não vazia, login
    * ativo, qualquer atividade comercial/financeira (própria ou da empresa interna dele).
