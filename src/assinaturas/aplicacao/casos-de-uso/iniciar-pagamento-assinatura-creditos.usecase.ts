@@ -17,7 +17,10 @@ export interface DadosIniciarPagamentoAssinaturaCreditos {
   contadorId: string;
   empresaId: string;
   planoId: string;
-  metodo: 'pix';
+  metodo: 'pix' | 'cartao';
+  /** Obrigatório quando metodo='cartao' -- PagSeguro.encryptCard() no navegador, nunca número/CVV em texto puro. */
+  cardEncrypted?: string;
+  installments?: number;
   customerEmail: string;
   customerTelefoneE164: string | null;
 }
@@ -56,6 +59,10 @@ export class IniciarPagamentoAssinaturaCreditosUseCase {
   ) {}
 
   async executar(dados: DadosIniciarPagamentoAssinaturaCreditos): Promise<ResultadoIniciarPagamentoAssinaturaCreditos> {
+    if (dados.metodo === 'cartao' && !dados.cardEncrypted) {
+      throw new BadRequestException('cardEncrypted é obrigatório pra pagamento com cartão');
+    }
+
     const pertence = await this.empresasRepositorio.pertenceAoContador(dados.empresaId, dados.contadorId);
     if (!pertence) {
       throw new NotFoundException('Empresa não encontrada na sua carteira');
@@ -82,7 +89,7 @@ export class IniciarPagamentoAssinaturaCreditosUseCase {
       throw new BadRequestException('Cadastre sua conta PagBank antes de vender com cobrança real');
     }
 
-    const { client, webhookUrl, splitHabilitado, platformAccountId } = await this.pagbankConfig.obterConfiguracaoSplit();
+    const { client, webhookUrl, splitHabilitado, platformAccountId } = await this.pagbankConfig.obterConfiguracaoSplit('assinatura-creditos');
     if (!splitHabilitado) {
       throw new BadRequestException('Pagamentos com split estão temporariamente indisponíveis -- ative o plano manualmente enquanto isso');
     }
@@ -119,33 +126,38 @@ export class IniciarPagamentoAssinaturaCreditosUseCase {
     const platformAmountCentavos = Math.round(platformAmount * 100);
     const sellerAmountCentavos = valorTotalCentavos - platformAmountCentavos;
 
+    const params = {
+      reference_id: `ASSINATURA_${pagamento.id}`,
+      valor_centavos: valorTotalCentavos,
+      customer: {
+        name: empresa.razaoSocial,
+        email: dados.customerEmail,
+        tax_id: empresa.cnpj.replace(/\D/g, ''),
+        phones: telefoneParaPagBank(dados.customerTelefoneE164),
+      },
+      itens: [{ name: `Assinatura: ${plano.nome}`, quantity: 1, unit_amount: valorTotalCentavos }],
+      webhook_url: webhookUrl,
+      splits: {
+        method: 'FIXED' as const,
+        receivers: [
+          { account: { id: contador.pagbankAccountId }, amount: { value: sellerAmountCentavos } },
+          { account: { id: platformAccountId }, amount: { value: platformAmountCentavos } },
+        ],
+      },
+    };
+
     let resposta: any;
     try {
-      resposta = await client.criarOrdemPix({
-        reference_id: `ASSINATURA_${pagamento.id}`,
-        valor_centavos: valorTotalCentavos,
-        customer: {
-          name: empresa.razaoSocial,
-          email: dados.customerEmail,
-          tax_id: empresa.cnpj.replace(/\D/g, ''),
-          phones: telefoneParaPagBank(dados.customerTelefoneE164),
-        },
-        itens: [{ name: `Assinatura: ${plano.nome}`, quantity: 1, unit_amount: valorTotalCentavos }],
-        webhook_url: webhookUrl,
-        splits: {
-          method: 'FIXED',
-          receivers: [
-            { account: { id: contador.pagbankAccountId }, amount: { value: sellerAmountCentavos } },
-            { account: { id: platformAccountId }, amount: { value: platformAmountCentavos } },
-          ],
-        },
-      });
+      resposta =
+        dados.metodo === 'cartao'
+          ? await client.criarOrdemCartao({ ...params, cardEncrypted: dados.cardEncrypted!, installments: dados.installments })
+          : await client.criarOrdemPix(params);
     } catch (erro) {
       // Marca falhou antes de propagar -- senão o pagamento fica 'pendente' pra sempre
       // (índice único de 1 pendente por empresa bloquearia qualquer nova tentativa).
       await this.pagamentosRepositorio.marcarFalhou(pagamento.id);
-      this.logger.error(`Falha ao criar ordem PIX PagBank (pagamento=${pagamento.id}): ${(erro as Error).message}`);
-      throw new BadRequestException((erro as Error).message ?? 'Falha ao gerar o PIX na PagBank');
+      this.logger.error(`Falha ao criar ordem PagBank (pagamento=${pagamento.id}): ${(erro as Error).message}`);
+      throw new BadRequestException((erro as Error).message ?? 'Falha ao processar o pagamento na PagBank');
     }
 
     const charge = resposta?.charges?.[0];
@@ -153,6 +165,15 @@ export class IniciarPagamentoAssinaturaCreditosUseCase {
     const pixQrUrl: string | null = charge?.links?.find((l: any) => l.rel === 'QRCODE.PNG')?.href ?? null;
 
     await this.pagamentosRepositorio.definirDadosPix(pagamento.id, { pagbankOrderId: resposta.id, pixCode, pixQrUrl });
+
+    // Cartão processa síncrono (capture:true) -- se já veio DECLINED, avisa na hora em vez
+    // de deixar o usuário esperando um webhook que só confirmaria o óbvio (mesmo
+    // tratamento de IniciarCompraCreditoAvulsoUseCase).
+    if (charge?.status === 'DECLINED') {
+      await this.pagamentosRepositorio.marcarFalhou(pagamento.id);
+      const motivo = charge?.payment_response?.message ?? 'Cartão recusado';
+      throw new BadRequestException(`Pagamento recusado: ${motivo}`);
+    }
 
     return { pagamentoId: pagamento.id, pixCode, pixQrUrl };
   }

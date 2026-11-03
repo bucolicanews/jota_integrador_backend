@@ -1,6 +1,6 @@
 import { Periodicidade } from '../../planos/dominio/plano';
 
-export type StatusAssinatura = 'ativa' | 'bloqueada' | 'cancelada';
+export type StatusAssinatura = 'ativa' | 'vencida' | 'bloqueada' | 'cancelada';
 
 /**
  * Próximo "válido até" depois de um pagamento confirmado -- renova a PARTIR do fim do

@@ -26,6 +26,12 @@ const PAPEIS_EMPRESA: Papel[] = [Papel.EMPRESARIO_DONO, Papel.OPERADOR_EMPRESA];
  * `/webhooks/...`, `/contadores/.../empresas/.../assinatura`) nunca são afetadas. Papéis
  * de contador/plataforma nunca são bloqueados aqui (precisam continuar acessando a
  * própria empresa mesmo bloqueada, pra poder reativar/cobrar de novo).
+ *
+ * Exceção: `/empresas/<id>/assinatura/...` (AssinaturaEmpresaController) nunca é
+ * bloqueado, mesmo pra empresa sem plano ativo -- é exatamente a rota que ela precisa pra
+ * ver/pagar a própria cobrança pendente (ex: cadastro feito com "cliente paga depois").
+ * Bloquear isso também viraria um beco sem saída: sem assinatura ativa, mas também sem
+ * conseguir chegar na tela que ativaria uma.
  */
 @Injectable()
 export class AssinaturaAtivaInterceptor implements NestInterceptor {
@@ -46,6 +52,10 @@ export class AssinaturaAtivaInterceptor implements NestInterceptor {
     if (!empresaId || empresaId !== usuario.empresaId) {
       // Rota não é /empresas/<id>/... (ex: /auth/me) -- sempre libera. empresaId
       // diferente do próprio -- não é esse interceptor que decide (guard de posse já rejeita).
+      return next.handle();
+    }
+    if (segmentos[2] === 'assinatura') {
+      // Ver comentário da classe -- ela precisa conseguir chegar aqui mesmo bloqueada.
       return next.handle();
     }
 

@@ -8,7 +8,9 @@ import { EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../../empresas/ap
 import { IniciarPagamentoAssinaturaCreditosUseCase, ResultadoIniciarPagamentoAssinaturaCreditos } from '../aplicacao/casos-de-uso/iniciar-pagamento-assinatura-creditos.usecase';
 import { ListarPlanosRevendaDisponiveisUseCase, PlanoRevendaDisponivelAssinatura } from '../aplicacao/casos-de-uso/listar-planos-revenda-disponiveis.usecase';
 import { ObterAssinaturaAtualUseCase } from '../aplicacao/casos-de-uso/obter-assinatura-atual.usecase';
+import { ObterPagamentoPendenteAssinaturaUseCase } from '../aplicacao/casos-de-uso/obter-pagamento-pendente-assinatura.usecase';
 import { Assinatura } from '../aplicacao/portas/assinaturas-repositorio.port';
+import { PagamentoAssinaturaCredito } from '../aplicacao/portas/pagamentos-assinatura-creditos-repositorio.port';
 import { IniciarPagamentoAssinaturaDto } from './dto/iniciar-pagamento-assinatura.dto';
 
 /**
@@ -24,6 +26,7 @@ export class AssinaturaEmpresaController {
   constructor(
     @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,
     private readonly obterAssinaturaAtual: ObterAssinaturaAtualUseCase,
+    private readonly obterPagamentoPendente: ObterPagamentoPendenteAssinaturaUseCase,
     private readonly listarPlanosRevenda: ListarPlanosRevendaDisponiveisUseCase,
     private readonly iniciarPagamento: IniciarPagamentoAssinaturaCreditosUseCase,
   ) {}
@@ -35,6 +38,16 @@ export class AssinaturaEmpresaController {
   ): Promise<Assinatura | null> {
     this.exigirPosse(usuarioAtual, empresaId);
     return this.obterAssinaturaAtual.executar(empresaId);
+  }
+
+  /** Cobrança pendente já gerada (por ela mesma ou pelo contador na criação da empresa) -- evita "Nenhuma assinatura ainda" sem mostrar o PIX/cartão que já existe. */
+  @Get('pagamento-pendente')
+  async pagamentoPendente(
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<PagamentoAssinaturaCredito | null> {
+    this.exigirPosse(usuarioAtual, empresaId);
+    return this.obterPagamentoPendente.executar(empresaId);
   }
 
   @Get('planos-revenda')
@@ -62,6 +75,8 @@ export class AssinaturaEmpresaController {
       empresaId,
       planoId: dto.planoId,
       metodo: dto.metodo,
+      cardEncrypted: dto.cardEncrypted,
+      installments: dto.installments,
       customerEmail: dto.customerEmail,
       customerTelefoneE164: dto.customerTelefoneE164 ?? null,
     });

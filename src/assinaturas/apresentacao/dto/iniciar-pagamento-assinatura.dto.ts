@@ -1,11 +1,21 @@
-import { IsEmail, IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsEmail, IsIn, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 
 export class IniciarPagamentoAssinaturaDto {
   @IsUUID()
   planoId!: string;
 
-  @IsIn(['pix'])
-  metodo!: 'pix';
+  @IsIn(['pix', 'cartao'])
+  metodo!: 'pix' | 'cartao';
+
+  /** Obrigatório quando metodo='cartao' -- PagSeguro.encryptCard() no navegador, nunca número/CVV em texto puro. */
+  @IsOptional()
+  @IsString()
+  cardEncrypted?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  installments?: number;
 
   @IsEmail()
   customerEmail!: string;
