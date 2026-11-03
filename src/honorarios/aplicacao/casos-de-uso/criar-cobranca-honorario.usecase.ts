@@ -1,12 +1,5 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Inject,
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { PagbankConfigService } from '../../../common/pagbank/pagbank-config.service';
 import {
   CONTADORES_REPOSITORIO,
   ContadoresRepositorioPort,
@@ -16,7 +9,6 @@ import {
   EmpresasRepositorioPort,
 } from '../../../empresas/aplicacao/portas/empresas-repositorio.port';
 import { validarValorCobranca } from '../../dominio/cobranca-honorario';
-import { StripeHonorariosService } from '../../infraestrutura/stripe-honorarios.service';
 import {
   CobrancaHonorario,
   COBRANCAS_HONORARIOS_REPOSITORIO,
@@ -28,10 +20,34 @@ export interface DadosCriarCobranca {
   empresaId: string;
   descricao: string;
   valor: number;
-  successUrl: string;
-  cancelUrl: string;
+  metodo: 'pix' | 'cartao';
+  /** Obrigatório quando metodo='cartao' -- PagSeguro.encryptCard() no navegador, nunca número/CVV em texto puro. */
+  cardEncrypted?: string;
+  installments?: number;
+  customerEmail: string;
+  customerTelefoneE164?: string;
 }
 
+export interface ResultadoCriarCobranca {
+  cobranca: CobrancaHonorario;
+  pixCode: string | null;
+  pixQrUrl: string | null;
+}
+
+function telefoneParaPagBank(telefoneE164: string | undefined): { country: string; area: string; number: string; type: 'MOBILE' }[] | undefined {
+  if (!telefoneE164) return undefined;
+  const digitos = telefoneE164.replace(/\D/g, '');
+  if (digitos.length < 12) return undefined; // +55(2) + DDD(2) + número(8/9)
+  return [{ country: digitos.slice(0, 2), area: digitos.slice(2, 4), number: digitos.slice(4), type: 'MOBILE' }];
+}
+
+/**
+ * Cria a cobrança de honorário (empresa paga o contador, Jota comissiona) com split
+ * PagBank -- mesmo mecanismo já em produção em assinatura-créditos/créditos-avulsos/
+ * licença-ativação, agora sem o onboarding Connect: o contador já cadastra o próprio
+ * pagbank_account_id em PATCH /contadores/:id/pagbank-conta. A cobrança SÓ fica 'pago'
+ * quando o webhook confirmar (ProcessarWebhookPagbankHonorarioUseCase).
+ */
 @Injectable()
 export class CriarCobrancaHonorarioUseCase {
   private readonly logger = new Logger(CriarCobrancaHonorarioUseCase.name);
@@ -41,14 +57,17 @@ export class CriarCobrancaHonorarioUseCase {
     @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,
     @Inject(COBRANCAS_HONORARIOS_REPOSITORIO)
     private readonly cobrancasRepositorio: CobrancasHonorariosRepositorioPort,
-    private readonly stripe: StripeHonorariosService,
+    private readonly pagbankConfig: PagbankConfigService,
   ) {}
 
-  async executar(dados: DadosCriarCobranca): Promise<{ url: string; cobranca: CobrancaHonorario }> {
+  async executar(dados: DadosCriarCobranca): Promise<ResultadoCriarCobranca> {
     try {
       validarValorCobranca(dados.valor);
     } catch (erro) {
       throw new BadRequestException((erro as Error).message);
+    }
+    if (dados.metodo === 'cartao' && !dados.cardEncrypted) {
+      throw new BadRequestException('cardEncrypted é obrigatório pra pagamento com cartão');
     }
 
     const contador = await this.contadoresRepositorio.buscarPorId(dados.contadorId);
@@ -56,7 +75,7 @@ export class CriarCobrancaHonorarioUseCase {
       throw new NotFoundException('Contador não encontrado');
     }
 
-    // Isolamento obrigatório antes de qualquer PaymentIntent (docs/SEGURANCA.md §7) --
+    // Isolamento obrigatório antes de qualquer ordem PagBank (docs/SEGURANCA.md §7) --
     // duplicando aqui o que `valida_posse_cobranca_honorario` já garante no banco
     // (defesa em profundidade, mesma regra de Zero Trust do resto do projeto).
     const pertenceACarteira = await this.empresasRepositorio.pertenceAoContador(dados.empresaId, dados.contadorId);
@@ -66,8 +85,21 @@ export class CriarCobrancaHonorarioUseCase {
 
     // Nunca mostrar opção de pagamento se a conta do contador não pode receber ainda
     // (docs/SEGURANCA.md §7: gating no backend, não só no frontend).
-    if (!contador.stripeChargesEnabled || !contador.stripeAccountId) {
-      throw new BadRequestException('Este contador ainda não concluiu o cadastro de recebimento -- cobrança indisponível');
+    if (!contador.pagbankAccountId) {
+      throw new BadRequestException('Cadastre sua conta PagBank antes de cobrar honorário com split real');
+    }
+
+    const empresa = await this.empresasRepositorio.buscarPorId(dados.empresaId);
+    if (!empresa) {
+      throw new NotFoundException('Empresa não encontrada');
+    }
+
+    const { client, webhookUrl, splitHabilitado, platformAccountId } = await this.pagbankConfig.obterConfiguracaoSplit('honorarios');
+    if (!splitHabilitado) {
+      throw new BadRequestException('Pagamentos com split estão temporariamente indisponíveis -- tente novamente mais tarde');
+    }
+    if (!platformAccountId) {
+      throw new BadRequestException('Conta PagBank da plataforma não configurada -- contate o suporte');
     }
 
     // Comissão é calculada pelo trigger do banco (definir_comissao_honorario), a partir
@@ -77,25 +109,62 @@ export class CriarCobrancaHonorarioUseCase {
       empresaId: dados.empresaId,
       descricao: dados.descricao,
       valor: dados.valor,
+      metodo: dados.metodo,
     });
 
+    const valorTotalCentavos = Math.round(cobranca.valor * 100);
+    const comissaoValorCentavos = Math.round(cobranca.comissaoValor * 100);
+    const sellerAmountCentavos = valorTotalCentavos - comissaoValorCentavos; // resto fica com o contador, absorve arredondamento
+
+    const params = {
+      reference_id: `HONORARIO_${cobranca.id}`,
+      valor_centavos: valorTotalCentavos,
+      customer: {
+        name: empresa.razaoSocial,
+        email: dados.customerEmail,
+        tax_id: empresa.cnpj.replace(/\D/g, ''),
+        phones: telefoneParaPagBank(dados.customerTelefoneE164),
+      },
+      itens: [{ name: `Honorário: ${dados.descricao}`, quantity: 1, unit_amount: valorTotalCentavos }],
+      webhook_url: webhookUrl,
+      splits: {
+        method: 'FIXED' as const,
+        receivers: [
+          { account: { id: contador.pagbankAccountId }, amount: { value: sellerAmountCentavos } },
+          { account: { id: platformAccountId }, amount: { value: comissaoValorCentavos } },
+        ],
+      },
+    };
+
+    let resposta: any;
     try {
-      const { url } = await this.stripe.criarCheckoutSession({
-        contadorStripeAccountId: contador.stripeAccountId,
-        cobrancaId: cobranca.id,
-        descricao: dados.descricao,
-        valorReais: cobranca.valor,
-        comissaoValorReais: cobranca.comissaoValor,
-        successUrl: dados.successUrl,
-        cancelUrl: dados.cancelUrl,
-      });
-      return { url, cobranca };
+      resposta =
+        dados.metodo === 'cartao'
+          ? await client.criarOrdemCartao({ ...params, cardEncrypted: dados.cardEncrypted!, installments: dados.installments })
+          : await client.criarOrdemPix(params);
     } catch (erro) {
-      // Não vaza erro bruto da Stripe (mesma regra de SERPRO/assinaturas) -- a cobrança
-      // fica registrada como 'pendente' (não removida) pra não perder o registro; um
-      // novo checkout pode ser gerado depois pra essa mesma cobrança se necessário.
-      this.logger.error(`Falha ao criar checkout de honorário (cobrança=${cobranca.id}): ${(erro as Error).message}`);
-      throw new InternalServerErrorException('Não foi possível iniciar o pagamento -- tente novamente em instantes');
+      // Marca falhou antes de propagar -- não deixa a cobrança 'pendente' sem nenhuma
+      // ordem PagBank associada (mesmo tratamento das outras 4 cobranças com split).
+      await this.cobrancasRepositorio.marcarFalhou(cobranca.id);
+      this.logger.error(`Falha ao criar ordem PagBank (cobrança=${cobranca.id}): ${(erro as Error).message}`);
+      throw new BadRequestException((erro as Error).message ?? 'Não foi possível iniciar o pagamento -- tente novamente em instantes');
     }
+
+    const charge = resposta?.charges?.[0];
+    const pixCode: string | null = charge?.qr_code?.text ?? null;
+    const pixQrUrl: string | null = charge?.links?.find((l: any) => l.rel === 'QRCODE.PNG')?.href ?? null;
+
+    await this.cobrancasRepositorio.definirDadosPix(cobranca.id, { pagbankOrderId: resposta.id, pixCode, pixQrUrl });
+
+    // Cartão processa síncrono (capture:true) -- se já veio DECLINED, avisa na hora em vez
+    // de deixar o usuário esperando um webhook que só confirmaria o óbvio (mesmo
+    // tratamento de IniciarCompraCreditoAvulsoUseCase/IniciarPagamentoAssinaturaCreditosUseCase).
+    if (charge?.status === 'DECLINED') {
+      await this.cobrancasRepositorio.marcarFalhou(cobranca.id);
+      const motivo = charge?.payment_response?.message ?? 'Cartão recusado';
+      throw new BadRequestException(`Pagamento recusado: ${motivo}`);
+    }
+
+    return { cobranca, pixCode, pixQrUrl };
   }
 }

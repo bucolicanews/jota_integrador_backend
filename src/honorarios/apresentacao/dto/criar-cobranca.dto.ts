@@ -1,4 +1,4 @@
-import { IsNumber, IsString, IsUrl, MaxLength, Min, MinLength } from 'class-validator';
+import { IsEmail, IsIn, IsInt, IsNumber, IsOptional, IsString, Min, MaxLength, MinLength } from 'class-validator';
 
 export class CriarCobrancaDto {
   @IsString()
@@ -10,9 +10,23 @@ export class CriarCobrancaDto {
   @Min(0.01)
   valor!: number;
 
-  @IsUrl({ require_tld: false })
-  successUrl!: string;
+  @IsIn(['pix', 'cartao'])
+  metodo!: 'pix' | 'cartao';
 
-  @IsUrl({ require_tld: false })
-  cancelUrl!: string;
+  /** Obrigatório quando metodo='cartao' -- PagSeguro.encryptCard() no navegador, nunca número/CVV em texto puro. */
+  @IsOptional()
+  @IsString()
+  cardEncrypted?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  installments?: number;
+
+  @IsEmail()
+  customerEmail!: string;
+
+  @IsOptional()
+  @IsString()
+  customerTelefoneE164?: string;
 }

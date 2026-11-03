@@ -156,11 +156,15 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://127.0.0.1:3000"
+site_url = "http://localhost:4028"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+# Precisa cobrir o `redirectTo` usado em ProvedorIdentidadeSupabase.gerarLinkAcesso()
+# (.../definir-senha) -- sem isso aqui, generateLink() falha ou cai pro site_url errado.
+# Em produção, o equivalente fica em Auth > URL Configuration no dashboard do Supabase,
+# não neste arquivo (que só vale pro `supabase start` local).
+additional_redirect_urls = ["http://localhost:4028/**"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 # 900 (15min) por politica do projeto (SECURITY SYSTEM DESIGN.md §11: Access Token = 15 minutos).
 jwt_expiry = 900

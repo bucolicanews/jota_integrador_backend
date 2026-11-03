@@ -9,7 +9,7 @@ import {
   Empresa,
   EmpresasRepositorioPort,
 } from '../../empresas/aplicacao/portas/empresas-repositorio.port';
-import { CriarCobrancaHonorarioUseCase } from '../aplicacao/casos-de-uso/criar-cobranca-honorario.usecase';
+import { CriarCobrancaHonorarioUseCase, ResultadoCriarCobranca } from '../aplicacao/casos-de-uso/criar-cobranca-honorario.usecase';
 import { ListarCobrancasHonorarioUseCase } from '../aplicacao/casos-de-uso/listar-cobrancas-honorario.usecase';
 import { CobrancaHonorario } from '../aplicacao/portas/cobrancas-honorarios-repositorio.port';
 import { CriarCobrancaDto } from './dto/criar-cobranca.dto';
@@ -39,15 +39,18 @@ export class HonorariosController {
     @Param('empresaId', ParseUUIDPipe) empresaId: string,
     @Body() dto: CriarCobrancaDto,
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
-  ): Promise<{ url: string; cobranca: CobrancaHonorario }> {
+  ): Promise<ResultadoCriarCobranca> {
     this.exigirPosseContador(usuarioAtual, contadorId);
     return this.criarCobranca.executar({
       contadorId,
       empresaId,
       descricao: dto.descricao,
       valor: dto.valor,
-      successUrl: dto.successUrl,
-      cancelUrl: dto.cancelUrl,
+      metodo: dto.metodo,
+      cardEncrypted: dto.cardEncrypted,
+      installments: dto.installments,
+      customerEmail: dto.customerEmail,
+      customerTelefoneE164: dto.customerTelefoneE164,
     });
   }
 

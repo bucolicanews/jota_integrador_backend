@@ -16,14 +16,18 @@ interface LinhaCobranca {
   valor: number;
   comissao_pct: number;
   comissao_valor: number;
-  stripe_payment_intent_id: string | null;
+  metodo: 'pix' | 'cartao' | null;
+  pagbank_order_id: string | null;
+  pagbank_charge_id: string | null;
+  pix_code: string | null;
+  pix_qr_url: string | null;
   status: StatusCobranca;
   criado_em: string;
   pago_em: string | null;
 }
 
 const COLUNAS_SELECT =
-  'id, contador_id, empresa_id, descricao, valor, comissao_pct, comissao_valor, stripe_payment_intent_id, status, criado_em, pago_em';
+  'id, contador_id, empresa_id, descricao, valor, comissao_pct, comissao_valor, metodo, pagbank_order_id, pagbank_charge_id, pix_code, pix_qr_url, status, criado_em, pago_em';
 
 @Injectable()
 export class CobrancasHonorariosRepositorioSupabase implements CobrancasHonorariosRepositorioPort {
@@ -40,6 +44,7 @@ export class CobrancasHonorariosRepositorioSupabase implements CobrancasHonorari
         empresa_id: dados.empresaId,
         descricao: dados.descricao,
         valor: dados.valor,
+        metodo: dados.metodo,
       })
       .select(COLUNAS_SELECT)
       .single();
@@ -63,15 +68,15 @@ export class CobrancasHonorariosRepositorioSupabase implements CobrancasHonorari
     return data ? this.mapear(data as LinhaCobranca) : null;
   }
 
-  async buscarPorStripePaymentIntentId(stripePaymentIntentId: string): Promise<CobrancaHonorario | null> {
+  async buscarPorPagbankOrderId(pagbankOrderId: string): Promise<CobrancaHonorario | null> {
     const { data, error } = await this.supabase.admin
       .from('cobrancas_honorarios')
       .select(COLUNAS_SELECT)
-      .eq('stripe_payment_intent_id', stripePaymentIntentId)
+      .eq('pagbank_order_id', pagbankOrderId)
       .maybeSingle();
 
     if (error) {
-      throw new InternalServerErrorException(`Falha ao buscar cobrança por payment intent: ${error.message}`);
+      throw new InternalServerErrorException(`Falha ao buscar cobrança por ordem PagBank: ${error.message}`);
     }
     return data ? this.mapear(data as LinhaCobranca) : null;
   }
@@ -102,12 +107,23 @@ export class CobrancasHonorariosRepositorioSupabase implements CobrancasHonorari
     return (data as LinhaCobranca[]).map((linha) => this.mapear(linha));
   }
 
+  async definirDadosPix(id: string, dados: { pagbankOrderId: string; pixCode: string | null; pixQrUrl: string | null }): Promise<void> {
+    const { error } = await this.supabase.admin
+      .from('cobrancas_honorarios')
+      .update({ pagbank_order_id: dados.pagbankOrderId, pix_code: dados.pixCode, pix_qr_url: dados.pixQrUrl })
+      .eq('id', id);
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao gravar dados da ordem PagBank: ${error.message}`);
+    }
+  }
+
   async atualizarPagamento(id: string, dados: DadosAtualizacaoPagamento): Promise<void> {
     const { error } = await this.supabase.admin
       .from('cobrancas_honorarios')
       .update({
         status: dados.status,
-        stripe_payment_intent_id: dados.stripePaymentIntentId,
+        pagbank_charge_id: dados.pagbankChargeId,
         pago_em: dados.pagoEm,
       })
       .eq('id', id);
@@ -117,27 +133,11 @@ export class CobrancasHonorariosRepositorioSupabase implements CobrancasHonorari
     }
   }
 
-  async jaProcessouEventoWebhook(gateway: string, eventoId: string): Promise<boolean> {
-    const { data, error } = await this.supabase.admin
-      .from('webhook_eventos_processados')
-      .select('id')
-      .eq('gateway', gateway)
-      .eq('evento_id', eventoId)
-      .maybeSingle();
+  async marcarFalhou(id: string): Promise<void> {
+    const { error } = await this.supabase.admin.from('cobrancas_honorarios').update({ status: 'falhou' }).eq('id', id);
 
     if (error) {
-      throw new InternalServerErrorException(`Falha ao checar idempotência de webhook: ${error.message}`);
-    }
-    return data !== null;
-  }
-
-  async marcarEventoWebhookProcessado(gateway: string, eventoId: string): Promise<void> {
-    const { error } = await this.supabase.admin
-      .from('webhook_eventos_processados')
-      .insert({ gateway, evento_id: eventoId });
-
-    if (error && error.code !== '23505') {
-      throw new InternalServerErrorException(`Falha ao marcar webhook processado: ${error.message}`);
+      throw new InternalServerErrorException(`Falha ao marcar cobrança como falhou: ${error.message}`);
     }
   }
 
@@ -150,7 +150,11 @@ export class CobrancasHonorariosRepositorioSupabase implements CobrancasHonorari
       valor: Number(linha.valor),
       comissaoPct: Number(linha.comissao_pct),
       comissaoValor: Number(linha.comissao_valor),
-      stripePaymentIntentId: linha.stripe_payment_intent_id,
+      metodo: linha.metodo,
+      pagbankOrderId: linha.pagbank_order_id,
+      pagbankChargeId: linha.pagbank_charge_id,
+      pixCode: linha.pix_code,
+      pixQrUrl: linha.pix_qr_url,
       status: linha.status,
       criadoEm: linha.criado_em,
       pagoEm: linha.pago_em,
