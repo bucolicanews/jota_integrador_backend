@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Checklist antes de commitar -- ver feedback_checklist_seguranca_padrao na memória.
+# Instalado via `core.hooksPath=.githooks` (postinstall do package.json).
+set -e
+
+VERDE='\033[0;32m'
+VERMELHO='\033[0;31m'
+AMARELO='\033[0;33m'
+RESET='\033[0m'
+
+ok() { echo -e "  ${VERDE}✓${RESET} $1"; }
+falhou() {
+  echo -e "  ${VERMELHO}✗${RESET} $1"
+  echo -e "\n${VERMELHO}Commit bloqueado.${RESET} Corrija o item acima e tente de novo."
+  exit 1
+}
+perguntar() {
+  if [ -n "$CI" ]; then ok "$1 (pulado -- CI)"; return; fi
+  if ! { read -r -p "  $1 [s/N] " resp < /dev/tty; } 2>/dev/null; then
+    ok "$1 (pulado -- sem terminal interativo)"
+    return
+  fi
+  case "$resp" in
+    s|S|y|Y) ok "$1" ;;
+    *) falhou "$1" ;;
+  esac
+}
+
+echo -e "${AMARELO}Checklist antes do commit:${RESET}"
+
+DIFF=$(git diff --cached)
+
+if echo "$DIFF" | grep -qE '(AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|(SECRET|PASSWORD|SENHA|API_KEY|TOKEN)[A-Z_]*\s*[=:]\s*["\x27][^"\x27[:space:]]{8,}["\x27])'; then
+  falhou "Nenhum segredo/chave aparente no diff (achou um padrão suspeito -- revise antes de commitar)"
+fi
+ok "Nenhum segredo/chave aparente no diff"
+
+if git diff --cached --name-only | grep -qE '(^|/)\.env($|\.[a-z]+$)'; then
+  falhou "Nenhum arquivo .env sendo commitado (achou um .env staged)"
+fi
+ok "Nenhum arquivo .env staged"
+
+perguntar "Revisei o diff (git status/diff --cached) item a item antes de commitar?"
+
+echo -e "${VERDE}Checklist ok -- commitando.${RESET}"

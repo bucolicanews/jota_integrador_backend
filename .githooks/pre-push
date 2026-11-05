@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Checklist antes de dar push -- ver feedback_checklist_seguranca_padrao na memória.
+# Instalado via `core.hooksPath=.githooks` (postinstall do package.json).
+set -e
+
+VERDE='\033[0;32m'
+VERMELHO='\033[0;31m'
+AMARELO='\033[0;33m'
+RESET='\033[0m'
+
+ok() { echo -e "  ${VERDE}✓${RESET} $1"; }
+falhou() {
+  echo -e "  ${VERMELHO}✗${RESET} $1"
+  echo -e "\n${VERMELHO}Push bloqueado.${RESET} Corrija o item acima e tente de novo."
+  exit 1
+}
+perguntar() {
+  if [ -n "$CI" ]; then ok "$1 (pulado -- CI)"; return; fi
+  if ! { read -r -p "  $1 [s/N] " resp < /dev/tty; } 2>/dev/null; then
+    ok "$1 (pulado -- sem terminal interativo)"
+    return
+  fi
+  case "$resp" in
+    s|S|y|Y) ok "$1" ;;
+    *) falhou "$1" ;;
+  esac
+}
+
+echo -e "${AMARELO}Checklist antes do push:${RESET}"
+
+LOG="$(mktemp)"
+if [ -f package.json ] && grep -q '"typecheck"' package.json; then
+  if npm run -s typecheck > "$LOG" 2>&1; then
+    ok "Typecheck passa"
+  else
+    cat "$LOG"
+    falhou "Typecheck passa (ver erro acima)"
+  fi
+else
+  ok "Typecheck (N/A -- sem script typecheck)"
+fi
+rm -f "$LOG"
+
+if [ -d supabase/migrations ]; then
+  perguntar "Se tem migration SQL nova, já aplicou LOCAL (nunca só produção) antes desse push?"
+fi
+
+perguntar "Testei manualmente essa mudança antes de dar push?"
+
+echo -e "${VERDE}Checklist ok -- pode empurrar.${RESET}"

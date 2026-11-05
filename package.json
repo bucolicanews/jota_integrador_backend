@@ -10,9 +10,11 @@
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
     "lint": "eslint \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit -p .",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:cov": "jest --coverage"
+    "test:cov": "jest --coverage",
+    "postinstall": "git config core.hooksPath .githooks"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
