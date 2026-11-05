@@ -15,6 +15,10 @@ export interface ConfiguracaoPlataformaRepositorioPort {
   /** Auditoria da mudança é automática via trigger do banco (audita_mudanca_comissao_plataforma) -- não precisa de AuditoriaService aqui. */
   atualizarComissaoHonorariosPct(pct: number): Promise<void>;
 
+  /** Comissão sobre link de pagamento PagBank de parcela de Contas a Receber (contrato) -- separada da de honorários. */
+  obterComissaoContratosPct(): Promise<number>;
+  atualizarComissaoContratosPct(pct: number): Promise<void>;
+
   obterConfiguracaoPagbank(): Promise<ConfiguracaoPagbank>;
   atualizarConfiguracaoPagbank(dados: DadosAtualizacaoConfiguracaoPagbank): Promise<void>;
 }

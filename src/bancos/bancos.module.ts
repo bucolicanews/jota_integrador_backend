@@ -20,5 +20,8 @@ import { BancosRepositorioSupabase } from './infraestrutura/bancos.repositorio.s
     AtualizarBancoUseCase,
     AlternarAtivoBancoUseCase,
   ],
+  // Exportado pro módulo de link de pagamento (parcelas de contas a receber) resolver
+  // qual conta contábil recebe o lançamento automático quando o webhook PagBank confirma.
+  exports: [BANCOS_REPOSITORIO],
 })
 export class BancosModule {}

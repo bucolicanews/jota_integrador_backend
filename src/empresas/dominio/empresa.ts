@@ -1,3 +1,5 @@
+import { validarCpf } from '../../contadores/dominio/contador';
+
 export type ModoAcessoSerpro = 'procuracao' | 'certificado_proprio';
 export type StatusEmpresa = 'ativo' | 'inativo';
 
@@ -5,6 +7,12 @@ export type StatusEmpresa = 'ativo' | 'inativo';
 // contabilidade do próprio contador/da própria Jota (Fase de licenciamento de módulos) --
 // nunca aparecem em carteira/marketplace, sempre liberadas do módulo de licenciamento.
 export type TipoEmpresa = 'cliente' | 'interna_contador' | 'interna_plataforma';
+
+// fisica só é permitido quando tipo='interna_contador' (contador autônomo que atua com
+// CPF+CRC, sem CNPJ -- empresa-cliente de verdade é sempre jurídica, precisa de CNPJ
+// pra consulta SERPRO). Regra também reforçada por CHECK no banco (ver migration
+// 20261103000003_empresa_pessoa_fisica.sql).
+export type TipoPessoaEmpresa = 'fisica' | 'juridica';
 
 // Nomenclatura de regime tributário alinhada com os serviços do SERPRO/Integra Contador
 // (MEI tem serviços próprios -- CCMEI/PGMEI -- separados do Simples Nacional "regular" --
@@ -49,4 +57,13 @@ export function validarCnpj(cnpj: string): boolean {
   const segundoDigito = calcularDigitoVerificador(base + primeiroDigito, pesosSegundoDigito);
 
   return digitos === `${base}${primeiroDigito}${segundoDigito}`;
+}
+
+/**
+ * `empresas.cnpj` guarda CPF quando tipoPessoa='fisica' (contador autônomo, sem CNPJ) --
+ * mesma coluna, dígito verificador trocado conforme o tipo. `validarCpf` importado de
+ * contador.ts em vez de duplicado (mesmo algoritmo, já usado lá pra `contadores.cnpj_cpf`).
+ */
+export function validarDocumentoEmpresa(documento: string, tipoPessoa: TipoPessoaEmpresa): boolean {
+  return tipoPessoa === 'fisica' ? validarCpf(documento) : validarCnpj(documento);
 }

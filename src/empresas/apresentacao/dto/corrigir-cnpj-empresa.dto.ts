@@ -1,10 +1,11 @@
 import { IsString, MaxLength, MinLength } from 'class-validator';
 
-// Formato/checksum real (validarCnpj) é validado no domínio, não aqui -- aceita com ou
-// sem máscara (14 dígitos puros ou "00.000.000/0000-00" com 18 caracteres).
+// Formato/checksum real (validarDocumentoEmpresa, CNPJ ou CPF conforme tipoPessoa da
+// empresa) é validado no domínio, não aqui -- só limita tamanho pra aceitar os dois:
+// CPF (11 dígitos puros) até CNPJ com máscara ("00.000.000/0000-00", 18 caracteres).
 export class CorrigirCnpjEmpresaDto {
   @IsString()
-  @MinLength(14)
+  @MinLength(11)
   @MaxLength(18)
   cnpj!: string;
 }

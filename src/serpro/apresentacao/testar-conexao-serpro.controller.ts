@@ -3,7 +3,7 @@ import { PapeisGuard } from '../../auth/apresentacao/guards/papeis.guard';
 import { SupabaseAuthGuard } from '../../auth/apresentacao/guards/supabase-auth.guard';
 import { UsuarioAtual } from '../../auth/apresentacao/decorators/usuario-atual.decorator';
 import { UsuarioAutenticado } from '../../auth/apresentacao/tipos/requisicao-autenticada';
-import { Papel } from '../../auth/dominio/papel';
+import { ehPapelDePlataforma } from '../../auth/dominio/papel';
 import { EMPRESAS_REPOSITORIO, Empresa, EmpresasRepositorioPort } from '../../empresas/aplicacao/portas/empresas-repositorio.port';
 import { ResultadoTesteConexao, TestarConexaoSerproUseCase } from '../aplicacao/casos-de-uso/testar-conexao-serpro.usecase';
 
@@ -37,7 +37,7 @@ export class TestarConexaoSerproController {
 
   /** Mesmo padrão de posse de SerproController/EmpresasController. */
   private exigirPosse(usuarioAtual: UsuarioAutenticado, empresa: Empresa): void {
-    if (usuarioAtual.papel === Papel.SUPER_ADMIN) return;
+    if (ehPapelDePlataforma(usuarioAtual.papel)) return;
     const ehContadorDono = usuarioAtual.contadorId !== null && usuarioAtual.contadorId === empresa.contadorId;
     const ehDaPropriaEmpresa = usuarioAtual.empresaId !== null && usuarioAtual.empresaId === empresa.id;
     if (!ehContadorDono && !ehDaPropriaEmpresa) {

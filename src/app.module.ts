@@ -27,6 +27,7 @@ import { LancamentosContabeisModule } from './lancamentos-contabeis/lancamentos-
 import { ConciliacaoBancariaModule } from './conciliacao-bancaria/conciliacao-bancaria.module';
 import { ContasAPagarModule } from './contas-a-pagar/contas-a-pagar.module';
 import { ContasAReceberModule } from './contas-a-receber/contas-a-receber.module';
+import { PagamentosParcelaModule } from './pagamentos-parcela/pagamentos-parcela.module';
 import { ClientesModule } from './clientes/clientes.module';
 import { FornecedoresModule } from './fornecedores/fornecedores.module';
 import { HistoricosModule } from './historicos/historicos.module';
@@ -84,6 +85,7 @@ import { PlanosRevendaCreditosAvulsosModule } from './planos-revenda-creditos-av
     ConciliacaoBancariaModule,
     ContasAPagarModule,
     ContasAReceberModule,
+    PagamentosParcelaModule,
     ClientesModule,
     FornecedoresModule,
     HistoricosModule,

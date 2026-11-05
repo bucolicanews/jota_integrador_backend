@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { SupabaseService } from '../../common/supabase/supabase.service';
-import { ModoAcessoSerpro, RegimeTributario, StatusEmpresa, TipoEmpresa } from '../dominio/empresa';
+import { ModoAcessoSerpro, RegimeTributario, StatusEmpresa, TipoEmpresa, TipoPessoaEmpresa } from '../dominio/empresa';
 import {
   DadosAtualizacaoEmpresa,
   DadosNovaEmpresa,
@@ -12,17 +12,21 @@ interface LinhaEmpresa {
   id: string;
   contador_id: string;
   tipo: TipoEmpresa;
+  tipo_pessoa: TipoPessoaEmpresa;
   razao_social: string;
   nome_fantasia: string | null;
   cnpj: string;
+  crc: string | null;
   regime_tributario: RegimeTributario | null;
   modo_acesso_serpro: ModoAcessoSerpro;
   status: StatusEmpresa;
   bloqueado: boolean;
+  pagbank_account_id: string | null;
+  banco_pagbank_id: string | null;
 }
 
 const COLUNAS_SELECT =
-  'id, contador_id, tipo, razao_social, nome_fantasia, cnpj, regime_tributario, modo_acesso_serpro, status, bloqueado';
+  'id, contador_id, tipo, tipo_pessoa, razao_social, nome_fantasia, cnpj, crc, regime_tributario, modo_acesso_serpro, status, bloqueado, pagbank_account_id, banco_pagbank_id';
 
 @Injectable()
 export class EmpresasRepositorioSupabase implements EmpresasRepositorioPort {
@@ -181,12 +185,14 @@ export class EmpresasRepositorioSupabase implements EmpresasRepositorioPort {
   }
 
   async atualizar(id: string, dados: DadosAtualizacaoEmpresa): Promise<void> {
-    // Whitelist explícita -- mesmo se `dados` viesse maior por engano, só estes 3 campos
+    // Whitelist explícita -- mesmo se `dados` viesse maior por engano, só estes 5 campos
     // são enviados ao banco (nunca contador_id/bloqueado/modo_acesso_serpro por aqui).
     const campos: Record<string, unknown> = {};
     if (dados.razaoSocial !== undefined) campos.razao_social = dados.razaoSocial;
     if (dados.nomeFantasia !== undefined) campos.nome_fantasia = dados.nomeFantasia;
     if (dados.regimeTributario !== undefined) campos.regime_tributario = dados.regimeTributario;
+    if (dados.tipoPessoa !== undefined) campos.tipo_pessoa = dados.tipoPessoa;
+    if (dados.crc !== undefined) campos.crc = dados.crc;
 
     const { error } = await this.supabase.admin.from('empresas').update(campos).eq('id', id);
 
@@ -257,14 +263,29 @@ export class EmpresasRepositorioSupabase implements EmpresasRepositorioPort {
       id: linha.id,
       contadorId: linha.contador_id,
       tipo: linha.tipo,
+      tipoPessoa: linha.tipo_pessoa,
       razaoSocial: linha.razao_social,
       nomeFantasia: linha.nome_fantasia,
       cnpj: linha.cnpj,
+      crc: linha.crc,
       regimeTributario: linha.regime_tributario,
       modoAcessoSerpro: linha.modo_acesso_serpro,
       status: linha.status,
       bloqueado: linha.bloqueado,
       planoNome: null,
+      pagbankAccountId: linha.pagbank_account_id,
+      bancoPagbankId: linha.banco_pagbank_id,
     };
+  }
+
+  async atualizarPagbankConta(id: string, dados: { pagbankAccountId?: string | null; bancoPagbankId?: string | null }): Promise<void> {
+    const campos: Record<string, unknown> = {};
+    if (dados.pagbankAccountId !== undefined) campos.pagbank_account_id = dados.pagbankAccountId;
+    if (dados.bancoPagbankId !== undefined) campos.banco_pagbank_id = dados.bancoPagbankId;
+
+    const { error } = await this.supabase.admin.from('empresas').update(campos).eq('id', id);
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao atualizar conta PagBank da empresa: ${error.message}`);
+    }
   }
 }

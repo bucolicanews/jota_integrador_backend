@@ -42,4 +42,26 @@ export class GerenciarComissaoPlataformaUseCase {
       dadosNovos: { comissaoHonorariosPct: pct },
     });
   }
+
+  async obterContratos(): Promise<number> {
+    return this.configuracaoRepositorio.obterComissaoContratosPct();
+  }
+
+  /** Mesmo tratamento de `atualizar()` -- comissão sobre link de pagamento de parcela (contrato), separada da de honorários. */
+  async atualizarContratos(pct: number, executadoPorId: string): Promise<void> {
+    if (pct < 0 || pct > 100) {
+      throw new BadRequestException('Comissão precisa estar entre 0 e 100');
+    }
+
+    const anterior = await this.configuracaoRepositorio.obterComissaoContratosPct();
+    await this.configuracaoRepositorio.atualizarComissaoContratosPct(pct);
+
+    await this.auditoria.registrar({
+      usuarioId: executadoPorId,
+      acao: 'configuracoes_plataforma.atualizar_comissao_contratos',
+      recurso: 'configuracoes_plataforma',
+      dadosAntigos: { comissaoContratosPct: anterior },
+      dadosNovos: { comissaoContratosPct: pct },
+    });
+  }
 }

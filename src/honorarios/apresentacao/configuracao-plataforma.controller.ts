@@ -9,6 +9,7 @@ import { GerenciarComissaoPlataformaUseCase } from '../aplicacao/casos-de-uso/ge
 import { GerenciarConfiguracaoPagbankUseCase } from '../aplicacao/casos-de-uso/gerenciar-configuracao-pagbank.usecase';
 import { ConfiguracaoPagbank } from '../aplicacao/portas/configuracao-plataforma-repositorio.port';
 import { AtualizarComissaoDto } from './dto/atualizar-comissao.dto';
+import { AtualizarComissaoContratosDto } from './dto/atualizar-comissao-contratos.dto';
 import { AtualizarConfiguracaoPagbankDto } from './dto/atualizar-configuracao-pagbank.dto';
 
 @Controller('configuracoes-plataforma')
@@ -31,6 +32,20 @@ export class ConfiguracaoPlataformaController {
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
   ): Promise<{ ok: true }> {
     await this.comissao.atualizar(dto.comissaoHonorariosPct, usuarioAtual.id);
+    return { ok: true };
+  }
+
+  @Get('comissao-contratos')
+  async obterComissaoContratos(): Promise<{ comissaoContratosPct: number }> {
+    return { comissaoContratosPct: await this.comissao.obterContratos() };
+  }
+
+  @Patch('comissao-contratos')
+  async atualizarComissaoContratos(
+    @Body() dto: AtualizarComissaoContratosDto,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ ok: true }> {
+    await this.comissao.atualizarContratos(dto.comissaoContratosPct, usuarioAtual.id);
     return { ok: true };
   }
 

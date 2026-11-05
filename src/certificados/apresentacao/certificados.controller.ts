@@ -20,7 +20,7 @@ import { UsuarioAtual } from '../../auth/apresentacao/decorators/usuario-atual.d
 import { PapeisGuard } from '../../auth/apresentacao/guards/papeis.guard';
 import { SupabaseAuthGuard } from '../../auth/apresentacao/guards/supabase-auth.guard';
 import { UsuarioAutenticado } from '../../auth/apresentacao/tipos/requisicao-autenticada';
-import { Papel } from '../../auth/dominio/papel';
+import { ehPapelDePlataforma, Papel } from '../../auth/dominio/papel';
 import { ExigirModulo } from '../../common/modulos/exigir-modulo.decorator';
 import { ModulosGuard } from '../../common/modulos/modulos.guard';
 import {
@@ -126,7 +126,7 @@ export class CertificadosController {
   }
 
   @Post('revogar')
-  @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
+  @Papeis(Papel.SUPER_ADMIN, Papel.ADMIN_FINANCEIRO, Papel.ADMIN_SUPORTE, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
   async revogar(
     @Param('empresaId', ParseUUIDPipe) empresaId: string,
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
@@ -148,7 +148,7 @@ export class CertificadosController {
 
   /** Mesmo padrão de posse de EmpresasController/SerproController -- contador dono ou usuário da própria empresa. */
   private exigirPosse(usuarioAtual: UsuarioAutenticado, empresa: Empresa): void {
-    if (usuarioAtual.papel === Papel.SUPER_ADMIN) {
+    if (ehPapelDePlataforma(usuarioAtual.papel)) {
       return;
     }
     const ehContadorDono = usuarioAtual.contadorId !== null && usuarioAtual.contadorId === empresa.contadorId;

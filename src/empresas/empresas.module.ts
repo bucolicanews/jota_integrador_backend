@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PagbankModule } from '../common/pagbank/pagbank.module';
 import { AtualizarEmpresaUseCase } from './aplicacao/casos-de-uso/atualizar-empresa.usecase';
 import { AtualizarModoAcessoSerproUseCase } from './aplicacao/casos-de-uso/atualizar-modo-acesso-serpro.usecase';
 import { BloquearEmpresaUseCase } from './aplicacao/casos-de-uso/bloquear-empresa.usecase';
@@ -11,10 +12,12 @@ import { ObterEmpresaInternaUseCase } from './aplicacao/casos-de-uso/obter-empre
 import { ObterEmpresaUseCase } from './aplicacao/casos-de-uso/obter-empresa.usecase';
 import { EMPRESAS_REPOSITORIO } from './aplicacao/portas/empresas-repositorio.port';
 import { EmpresasController } from './apresentacao/empresas.controller';
+import { PagbankContaEmpresaController } from './apresentacao/pagbank-conta-empresa.controller';
 import { EmpresasRepositorioSupabase } from './infraestrutura/empresas.repositorio.supabase';
 
 @Module({
-  controllers: [EmpresasController],
+  imports: [PagbankModule],
+  controllers: [EmpresasController, PagbankContaEmpresaController],
   providers: [
     { provide: EMPRESAS_REPOSITORIO, useClass: EmpresasRepositorioSupabase },
     CriarEmpresaUseCase,

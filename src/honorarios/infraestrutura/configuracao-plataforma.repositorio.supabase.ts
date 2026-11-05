@@ -34,6 +34,30 @@ export class ConfiguracaoPlataformaRepositorioSupabase implements ConfiguracaoPl
     }
   }
 
+  async obterComissaoContratosPct(): Promise<number> {
+    const { data, error } = await this.supabase.admin
+      .from('configuracoes_plataforma')
+      .select('comissao_contratos_pct')
+      .eq('id', 1)
+      .single();
+
+    if (error || !data) {
+      throw new InternalServerErrorException(`Falha ao obter comissão de contratos da plataforma: ${error?.message}`);
+    }
+    return Number(data.comissao_contratos_pct);
+  }
+
+  async atualizarComissaoContratosPct(pct: number): Promise<void> {
+    const { error } = await this.supabase.admin
+      .from('configuracoes_plataforma')
+      .update({ comissao_contratos_pct: pct })
+      .eq('id', 1);
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao atualizar comissão de contratos da plataforma: ${error.message}`);
+    }
+  }
+
   async obterConfiguracaoPagbank(): Promise<ConfiguracaoPagbank> {
     const { data, error } = await this.supabase.admin
       .from('configuracoes_plataforma')

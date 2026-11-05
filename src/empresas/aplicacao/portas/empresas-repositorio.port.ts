@@ -1,18 +1,26 @@
-import { ModoAcessoSerpro, RegimeTributario, StatusEmpresa, TipoEmpresa } from '../../dominio/empresa';
+import { ModoAcessoSerpro, RegimeTributario, StatusEmpresa, TipoEmpresa, TipoPessoaEmpresa } from '../../dominio/empresa';
 
 export interface Empresa {
   id: string;
   contadorId: string;
   tipo: TipoEmpresa;
+  /** 'fisica' só é possível quando tipo='interna_contador' -- empresa-cliente é sempre jurídica. */
+  tipoPessoa: TipoPessoaEmpresa;
   razaoSocial: string;
   nomeFantasia: string | null;
   cnpj: string;
+  /** Registro no Conselho Regional de Contabilidade -- obrigatório quando tipoPessoa='fisica', senão sempre null. */
+  crc: string | null;
   regimeTributario: RegimeTributario | null;
   modoAcessoSerpro: ModoAcessoSerpro;
   status: StatusEmpresa;
   bloqueado: boolean;
   /** Nome do plano de crédito SERPRO ativo -- só populado em `listarPorContador` (Carteira de Empresas), null nos demais métodos. */
   planoNome: string | null;
+  /** Conta PagBank PRÓPRIA desta empresa -- recebe a parte "seller" de qualquer link de pagamento com split gerado em nome dela. */
+  pagbankAccountId: string | null;
+  /** Banco (bancos.id) que recebe automaticamente o lançamento quando um link de pagamento confirma. */
+  bancoPagbankId: string | null;
 }
 
 export interface DadosNovaEmpresa {
@@ -29,6 +37,8 @@ export interface DadosAtualizacaoEmpresa {
   razaoSocial?: string;
   nomeFantasia?: string | null;
   regimeTributario?: RegimeTributario | null;
+  tipoPessoa?: TipoPessoaEmpresa;
+  crc?: string | null;
 }
 
 export interface EmpresasRepositorioPort {
@@ -52,6 +62,8 @@ export interface EmpresasRepositorioPort {
   atualizarContadorId(id: string, contadorId: string): Promise<void>;
   atualizarModoAcessoSerpro(id: string, modo: ModoAcessoSerpro): Promise<void>;
   marcarBloqueio(id: string, bloqueado: boolean, motivo: string | null, executadoPorId: string): Promise<void>;
+  /** Cadastro manual da conta PagBank própria da empresa + banco padrão de conciliação -- mesmo padrão de contadores.pagbankAccountId. */
+  atualizarPagbankConta(id: string, dados: { pagbankAccountId?: string | null; bancoPagbankId?: string | null }): Promise<void>;
 }
 
 export const EMPRESAS_REPOSITORIO = Symbol('EMPRESAS_REPOSITORIO');

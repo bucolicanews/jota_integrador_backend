@@ -18,7 +18,7 @@ import { UsuarioAtual } from '../../auth/apresentacao/decorators/usuario-atual.d
 import { PapeisGuard } from '../../auth/apresentacao/guards/papeis.guard';
 import { SupabaseAuthGuard } from '../../auth/apresentacao/guards/supabase-auth.guard';
 import { UsuarioAutenticado } from '../../auth/apresentacao/tipos/requisicao-autenticada';
-import { Papel } from '../../auth/dominio/papel';
+import { ehPapelDePlataforma, Papel } from '../../auth/dominio/papel';
 import { SupabaseService } from '../../common/supabase/supabase.service';
 import { AtualizarEmpresaUseCase } from '../aplicacao/casos-de-uso/atualizar-empresa.usecase';
 import { AtualizarModoAcessoSerproUseCase } from '../aplicacao/casos-de-uso/atualizar-modo-acesso-serpro.usecase';
@@ -115,13 +115,15 @@ export class EmpresasController {
       razaoSocial: dto.razaoSocial,
       nomeFantasia: dto.nomeFantasia,
       regimeTributario: dto.regimeTributario,
+      tipoPessoa: dto.tipoPessoa,
+      crc: dto.crc,
     });
     return { ok: true };
   }
 
   /** Correção pontual de CNPJ cadastrado errado -- fora do `atualizar()` normal de propósito (ação sensível, sempre auditada). Só admin ou o contador dono da carteira, nunca a própria empresa. */
   @Patch(':id/cnpj')
-  @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO)
+  @Papeis(Papel.SUPER_ADMIN, Papel.ADMIN_FINANCEIRO, Papel.ADMIN_SUPORTE, Papel.CONTADOR_DONO)
   async corrigirCnpj(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CorrigirCnpjEmpresaDto,
@@ -201,7 +203,7 @@ export class EmpresasController {
 
   /** Contador dono ou usuário da própria empresa (ou plataforma) -- leitura/edição básica. */
   private exigirPosse(usuarioAtual: UsuarioAutenticado, empresa: Empresa): void {
-    if (usuarioAtual.papel === Papel.SUPER_ADMIN) {
+    if (ehPapelDePlataforma(usuarioAtual.papel)) {
       return;
     }
     const ehContadorDono = usuarioAtual.contadorId !== null && usuarioAtual.contadorId === empresa.contadorId;
@@ -217,7 +219,7 @@ export class EmpresasController {
    * empresário (não faz sentido a empresa se autobloquear, ver docs/BANCO_DE_DADOS.md §7).
    */
   private exigirPosseDeContador(usuarioAtual: UsuarioAutenticado, empresa: Empresa): void {
-    if (usuarioAtual.papel === Papel.SUPER_ADMIN) {
+    if (ehPapelDePlataforma(usuarioAtual.papel)) {
       return;
     }
     if (usuarioAtual.contadorId !== empresa.contadorId) {
