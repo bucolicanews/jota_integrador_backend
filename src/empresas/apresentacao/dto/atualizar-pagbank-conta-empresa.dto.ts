@@ -8,4 +8,8 @@ export class AtualizarPagbankContaEmpresaDto {
   @IsOptional()
   @IsUUID()
   bancoPagbankId?: string | null;
+
+  @IsOptional()
+  @IsUUID()
+  contaContabilPagbankId?: string | null;
 }

@@ -2,7 +2,7 @@ import {
   IsEmail,
   IsEnum,
   IsOptional,
-  IsUUID,
+  Matches,
   MaxLength,
   MinLength,
   Validate,
@@ -11,6 +11,12 @@ import {
   ValidatorConstraintInterface,
 } from 'class-validator';
 import { ESCOPO_POR_PAPEL, Papel } from '../../dominio/papel';
+
+// `@IsUUID()` do class-validator rejeita o id sentinela 'Jota Contabilidade'
+// (00000000-0000-0000-0000-000000000001 -- dígito de versão '0', fora de 1-5) -- mesmo
+// ajuste já feito em transferir-carteira-empresa.dto.ts. Formato solto (8-4-4-4-12 hex),
+// a existência de verdade é garantida pela FK (23503 tratado no repositório).
+const REGEX_UUID_SOLTO = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 @ValidatorConstraint({ name: 'coerenciaEscopoPapel', async: false })
 class CoerenciaEscopoPapelConstraint implements ValidatorConstraintInterface {
@@ -47,10 +53,10 @@ export class CriarUsuarioDto {
   papel!: Papel;
 
   @IsOptional()
-  @IsUUID()
+  @Matches(REGEX_UUID_SOLTO, { message: 'contadorId deve ser um identificador válido' })
   contadorId?: string | null;
 
   @IsOptional()
-  @IsUUID()
+  @Matches(REGEX_UUID_SOLTO, { message: 'empresaId deve ser um identificador válido' })
   empresaId?: string | null;
 }

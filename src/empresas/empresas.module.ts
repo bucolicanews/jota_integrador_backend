@@ -1,7 +1,9 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { PagbankModule } from '../common/pagbank/pagbank.module';
+import { PlanoDeContasModule } from '../plano-de-contas/plano-de-contas.module';
 import { AtualizarEmpresaUseCase } from './aplicacao/casos-de-uso/atualizar-empresa.usecase';
 import { AtualizarModoAcessoSerproUseCase } from './aplicacao/casos-de-uso/atualizar-modo-acesso-serpro.usecase';
+import { AtualizarPagbankContaEmpresaUseCase } from './aplicacao/casos-de-uso/atualizar-pagbank-conta-empresa.usecase';
 import { BloquearEmpresaUseCase } from './aplicacao/casos-de-uso/bloquear-empresa.usecase';
 import { CorrigirCnpjEmpresaUseCase } from './aplicacao/casos-de-uso/corrigir-cnpj-empresa.usecase';
 import { CriarEmpresaUseCase } from './aplicacao/casos-de-uso/criar-empresa.usecase';
@@ -16,7 +18,7 @@ import { PagbankContaEmpresaController } from './apresentacao/pagbank-conta-empr
 import { EmpresasRepositorioSupabase } from './infraestrutura/empresas.repositorio.supabase';
 
 @Module({
-  imports: [PagbankModule],
+  imports: [PagbankModule, forwardRef(() => PlanoDeContasModule)],
   controllers: [EmpresasController, PagbankContaEmpresaController],
   providers: [
     { provide: EMPRESAS_REPOSITORIO, useClass: EmpresasRepositorioSupabase },
@@ -26,6 +28,7 @@ import { EmpresasRepositorioSupabase } from './infraestrutura/empresas.repositor
     ObterEmpresaInternaUseCase,
     AtualizarEmpresaUseCase,
     AtualizarModoAcessoSerproUseCase,
+    AtualizarPagbankContaEmpresaUseCase,
     BloquearEmpresaUseCase,
     DesbloquearEmpresaUseCase,
     CorrigirCnpjEmpresaUseCase,

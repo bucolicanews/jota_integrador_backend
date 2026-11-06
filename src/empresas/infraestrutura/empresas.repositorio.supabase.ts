@@ -23,10 +23,11 @@ interface LinhaEmpresa {
   bloqueado: boolean;
   pagbank_account_id: string | null;
   banco_pagbank_id: string | null;
+  conta_contabil_pagbank_id: string | null;
 }
 
 const COLUNAS_SELECT =
-  'id, contador_id, tipo, tipo_pessoa, razao_social, nome_fantasia, cnpj, crc, regime_tributario, modo_acesso_serpro, status, bloqueado, pagbank_account_id, banco_pagbank_id';
+  'id, contador_id, tipo, tipo_pessoa, razao_social, nome_fantasia, cnpj, crc, regime_tributario, modo_acesso_serpro, status, bloqueado, pagbank_account_id, banco_pagbank_id, conta_contabil_pagbank_id';
 
 @Injectable()
 export class EmpresasRepositorioSupabase implements EmpresasRepositorioPort {
@@ -275,13 +276,18 @@ export class EmpresasRepositorioSupabase implements EmpresasRepositorioPort {
       planoNome: null,
       pagbankAccountId: linha.pagbank_account_id,
       bancoPagbankId: linha.banco_pagbank_id,
+      contaContabilPagbankId: linha.conta_contabil_pagbank_id,
     };
   }
 
-  async atualizarPagbankConta(id: string, dados: { pagbankAccountId?: string | null; bancoPagbankId?: string | null }): Promise<void> {
+  async atualizarPagbankConta(
+    id: string,
+    dados: { pagbankAccountId?: string | null; bancoPagbankId?: string | null; contaContabilPagbankId?: string | null },
+  ): Promise<void> {
     const campos: Record<string, unknown> = {};
     if (dados.pagbankAccountId !== undefined) campos.pagbank_account_id = dados.pagbankAccountId;
     if (dados.bancoPagbankId !== undefined) campos.banco_pagbank_id = dados.bancoPagbankId;
+    if (dados.contaContabilPagbankId !== undefined) campos.conta_contabil_pagbank_id = dados.contaContabilPagbankId;
 
     const { error } = await this.supabase.admin.from('empresas').update(campos).eq('id', id);
     if (error) {

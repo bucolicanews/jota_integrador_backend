@@ -85,8 +85,8 @@ export class GerarLinkPagamentoParcelaUseCase {
     if (!empresa.pagbankAccountId) {
       throw new BadRequestException('Cadastre a conta PagBank da empresa antes de gerar link de pagamento com split real');
     }
-    if (!empresa.bancoPagbankId) {
-      throw new BadRequestException('Escolha o banco padrão de recebimento PagBank da empresa antes de gerar o link');
+    if (!empresa.bancoPagbankId && !empresa.contaContabilPagbankId) {
+      throw new BadRequestException('Escolha o destino de recebimento (banco ou conta do Plano de Contas) da empresa antes de gerar o link');
     }
 
     if (!conta.clienteId) {

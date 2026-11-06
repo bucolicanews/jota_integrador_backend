@@ -5,6 +5,7 @@ import { SupabaseAuthGuard } from '../../auth/apresentacao/guards/supabase-auth.
 import { UsuarioAutenticado } from '../../auth/apresentacao/tipos/requisicao-autenticada';
 import { ehPapelDePlataforma } from '../../auth/dominio/papel';
 import { PagbankConfigService } from '../../common/pagbank/pagbank-config.service';
+import { AtualizarPagbankContaEmpresaUseCase } from '../aplicacao/casos-de-uso/atualizar-pagbank-conta-empresa.usecase';
 import { Empresa, EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../aplicacao/portas/empresas-repositorio.port';
 import { AtualizarPagbankContaEmpresaDto } from './dto/atualizar-pagbank-conta-empresa.dto';
 
@@ -18,6 +19,7 @@ import { AtualizarPagbankContaEmpresaDto } from './dto/atualizar-pagbank-conta-e
 export class PagbankContaEmpresaController {
   constructor(
     @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,
+    private readonly atualizarPagbankConta: AtualizarPagbankContaEmpresaUseCase,
     private readonly pagbankConfig: PagbankConfigService,
   ) {}
 
@@ -30,9 +32,10 @@ export class PagbankContaEmpresaController {
     const empresa = await this.buscarEmpresaOuFalhar(empresaId);
     this.exigirPosse(usuarioAtual, empresa);
 
-    await this.empresasRepositorio.atualizarPagbankConta(empresaId, {
+    await this.atualizarPagbankConta.executar(empresaId, {
       pagbankAccountId: dto.pagbankAccountId === undefined ? undefined : (dto.pagbankAccountId?.trim() ?? null),
       bancoPagbankId: dto.bancoPagbankId,
+      contaContabilPagbankId: dto.contaContabilPagbankId,
     });
     return { ok: true };
   }
@@ -49,7 +52,7 @@ export class PagbankContaEmpresaController {
     const { splitHabilitado } = await this.pagbankConfig.obterConfiguracaoSplit();
     return {
       temContaCadastrada: Boolean(empresa.pagbankAccountId),
-      temBancoPadrao: Boolean(empresa.bancoPagbankId),
+      temBancoPadrao: Boolean(empresa.bancoPagbankId || empresa.contaContabilPagbankId),
       splitHabilitado,
     };
   }

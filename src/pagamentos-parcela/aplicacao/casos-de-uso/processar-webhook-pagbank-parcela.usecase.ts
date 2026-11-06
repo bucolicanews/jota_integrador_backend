@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { AuditoriaService } from '../../../common/auditoria/auditoria.service';
 import { PagbankConfigService } from '../../../common/pagbank/pagbank-config.service';
 import { BANCOS_REPOSITORIO, BancosRepositorioPort } from '../../../bancos/aplicacao/portas/bancos-repositorio.port';
-import { EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../../../empresas/aplicacao/portas/empresas-repositorio.port';
+import { Empresa, EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../../../empresas/aplicacao/portas/empresas-repositorio.port';
 import { RegistrarRecebimentoUseCase } from '../../../contas-a-receber/aplicacao/casos-de-uso/registrar-recebimento.usecase';
 import { ContasReceberRepositorioPort, CONTAS_RECEBER_REPOSITORIO } from '../../../contas-a-receber/aplicacao/portas/contas-receber-repositorio.port';
 import {
@@ -81,15 +81,8 @@ export class ProcessarWebhookPagbankParcelaUseCase {
    */
   private async registrarRecebimentoAutomatico(link: LinkPagamentoParcela): Promise<string | null> {
     const empresa = await this.empresasRepositorio.buscarPorId(link.empresaId);
-    if (!empresa?.bancoPagbankId) {
-      this.logger.error(`Link ${link.id} pago mas empresa ${link.empresaId} sem banco_pagbank_id -- recebimento NÃO registrado, requer conciliação manual`);
-      return null;
-    }
-    const banco = await this.bancosRepositorio.obterPorId(empresa.bancoPagbankId);
-    if (!banco) {
-      this.logger.error(`Link ${link.id} pago mas banco_pagbank_id da empresa ${link.empresaId} não existe mais -- recebimento NÃO registrado, requer conciliação manual`);
-      return null;
-    }
+    const contaBancariaId = await this.resolverContaBancariaDestino(link, empresa);
+    if (!contaBancariaId) return null;
 
     const parcela = await this.contasReceberRepositorio.obterParcela(link.parcelaId);
     if (!parcela || parcela.status === 'recebida' || parcela.status === 'cancelada') {
@@ -101,12 +94,34 @@ export class ProcessarWebhookPagbankParcelaUseCase {
     const recebimento = await this.registrarRecebimento.executar({
       parcelaId: link.parcelaId,
       empresaId: link.empresaId,
-      contaBancariaId: banco.contaContabilId,
+      contaBancariaId,
       valorRecebido: link.valor,
       dataRecebimento: new Date().toISOString().slice(0, 10),
       usuarioId: link.criadoPor,
     });
     return recebimento.id;
+  }
+
+  /**
+   * bancoPagbankId (empresa com módulo "bancos") tem prioridade; contaContabilPagbankId é
+   * a alternativa pra empresa sem o módulo -- aponta direto pra uma conta do Plano de
+   * Contas, sem precisar de um registro formal em `bancos`. Mutuamente exclusivos (ver
+   * AtualizarPagbankContaEmpresaUseCase).
+   */
+  private async resolverContaBancariaDestino(link: LinkPagamentoParcela, empresa: Empresa | null): Promise<string | null> {
+    if (empresa?.bancoPagbankId) {
+      const banco = await this.bancosRepositorio.obterPorId(empresa.bancoPagbankId);
+      if (!banco) {
+        this.logger.error(`Link ${link.id} pago mas banco_pagbank_id da empresa ${link.empresaId} não existe mais -- recebimento NÃO registrado, requer conciliação manual`);
+        return null;
+      }
+      return banco.contaContabilId;
+    }
+    if (empresa?.contaContabilPagbankId) {
+      return empresa.contaContabilPagbankId;
+    }
+    this.logger.error(`Link ${link.id} pago mas empresa ${link.empresaId} sem destino de recebimento configurado -- recebimento NÃO registrado, requer conciliação manual`);
+    return null;
   }
 
   private async registrarAuditoria(link: LinkPagamentoParcela, recebimentoId: string | null): Promise<void> {

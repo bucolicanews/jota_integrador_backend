@@ -21,6 +21,8 @@ export interface Empresa {
   pagbankAccountId: string | null;
   /** Banco (bancos.id) que recebe automaticamente o lançamento quando um link de pagamento confirma. */
   bancoPagbankId: string | null;
+  /** Alternativa a bancoPagbankId pra empresa sem o módulo "bancos" liberado -- aponta direto pra uma conta do Plano de Contas (núcleo, sem módulo), mesmo papel de destino do lançamento automático. Mutuamente exclusivo com bancoPagbankId na prática (webhook usa bancoPagbankId se presente, senão este). */
+  contaContabilPagbankId: string | null;
 }
 
 export interface DadosNovaEmpresa {
@@ -63,7 +65,10 @@ export interface EmpresasRepositorioPort {
   atualizarModoAcessoSerpro(id: string, modo: ModoAcessoSerpro): Promise<void>;
   marcarBloqueio(id: string, bloqueado: boolean, motivo: string | null, executadoPorId: string): Promise<void>;
   /** Cadastro manual da conta PagBank própria da empresa + banco padrão de conciliação -- mesmo padrão de contadores.pagbankAccountId. */
-  atualizarPagbankConta(id: string, dados: { pagbankAccountId?: string | null; bancoPagbankId?: string | null }): Promise<void>;
+  atualizarPagbankConta(
+    id: string,
+    dados: { pagbankAccountId?: string | null; bancoPagbankId?: string | null; contaContabilPagbankId?: string | null },
+  ): Promise<void>;
 }
 
 export const EMPRESAS_REPOSITORIO = Symbol('EMPRESAS_REPOSITORIO');
