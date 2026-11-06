@@ -24,6 +24,44 @@ export class PermissoesRepositorioSupabase implements PermissoesRepositorioPort 
     return (data as unknown as { permissoes: LinhaPermissao }[]).map((linha) => this.mapear(linha.permissoes));
   }
 
+  async listarCatalogoPermissoes(): Promise<Permissao[]> {
+    const { data, error } = await this.supabase.admin.from('permissoes').select(COLUNAS_PERMISSAO).order('recurso').order('acao');
+    if (error) throw new InternalServerErrorException(`Falha ao listar catálogo de permissões: ${error.message}`);
+    return (data as LinhaPermissao[]).map((linha) => this.mapear(linha));
+  }
+
+  async obterTetoEfetivo(papelId: string, contadorId: string | null, empresaId: string | null): Promise<Permissao[]> {
+    let query = this.supabase.admin.from('papel_permissoes_dono').select(`permissoes (${COLUNAS_PERMISSAO})`).eq('papel_id', papelId);
+    query = contadorId
+      ? query.eq('contador_id', contadorId)
+      : empresaId
+        ? query.eq('empresa_id', empresaId)
+        : query.is('contador_id', null).is('empresa_id', null);
+
+    const { data, error } = await query;
+    if (error) throw new InternalServerErrorException(`Falha ao obter teto por dono: ${error.message}`);
+    const override = (data as unknown as { permissoes: LinhaPermissao }[]).map((linha) => this.mapear(linha.permissoes));
+    if (override.length > 0) return override;
+    return this.listarPermissoesDoPapel(papelId);
+  }
+
+  async definirTetoDono(papelId: string, contadorId: string | null, empresaId: string | null, permissaoIds: string[]): Promise<void> {
+    let delQuery = this.supabase.admin.from('papel_permissoes_dono').delete().eq('papel_id', papelId);
+    delQuery = contadorId
+      ? delQuery.eq('contador_id', contadorId)
+      : empresaId
+        ? delQuery.eq('empresa_id', empresaId)
+        : delQuery.is('contador_id', null).is('empresa_id', null);
+
+    const { error: erroDelete } = await delQuery;
+    if (erroDelete) throw new InternalServerErrorException(`Falha ao limpar teto por dono: ${erroDelete.message}`);
+    if (permissaoIds.length === 0) return;
+
+    const linhas = permissaoIds.map((permissaoId) => ({ papel_id: papelId, contador_id: contadorId, empresa_id: empresaId, permissao_id: permissaoId }));
+    const { error: erroInsert } = await this.supabase.admin.from('papel_permissoes_dono').insert(linhas);
+    if (erroInsert) throw new InternalServerErrorException(`Falha ao salvar teto por dono: ${erroInsert.message}`);
+  }
+
   async listarPermissoesDoUsuario(usuarioId: string): Promise<Permissao[]> {
     const { data, error } = await this.supabase.admin
       .from('usuario_permissoes')

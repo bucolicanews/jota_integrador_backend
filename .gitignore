@@ -57,3 +57,8 @@ Thumbs.db
 .turbo/
 .cache/
 *.tsbuildinfo
+
+# Build gerado dentro de scripts/ (ts-node às vezes emite .js/.d.ts junto do .ts fonte)
+scripts/*.js
+scripts/*.js.map
+scripts/*.d.ts

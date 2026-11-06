@@ -3,7 +3,7 @@ import { PERMISSOES_REPOSITORIO, Permissao, PermissoesRepositorioPort } from '..
 import { USUARIOS_REPOSITORIO, Usuario, UsuariosRepositorioPort } from '../portas/usuarios-repositorio.port';
 
 export interface PermissoesDoUsuario {
-  /** Teto -- permissões que fazem sentido pro papel desse usuário (papel_permissoes), catálogo assinalável na UI. */
+  /** Teto EFETIVO -- override do dono (papel_permissoes_dono) se existir, senão o global (papel_permissoes); catálogo assinalável na UI. */
   catalogoDisponivel: Permissao[];
   /** Concessões de fato (usuario_permissoes). */
   concedidas: Permissao[];
@@ -19,7 +19,7 @@ export class ListarPermissoesUsuarioUseCase {
   async executar(alvo: Usuario): Promise<PermissoesDoUsuario> {
     const papelId = await this.usuarios.buscarIdPapelPorNome(alvo.papel);
     const [catalogoDisponivel, concedidas] = await Promise.all([
-      this.permissoes.listarPermissoesDoPapel(papelId),
+      this.permissoes.obterTetoEfetivo(papelId, alvo.contadorId, alvo.empresaId),
       this.permissoes.listarPermissoesDoUsuario(alvo.id),
     ]);
     return { catalogoDisponivel, concedidas };

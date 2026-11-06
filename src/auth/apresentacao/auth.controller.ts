@@ -26,6 +26,7 @@ import { ESCOPO_POR_PAPEL, Papel } from '../dominio/papel';
 import { AtualizarAvatarProprioUseCase } from '../aplicacao/casos-de-uso/atualizar-avatar-proprio.usecase';
 import { AtualizarNomeProprioUseCase } from '../aplicacao/casos-de-uso/atualizar-nome-proprio.usecase';
 import { AtualizarPapelUsuarioUseCase } from '../aplicacao/casos-de-uso/atualizar-papel-usuario.usecase';
+import { AtualizarTetoPermissoesUseCase } from '../aplicacao/casos-de-uso/atualizar-teto-permissoes.usecase';
 import { BloquearUsuarioUseCase } from '../aplicacao/casos-de-uso/bloquear-usuario.usecase';
 import { ConcederPermissaoUseCase } from '../aplicacao/casos-de-uso/conceder-permissao.usecase';
 import { CriarUsuarioUseCase, ResultadoCriarUsuario } from '../aplicacao/casos-de-uso/criar-usuario.usecase';
@@ -35,9 +36,12 @@ import { ListarPermissoesUsuarioUseCase, PermissoesDoUsuario } from '../aplicaca
 import { ListarUsuariosUseCase } from '../aplicacao/casos-de-uso/listar-usuarios.usecase';
 import { LogoutGlobalUseCase } from '../aplicacao/casos-de-uso/logout-global.usecase';
 import { ObterPerfilUseCase } from '../aplicacao/casos-de-uso/obter-perfil.usecase';
+import { ObterTetoPermissoesUseCase } from '../aplicacao/casos-de-uso/obter-teto-permissoes.usecase';
+import { Permissao } from '../aplicacao/portas/permissoes-repositorio.port';
 import { RevogarPermissaoUseCase } from '../aplicacao/casos-de-uso/revogar-permissao.usecase';
 import { Usuario } from '../aplicacao/portas/usuarios-repositorio.port';
 import { AtualizarPapelUsuarioDto } from './dto/atualizar-papel-usuario.dto';
+import { AtualizarTetoPermissoesDto } from './dto/atualizar-teto-permissoes.dto';
 import { AtualizarPerfilProprioDto } from './dto/atualizar-perfil-proprio.dto';
 import { BloquearUsuarioDto } from './dto/bloquear-usuario.dto';
 import { CriarUsuarioDto } from './dto/criar-usuario.dto';
@@ -64,6 +68,8 @@ export class AuthController {
     private readonly listarUsuarios: ListarUsuariosUseCase,
     private readonly concederPermissao: ConcederPermissaoUseCase,
     private readonly revogarPermissao: RevogarPermissaoUseCase,
+    private readonly obterTetoPermissoes: ObterTetoPermissoesUseCase,
+    private readonly atualizarTetoPermissoes: AtualizarTetoPermissoesUseCase,
     @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,
   ) {}
 
@@ -159,6 +165,54 @@ export class AuthController {
     this.exigirAutoridadeSobre(usuarioAtual, alvo);
 
     return this.gerarLinkAcesso.executar(id);
+  }
+
+  /**
+   * Teto de permissões dos FUNCIONÁRIOS deste dono (contador -> OPERADOR_CONTADOR,
+   * empresa -> OPERADOR_EMPRESA, plataforma -> ADMIN_FINANCEIRO/ADMIN_SUPORTE via query
+   * `papel`, já que plataforma tem dois papéis configuráveis). Nunca o papel do próprio
+   * chamador (dono já tem acesso total dentro do próprio escopo, não precisa de teto).
+   */
+  @Get('teto-permissoes')
+  @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
+  async obterTetoPermissoesRota(
+    @Query('papel') papelQuery: string | undefined,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ papel: Papel; catalogo: Permissao[]; selecionadas: string[] }> {
+    const { papel, contadorId, empresaId } = this.resolverPapelConfiguravel(usuarioAtual, papelQuery);
+    const resultado = await this.obterTetoPermissoes.executar(papel, contadorId, empresaId);
+    return { papel, ...resultado };
+  }
+
+  @Put('teto-permissoes')
+  @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
+  async atualizarTetoPermissoesRota(
+    @Query('papel') papelQuery: string | undefined,
+    @Body() dto: AtualizarTetoPermissoesDto,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ ok: true }> {
+    const { papel, contadorId, empresaId } = this.resolverPapelConfiguravel(usuarioAtual, papelQuery);
+    await this.atualizarTetoPermissoes.executar(papel, contadorId, empresaId, dto.permissaoIds, usuarioAtual.id);
+    return { ok: true };
+  }
+
+  private resolverPapelConfiguravel(
+    usuarioAtual: UsuarioAutenticado,
+    papelQuery: string | undefined,
+  ): { papel: Papel; contadorId: string | null; empresaId: string | null } {
+    if (usuarioAtual.papel === Papel.SUPER_ADMIN) {
+      if (papelQuery !== Papel.ADMIN_FINANCEIRO && papelQuery !== Papel.ADMIN_SUPORTE) {
+        throw new BadRequestException('Query "papel" deve ser ADMIN_FINANCEIRO ou ADMIN_SUPORTE');
+      }
+      return { papel: papelQuery, contadorId: null, empresaId: null };
+    }
+    if (usuarioAtual.papel === Papel.CONTADOR_DONO) {
+      return { papel: Papel.OPERADOR_CONTADOR, contadorId: usuarioAtual.contadorId, empresaId: null };
+    }
+    if (usuarioAtual.papel === Papel.EMPRESARIO_DONO) {
+      return { papel: Papel.OPERADOR_EMPRESA, contadorId: null, empresaId: usuarioAtual.empresaId };
+    }
+    throw new ForbiddenException('Sem autoridade para configurar teto de permissões');
   }
 
   @Patch('usuarios/:id/papel')

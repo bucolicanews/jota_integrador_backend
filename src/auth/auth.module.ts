@@ -3,6 +3,7 @@ import { EmpresasModule } from '../empresas/empresas.module';
 import { AtualizarAvatarProprioUseCase } from './aplicacao/casos-de-uso/atualizar-avatar-proprio.usecase';
 import { AtualizarNomeProprioUseCase } from './aplicacao/casos-de-uso/atualizar-nome-proprio.usecase';
 import { AtualizarPapelUsuarioUseCase } from './aplicacao/casos-de-uso/atualizar-papel-usuario.usecase';
+import { AtualizarTetoPermissoesUseCase } from './aplicacao/casos-de-uso/atualizar-teto-permissoes.usecase';
 import { BloquearUsuarioUseCase } from './aplicacao/casos-de-uso/bloquear-usuario.usecase';
 import { ConcederPermissaoUseCase } from './aplicacao/casos-de-uso/conceder-permissao.usecase';
 import { CriarUsuarioUseCase } from './aplicacao/casos-de-uso/criar-usuario.usecase';
@@ -12,6 +13,7 @@ import { ListarPermissoesUsuarioUseCase } from './aplicacao/casos-de-uso/listar-
 import { ListarUsuariosUseCase } from './aplicacao/casos-de-uso/listar-usuarios.usecase';
 import { LogoutGlobalUseCase } from './aplicacao/casos-de-uso/logout-global.usecase';
 import { ObterPerfilUseCase } from './aplicacao/casos-de-uso/obter-perfil.usecase';
+import { ObterTetoPermissoesUseCase } from './aplicacao/casos-de-uso/obter-teto-permissoes.usecase';
 import { RevogarPermissaoUseCase } from './aplicacao/casos-de-uso/revogar-permissao.usecase';
 import { PERMISSOES_REPOSITORIO } from './aplicacao/portas/permissoes-repositorio.port';
 import { PROVEDOR_IDENTIDADE } from './aplicacao/portas/provedor-identidade.port';
@@ -52,6 +54,8 @@ import { UsuariosRepositorioSupabase } from './infraestrutura/usuarios.repositor
     ListarUsuariosUseCase,
     ConcederPermissaoUseCase,
     RevogarPermissaoUseCase,
+    ObterTetoPermissoesUseCase,
+    AtualizarTetoPermissoesUseCase,
     SupabaseAuthGuard,
     PapeisGuard,
     PermissoesGuard,

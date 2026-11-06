@@ -4,10 +4,11 @@ import { PERMISSOES_REPOSITORIO, PermissoesRepositorioPort } from '../portas/per
 import { USUARIOS_REPOSITORIO, Usuario, UsuariosRepositorioPort } from '../portas/usuarios-repositorio.port';
 
 /**
- * Concede uma permissão granular a um usuário -- valida contra o TETO do papel dele
- * (papel_permissoes) antes de gravar em usuario_permissoes. Um contador não consegue
+ * Concede uma permissão granular a um usuário -- valida contra o TETO EFETIVO do papel
+ * dele (override por dono em papel_permissoes_dono, com fallback pro global
+ * papel_permissoes) antes de gravar em usuario_permissoes. Um contador não consegue
  * conceder "financeiro:excluir" pro próprio OPERADOR_CONTADOR se essa permissão nunca
- * foi ligada a esse papel no catálogo (mesmo se tentar via API direto).
+ * foi ligada a esse papel no teto (mesmo se tentar via API direto).
  */
 @Injectable()
 export class ConcederPermissaoUseCase {
@@ -24,7 +25,7 @@ export class ConcederPermissaoUseCase {
     }
 
     const papelId = await this.usuarios.buscarIdPapelPorNome(alvo.papel);
-    const teto = await this.permissoes.listarPermissoesDoPapel(papelId);
+    const teto = await this.permissoes.obterTetoEfetivo(papelId, alvo.contadorId, alvo.empresaId);
     if (!teto.some((p) => p.id === permissaoId)) {
       throw new ForbiddenException(`Permissão "${permissao.chave}" não está disponível pro papel ${alvo.papel}`);
     }
