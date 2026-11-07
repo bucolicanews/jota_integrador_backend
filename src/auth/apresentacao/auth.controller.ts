@@ -177,7 +177,7 @@ export class AuthController {
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
   ): Promise<{ linkAcesso: string }> {
     const alvo = await this.obterPerfil.executar(id);
-    this.exigirAutoridadeSobre(usuarioAtual, alvo);
+    await this.exigirAutoridadeSobre(usuarioAtual, alvo);
 
     return this.gerarLinkAcesso.executar(id);
   }
@@ -254,7 +254,7 @@ export class AuthController {
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
   ): Promise<Usuario> {
     const alvo = await this.obterPerfil.executar(id);
-    this.exigirAutoridadeSobre(usuarioAtual, alvo);
+    await this.exigirAutoridadeSobre(usuarioAtual, alvo);
 
     return this.atualizarEmailUsuario.executar(id, dto.novoEmail);
   }
@@ -268,7 +268,7 @@ export class AuthController {
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
   ): Promise<{ ok: true }> {
     const alvo = await this.obterPerfil.executar(id);
-    this.exigirAutoridadeSobre(usuarioAtual, alvo);
+    await this.exigirAutoridadeSobre(usuarioAtual, alvo);
 
     await this.atualizarSenhaUsuario.executar(id, dto.novaSenha);
     return { ok: true };
@@ -282,7 +282,7 @@ export class AuthController {
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
   ): Promise<{ ok: true }> {
     const alvo = await this.obterPerfil.executar(id);
-    this.exigirAutoridadeSobre(usuarioAtual, alvo);
+    await this.exigirAutoridadeSobre(usuarioAtual, alvo);
 
     await this.bloquearUsuario.executar(id, dto.motivo, usuarioAtual.id);
     return { ok: true };
@@ -295,7 +295,7 @@ export class AuthController {
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
   ): Promise<{ ok: true }> {
     const alvo = await this.obterPerfil.executar(id);
-    this.exigirAutoridadeSobre(usuarioAtual, alvo);
+    await this.exigirAutoridadeSobre(usuarioAtual, alvo);
 
     await this.desbloquearUsuario.executar(id, usuarioAtual.id);
     return { ok: true };
@@ -309,7 +309,7 @@ export class AuthController {
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
   ): Promise<PermissoesDoUsuario> {
     const alvo = await this.obterPerfil.executar(id);
-    this.exigirAutoridadeSobre(usuarioAtual, alvo);
+    await this.exigirAutoridadeSobre(usuarioAtual, alvo);
     return this.listarPermissoesUsuario.executar(alvo);
   }
 
@@ -321,7 +321,7 @@ export class AuthController {
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
   ): Promise<{ ok: true }> {
     const alvo = await this.obterPerfil.executar(id);
-    this.exigirAutoridadeSobre(usuarioAtual, alvo);
+    await this.exigirAutoridadeSobre(usuarioAtual, alvo);
     await this.concederPermissao.executar(alvo, permissaoId, usuarioAtual.id);
     return { ok: true };
   }
@@ -334,7 +334,7 @@ export class AuthController {
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
   ): Promise<{ ok: true }> {
     const alvo = await this.obterPerfil.executar(id);
-    this.exigirAutoridadeSobre(usuarioAtual, alvo);
+    await this.exigirAutoridadeSobre(usuarioAtual, alvo);
     await this.revogarPermissao.executar(alvo, permissaoId, usuarioAtual.id);
     return { ok: true };
   }
@@ -384,16 +384,32 @@ export class AuthController {
     throw new ForbiddenException('Sem autoridade para criar usuário com este papel/vínculo');
   }
 
-  /** Ninguém além da plataforma age sobre usuário fora do próprio contador/empresa. */
-  private exigirAutoridadeSobre(usuarioAtual: UsuarioAutenticado, alvo: Usuario): void {
+  /**
+   * Ninguém além da plataforma age sobre usuário fora do próprio contador/empresa --
+   * exceto o caso comum de "alvo é o login do EMPRESARIO_DONO/OPERADOR_EMPRESA de uma
+   * empresa-cliente da carteira deste contador" (vínculo via empresa, não contador_id
+   * direto, mesma checagem de posse que `ListarUsuariosUseCase` já faz na listagem --
+   * sem isso, contador via o login do próprio cliente na lista mas não conseguia agir
+   * sobre ele, 403 em bloquear/desbloquear/link-acesso/e-mail/senha).
+   */
+  private async exigirAutoridadeSobre(usuarioAtual: UsuarioAutenticado, alvo: Usuario): Promise<void> {
     if (usuarioAtual.papel === Papel.SUPER_ADMIN) {
       return;
     }
     const mesmoContador = usuarioAtual.contadorId !== null && usuarioAtual.contadorId === alvo.contadorId;
     const mesmaEmpresa = usuarioAtual.empresaId !== null && usuarioAtual.empresaId === alvo.empresaId;
 
-    if (!mesmoContador && !mesmaEmpresa) {
-      throw new ForbiddenException('Sem autoridade sobre este usuário');
+    if (mesmoContador || mesmaEmpresa) {
+      return;
     }
+
+    if (usuarioAtual.contadorId !== null && alvo.empresaId !== null) {
+      const pertence = await this.empresasRepositorio.pertenceAoContador(alvo.empresaId, usuarioAtual.contadorId);
+      if (pertence) {
+        return;
+      }
+    }
+
+    throw new ForbiddenException('Sem autoridade sobre este usuário');
   }
 }
