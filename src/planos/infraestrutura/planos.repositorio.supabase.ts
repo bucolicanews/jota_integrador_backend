@@ -13,6 +13,7 @@ interface LinhaPlano {
   nome: string;
   descricao: string | null;
   modulos: string[];
+  permissoes_padrao: string[];
   preco: number;
   periodicidade: Periodicidade;
   data_validade: string | null;
@@ -20,7 +21,7 @@ interface LinhaPlano {
   ativo: boolean;
 }
 
-const COLUNAS_SELECT = 'id, nome, descricao, modulos, preco, periodicidade, data_validade, gratuito, ativo';
+const COLUNAS_SELECT = 'id, nome, descricao, modulos, permissoes_padrao, preco, periodicidade, data_validade, gratuito, ativo';
 
 @Injectable()
 export class PlanosRepositorioSupabase implements PlanosRepositorioPort {
@@ -36,6 +37,7 @@ export class PlanosRepositorioSupabase implements PlanosRepositorioPort {
         // ver VerificarCotaIncluidaUseCase) -- sempre 0, coluna mantida só por compatibilidade.
         operacoes_incluidas: 0,
         modulos: dados.modulos,
+        permissoes_padrao: dados.permissoesPadrao,
         preco: dados.preco,
         periodicidade: dados.periodicidade,
         data_validade: dados.dataValidade,
@@ -81,6 +83,7 @@ export class PlanosRepositorioSupabase implements PlanosRepositorioPort {
     if (dados.nome !== undefined) campos.nome = dados.nome;
     if (dados.descricao !== undefined) campos.descricao = dados.descricao;
     if (dados.modulos !== undefined) campos.modulos = dados.modulos;
+    if (dados.permissoesPadrao !== undefined) campos.permissoes_padrao = dados.permissoesPadrao;
     if (dados.preco !== undefined) campos.preco = dados.preco;
     if (dados.periodicidade !== undefined) campos.periodicidade = dados.periodicidade;
     if (dados.ativo !== undefined) campos.ativo = dados.ativo;
@@ -106,6 +109,7 @@ export class PlanosRepositorioSupabase implements PlanosRepositorioPort {
       nome: linha.nome,
       descricao: linha.descricao,
       modulos: linha.modulos,
+      permissoesPadrao: linha.permissoes_padrao,
       preco: Number(linha.preco),
       periodicidade: linha.periodicidade,
       dataValidade: linha.data_validade,

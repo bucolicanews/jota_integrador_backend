@@ -1,5 +1,7 @@
 import { Global, Module } from '@nestjs/common';
+import { AssinaturasModule } from '../assinaturas/assinaturas.module';
 import { EmpresasModule } from '../empresas/empresas.module';
+import { PlanosModule } from '../planos/planos.module';
 import { AtualizarAvatarProprioUseCase } from './aplicacao/casos-de-uso/atualizar-avatar-proprio.usecase';
 import { AtualizarEmailUsuarioUseCase } from './aplicacao/casos-de-uso/atualizar-email-usuario.usecase';
 import { AtualizarNomeProprioUseCase } from './aplicacao/casos-de-uso/atualizar-nome-proprio.usecase';
@@ -36,7 +38,10 @@ import { UsuariosRepositorioSupabase } from './infraestrutura/usuarios.repositor
 // compartilhado -- ver [[project_deliveryhub]] na memória).
 @Global()
 @Module({
-  imports: [EmpresasModule], // EMPRESAS_REPOSITORIO -- checagem de posse em CriarUsuario
+  // EmpresasModule -- checagem de posse em CriarUsuario. AssinaturasModule/PlanosModule --
+  // CriarUsuarioUseCase lê permissoesPadrao do plano ativo da empresa pra conceder de cara
+  // a um OPERADOR_EMPRESA recém-criado (ver comentário no próprio usecase).
+  imports: [EmpresasModule, AssinaturasModule, PlanosModule],
   controllers: [AuthController],
   providers: [
     { provide: USUARIOS_REPOSITORIO, useClass: UsuariosRepositorioSupabase },

@@ -35,6 +35,7 @@ export class PlanosController {
       nome: dto.nome,
       descricao: dto.descricao ?? null,
       modulos: dto.modulos ?? [],
+      permissoesPadrao: dto.permissoesPadrao ?? [],
       preco: dto.preco,
       periodicidade: dto.periodicidade,
       dataValidade: dto.dataValidade ?? null,

@@ -19,6 +19,12 @@ export class AtualizarPlanoDto {
   modulos?: string[];
 
   @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsString({ each: true })
+  permissoesPadrao?: string[];
+
+  @IsOptional()
   @IsNumber()
   @Min(0)
   preco?: number;

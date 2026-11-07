@@ -39,7 +39,7 @@ import { ListarUsuariosUseCase } from '../aplicacao/casos-de-uso/listar-usuarios
 import { LogoutGlobalUseCase } from '../aplicacao/casos-de-uso/logout-global.usecase';
 import { ObterPerfilUseCase } from '../aplicacao/casos-de-uso/obter-perfil.usecase';
 import { ObterTetoPermissoesUseCase } from '../aplicacao/casos-de-uso/obter-teto-permissoes.usecase';
-import { Permissao } from '../aplicacao/portas/permissoes-repositorio.port';
+import { PERMISSOES_REPOSITORIO, Permissao, PermissoesRepositorioPort } from '../aplicacao/portas/permissoes-repositorio.port';
 import { RevogarPermissaoUseCase } from '../aplicacao/casos-de-uso/revogar-permissao.usecase';
 import { Usuario } from '../aplicacao/portas/usuarios-repositorio.port';
 import { AtualizarEmailUsuarioDto } from './dto/atualizar-email-usuario.dto';
@@ -77,7 +77,15 @@ export class AuthController {
     private readonly obterTetoPermissoes: ObterTetoPermissoesUseCase,
     private readonly atualizarTetoPermissoes: AtualizarTetoPermissoesUseCase,
     @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,
+    @Inject(PERMISSOES_REPOSITORIO) private readonly permissoesRepositorio: PermissoesRepositorioPort,
   ) {}
+
+  /** Catálogo completo (todos os recursos/ações cadastrados), sem filtrar por teto de papel nenhum -- usado por "Editar plano" (permissoesPadrao) e qualquer outra tela que precise montar um checklist genérico. */
+  @Get('permissoes-catalogo')
+  @Papeis(Papel.SUPER_ADMIN, Papel.ADMIN_FINANCEIRO)
+  async listarCatalogoPermissoes(): Promise<Permissao[]> {
+    return this.permissoesRepositorio.listarCatalogoPermissoes();
+  }
 
   @Get('me')
   async me(@UsuarioAtual() usuarioAtual: UsuarioAutenticado): Promise<Usuario> {

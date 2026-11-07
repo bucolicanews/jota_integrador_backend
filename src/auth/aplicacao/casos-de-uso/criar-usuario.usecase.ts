@@ -1,5 +1,12 @@
 import { ConflictException, Inject, Injectable } from '@nestjs/common';
+import { ASSINATURAS_REPOSITORIO, AssinaturasRepositorioPort } from '../../../assinaturas/aplicacao/portas/assinaturas-repositorio.port';
+import { PLANOS_REPOSITORIO, PlanosRepositorioPort } from '../../../planos/aplicacao/portas/planos-repositorio.port';
+import { papelExigeChecagemGranular } from '../../dominio/permissao';
 import { Papel, validarCoerenciaEscopo } from '../../dominio/papel';
+import {
+  PERMISSOES_REPOSITORIO,
+  PermissoesRepositorioPort,
+} from '../portas/permissoes-repositorio.port';
 import {
   USUARIOS_REPOSITORIO,
   Usuario,
@@ -33,6 +40,9 @@ export class CriarUsuarioUseCase {
   constructor(
     @Inject(USUARIOS_REPOSITORIO) private readonly usuariosRepositorio: UsuariosRepositorioPort,
     @Inject(PROVEDOR_IDENTIDADE) private readonly provedorIdentidade: ProvedorIdentidadePort,
+    @Inject(PERMISSOES_REPOSITORIO) private readonly permissoesRepositorio: PermissoesRepositorioPort,
+    @Inject(ASSINATURAS_REPOSITORIO) private readonly assinaturasRepositorio: AssinaturasRepositorioPort,
+    @Inject(PLANOS_REPOSITORIO) private readonly planosRepositorio: PlanosRepositorioPort,
   ) {}
 
   async executar(entrada: EntradaCriarUsuario): Promise<ResultadoCriarUsuario> {
@@ -74,7 +84,37 @@ export class CriarUsuarioUseCase {
       empresaId: entrada.empresaId,
     });
 
-    // 4. Link de acesso -- gerado DEPOIS do usuário já existir no provedor (passo 1).
+    // 4. Suporte é concedido por padrão pra todo papel restringível (OPERADOR_CONTADOR/
+    //    OPERADOR_EMPRESA/ADMIN_FINANCEIRO/ADMIN_SUPORTE) -- sem isso, um recém-criado sem
+    //    nenhuma concessão fica só com Painel no menu, sem nem conseguir abrir um ticket.
+    //    `concedido_por` aponta pro próprio usuário (concessão automática de sistema, não
+    //    ação de um admin de verdade).
+    if (papelExigeChecagemGranular(entrada.papel)) {
+      const catalogo = await this.permissoesRepositorio.listarCatalogoPermissoes();
+      const chavesPadrao = new Set(['suporte:visualizar']);
+
+      // OPERADOR_EMPRESA também herda o que o PLANO da empresa define como padrão (ver
+      // "Editar plano" > permissões incluídas) -- só aplicado aqui na criação, nunca
+      // retroativo pra quem já existe. Falha silenciosa se a empresa não tiver assinatura
+      // ativa ainda (ex: convite enviado antes de ativar o plano) -- não é motivo pra
+      // travar a criação do login.
+      if (entrada.papel === Papel.OPERADOR_EMPRESA && entrada.empresaId) {
+        const assinatura = await this.assinaturasRepositorio.buscarAtivaPorEmpresa(entrada.empresaId);
+        if (assinatura) {
+          const plano = await this.planosRepositorio.buscarPorId(assinatura.planoId);
+          plano?.permissoesPadrao.forEach((chave) => chavesPadrao.add(chave));
+        }
+      }
+
+      for (const chave of chavesPadrao) {
+        const permissao = catalogo.find((p) => p.chave === chave);
+        if (permissao) {
+          await this.permissoesRepositorio.conceder(usuario.id, permissao.id, usuario.id);
+        }
+      }
+    }
+
+    // 5. Link de acesso -- gerado DEPOIS do usuário já existir no provedor (passo 1).
     const linkAcesso = await this.provedorIdentidade.gerarLinkAcesso(entrada.email);
 
     return { ...usuario, linkAcesso };

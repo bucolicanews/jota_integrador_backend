@@ -5,6 +5,8 @@ export interface Plano {
   nome: string;
   descricao: string | null;
   modulos: string[];
+  /** Chaves (recurso:acao) concedidas de cara a todo OPERADOR_EMPRESA criado enquanto a empresa está neste plano -- ver CriarUsuarioUseCase. */
+  permissoesPadrao: string[];
   preco: number;
   periodicidade: Periodicidade;
   dataValidade: string | null;
@@ -16,6 +18,7 @@ export interface DadosNovoPlano {
   nome: string;
   descricao: string | null;
   modulos: string[];
+  permissoesPadrao: string[];
   preco: number;
   periodicidade: Periodicidade;
   dataValidade: string | null;
@@ -26,6 +29,7 @@ export interface DadosAtualizacaoPlano {
   nome?: string;
   descricao?: string | null;
   modulos?: string[];
+  permissoesPadrao?: string[];
   preco?: number;
   periodicidade?: Periodicidade;
   ativo?: boolean;

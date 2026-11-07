@@ -20,6 +20,15 @@ export class CriarPlanoDto {
   @IsIn(MODULOS_LICENCIAVEIS, { each: true })
   modulos?: string[];
 
+  // Chaves (recurso:acao) concedidas de cara a todo OPERADOR_EMPRESA criado enquanto a
+  // empresa está neste plano -- catálogo é dinâmico (tabela permissoes), checagem de
+  // "existe mesmo" fica no usecase, não aqui (ver CriarPlanoUseCase).
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsString({ each: true })
+  permissoesPadrao?: string[];
+
   @IsNumber()
   @Min(0)
   preco!: number;
