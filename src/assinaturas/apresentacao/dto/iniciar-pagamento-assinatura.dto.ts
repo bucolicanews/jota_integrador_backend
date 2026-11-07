@@ -1,4 +1,4 @@
-import { IsEmail, IsIn, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+import { IsBoolean, IsEmail, IsIn, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 
 export class IniciarPagamentoAssinaturaDto {
   @IsUUID()
@@ -25,4 +25,9 @@ export class IniciarPagamentoAssinaturaDto {
   @IsOptional()
   @IsString()
   customerTelefoneE164?: string;
+
+  /** true = o próprio contador paga (cobra só o custo, sem a margem de revenda). Ausente/false = cobrança pro cliente, com split de sempre. */
+  @IsOptional()
+  @IsBoolean()
+  pagoPeloContador?: boolean;
 }

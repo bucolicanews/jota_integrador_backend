@@ -104,6 +104,7 @@ export class AssinaturasController {
       installments: dto.installments,
       customerEmail: dto.customerEmail,
       customerTelefoneE164: dto.customerTelefoneE164 ?? null,
+      pagoPeloContador: dto.pagoPeloContador ?? false,
     });
   }
 

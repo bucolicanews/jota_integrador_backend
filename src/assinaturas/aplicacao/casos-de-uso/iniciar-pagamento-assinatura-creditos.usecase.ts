@@ -23,6 +23,13 @@ export interface DadosIniciarPagamentoAssinaturaCreditos {
   installments?: number;
   customerEmail: string;
   customerTelefoneE164: string | null;
+  /**
+   * true = o próprio CONTADOR está pagando (cobra só plano.preco, o custo real da Jota --
+   * ele nunca paga a própria margem de revenda pra si mesmo). false/ausente = cobrança pro
+   * CLIENTE (cobra planoRevenda.valorVenda, preço de venda completo, contador fica com a
+   * margem via split). Default false preserva o comportamento de sempre.
+   */
+  pagoPeloContador?: boolean;
 }
 
 export interface ResultadoIniciarPagamentoAssinaturaCreditos {
@@ -85,7 +92,9 @@ export class IniciarPagamentoAssinaturaCreditosUseCase {
     if (!contador) {
       throw new NotFoundException('Contador não encontrado');
     }
-    if (!contador.pagbankAccountId) {
+    // Quando o contador paga pra si mesmo, 100% vai pra plataforma (sem split nenhum) --
+    // não precisa da própria conta PagBank cadastrada pra isso.
+    if (!dados.pagoPeloContador && !contador.pagbankAccountId) {
       throw new BadRequestException('Cadastre sua conta PagBank antes de vender com cobrança real');
     }
 
@@ -107,9 +116,12 @@ export class IniciarPagamentoAssinaturaCreditosUseCase {
       throw new NotFoundException('Empresa não encontrada');
     }
 
-    const valorTotal = planoRevenda.valorVenda;
-    const platformAmount = plano.preco;
-    const sellerAmount = valorTotal - platformAmount; // resto fica com o contador, absorve arredondamento
+    // Contador pagando pra si mesmo: cobra só o custo real (plano.preco), nunca a própria
+    // margem de revenda -- ele não "vende" pra si. Cliente pagando (padrão): cobra o preço
+    // de venda completo, contador fica com a margem via split (comportamento de sempre).
+    const valorTotal = dados.pagoPeloContador ? plano.preco : planoRevenda.valorVenda;
+    const platformAmount = dados.pagoPeloContador ? plano.preco : plano.preco;
+    const sellerAmount = dados.pagoPeloContador ? 0 : valorTotal - platformAmount; // resto fica com o contador, absorve arredondamento
 
     const pagamento = await this.pagamentosRepositorio.criar({
       contadorId: dados.contadorId,
@@ -139,10 +151,15 @@ export class IniciarPagamentoAssinaturaCreditosUseCase {
       webhook_url: webhookUrl,
       splits: {
         method: 'FIXED' as const,
-        receivers: [
-          { account: { id: contador.pagbankAccountId }, amount: { value: sellerAmountCentavos } },
-          { account: { id: platformAccountId }, amount: { value: platformAmountCentavos } },
-        ],
+        // Contador pagando pra si mesmo: só a plataforma recebe (sellerAmount é sempre 0
+        // nesse caso, não cadastrar o contador como receiver evita mandar conta nula/0 pra
+        // PagBank). Cliente pagando: split de sempre, contador + plataforma.
+        receivers: dados.pagoPeloContador
+          ? [{ account: { id: platformAccountId }, amount: { value: platformAmountCentavos } }]
+          : [
+              { account: { id: contador.pagbankAccountId as string }, amount: { value: sellerAmountCentavos } },
+              { account: { id: platformAccountId }, amount: { value: platformAmountCentavos } },
+            ],
       },
     };
 
