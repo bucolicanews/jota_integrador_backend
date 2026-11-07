@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { AuditoriaService } from '../../../common/auditoria/auditoria.service';
+import { papelExigeChecagemGranular } from '../../dominio/permissao';
 import { PERMISSOES_REPOSITORIO, PermissoesRepositorioPort } from '../portas/permissoes-repositorio.port';
 import { USUARIOS_REPOSITORIO, Usuario, UsuariosRepositorioPort } from '../portas/usuarios-repositorio.port';
 
@@ -30,8 +31,8 @@ export class ConcederPermissaoUseCase {
       throw new ForbiddenException(`Permissão "${permissao.chave}" não está disponível pro papel ${alvo.papel}`);
     }
 
-    if (alvo.contadorId === null && alvo.empresaId === null) {
-      throw new BadRequestException('Permissão granular só se aplica a usuário vinculado a contador ou empresa');
+    if (!papelExigeChecagemGranular(alvo.papel)) {
+      throw new BadRequestException(`Permissão granular não se aplica ao papel ${alvo.papel}`);
     }
 
     await this.permissoes.conceder(alvo.id, permissaoId, concedidoPorId);
