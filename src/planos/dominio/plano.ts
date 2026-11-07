@@ -18,6 +18,9 @@ export const MODULOS_LICENCIAVEIS = [
   // cliente nenhuma (ver MenuLateral.tsx, itens duplicados por papel).
   'ponto_eletronico',
   'usuarios',
+  'clientes',
+  'fornecedores',
+  'historicos',
 ] as const;
 
 /** Regra de negócio pura -- mesmo que o CHECK do banco já garanta, revalidar aqui (Zero Trust, docs/SEGURANCA.md). */
