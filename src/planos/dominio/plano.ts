@@ -13,6 +13,11 @@ export const MODULOS_LICENCIAVEIS = [
   'bancos',
   'relatorios',
   'fiscal',
+  // Só gate pra EMPRESARIO_DONO/OPERADOR_EMPRESA (visão empresa) no MenuLateral -- contador/
+  // admin usam o mesmo item de menu pro PRÓPRIO time, nunca depende de módulo de empresa-
+  // cliente nenhuma (ver MenuLateral.tsx, itens duplicados por papel).
+  'ponto_eletronico',
+  'usuarios',
 ] as const;
 
 /** Regra de negócio pura -- mesmo que o CHECK do banco já garanta, revalidar aqui (Zero Trust, docs/SEGURANCA.md). */
