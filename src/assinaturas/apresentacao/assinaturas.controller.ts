@@ -50,6 +50,13 @@ export class AssinaturasController {
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
   ): Promise<Assinatura> {
     this.exigirPosse(usuarioAtual, contadorId);
+    // "Ativar sem cobrar" é exclusivo da plataforma -- contador nunca ativa empresa-cliente
+    // de graça (regra já existia só no frontend, ModalCadastrarEmpresa; endpoint deixava
+    // qualquer contador chamar direto e furar isso). Contador sempre tem que cobrar (PIX
+    // dele mesmo ou "cliente paga depois"), nunca "grátis".
+    if (!ehPapelDePlataforma(usuarioAtual.papel)) {
+      throw new ForbiddenException('Só a plataforma pode ativar uma assinatura sem cobrar');
+    }
     return this.ativarManual.executar({
       contadorId,
       empresaId,
