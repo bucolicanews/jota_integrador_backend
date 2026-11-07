@@ -144,7 +144,7 @@ export class UsuariosRepositorioSupabase implements UsuariosRepositorioPort {
     }
   }
 
-  async listar(filtro: { contadorId: string | null; empresaIds: string[] }): Promise<Usuario[]> {
+  async listar(filtro: { contadorId: string | null; empresaIds: string[]; plataforma?: boolean }): Promise<Usuario[]> {
     let consulta = this.supabase.admin
       .from('usuarios')
       .select(COLUNAS_SELECT)
@@ -156,6 +156,8 @@ export class UsuariosRepositorioSupabase implements UsuariosRepositorioPort {
       consulta = consulta.eq('contador_id', filtro.contadorId);
     } else if (filtro.empresaIds.length > 0) {
       consulta = consulta.in('empresa_id', filtro.empresaIds);
+    } else if (filtro.plataforma) {
+      consulta = consulta.is('contador_id', null).is('empresa_id', null);
     } else {
       return [];
     }

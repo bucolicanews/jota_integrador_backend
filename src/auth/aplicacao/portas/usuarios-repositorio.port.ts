@@ -37,7 +37,7 @@ export interface UsuariosRepositorioPort {
    * e/ou `empresaIds` (escopo `empresa`, uma ou mais empresas da carteira). Os dois juntos
    * unem "meus funcionários" + "funcionários dos clientes" numa lista só (OR).
    */
-  listar(filtro: { contadorId: string | null; empresaIds: string[] }): Promise<Usuario[]>;
+  listar(filtro: { contadorId: string | null; empresaIds: string[]; plataforma?: boolean }): Promise<Usuario[]>;
   atualizarPapelEVinculo(
     id: string,
     papelId: string,

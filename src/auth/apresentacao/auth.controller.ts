@@ -125,10 +125,15 @@ export class AuthController {
   async listar(
     @Query('contadorId') contadorIdConsulta: string | undefined,
     @Query('empresaId') empresaIdConsulta: string | undefined,
+    @Query('plataforma') plataformaConsulta: string | undefined,
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
   ): Promise<Usuario[]> {
     if (usuarioAtual.papel === Papel.EMPRESARIO_DONO) {
       return this.listarUsuarios.executar({ contadorId: null, empresaIdUnico: usuarioAtual.empresaId });
+    }
+
+    if (usuarioAtual.papel === Papel.SUPER_ADMIN && plataformaConsulta === 'true') {
+      return this.listarUsuarios.executar({ contadorId: null, empresaIdUnico: null, plataforma: true });
     }
 
     const contadorId = usuarioAtual.papel === Papel.SUPER_ADMIN ? (contadorIdConsulta ?? null) : usuarioAtual.contadorId;

@@ -6,6 +6,8 @@ export interface FiltroListarUsuarios {
   contadorId: string | null;
   /** Uma empresa específica, pra restringir a listagem só à equipe dela. */
   empresaIdUnico: string | null;
+  /** SUPER_ADMIN vendo usuários de plataforma (SUPER_ADMIN/ADMIN_FINANCEIRO/ADMIN_SUPORTE) -- nunca tinha como aparecer nesta listagem antes (contador_id e empresa_id são sempre null pra eles). */
+  plataforma?: boolean;
 }
 
 @Injectable()
@@ -16,6 +18,10 @@ export class ListarUsuariosUseCase {
   ) {}
 
   async executar(filtro: FiltroListarUsuarios): Promise<Usuario[]> {
+    if (filtro.plataforma) {
+      return this.usuariosRepositorio.listar({ contadorId: null, empresaIds: [], plataforma: true });
+    }
+
     // Escopo plataforma direto numa empresa (SUPER_ADMIN) ou o próprio empresário vendo
     // a própria equipe -- controller já garantiu a autoridade, sem checagem extra aqui.
     if (!filtro.contadorId && filtro.empresaIdUnico) {
