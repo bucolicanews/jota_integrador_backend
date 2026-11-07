@@ -24,8 +24,10 @@ import {
 } from '../../empresas/aplicacao/portas/empresas-repositorio.port';
 import { ESCOPO_POR_PAPEL, Papel } from '../dominio/papel';
 import { AtualizarAvatarProprioUseCase } from '../aplicacao/casos-de-uso/atualizar-avatar-proprio.usecase';
+import { AtualizarEmailUsuarioUseCase } from '../aplicacao/casos-de-uso/atualizar-email-usuario.usecase';
 import { AtualizarNomeProprioUseCase } from '../aplicacao/casos-de-uso/atualizar-nome-proprio.usecase';
 import { AtualizarPapelUsuarioUseCase } from '../aplicacao/casos-de-uso/atualizar-papel-usuario.usecase';
+import { AtualizarSenhaUsuarioUseCase } from '../aplicacao/casos-de-uso/atualizar-senha-usuario.usecase';
 import { AtualizarTetoPermissoesUseCase } from '../aplicacao/casos-de-uso/atualizar-teto-permissoes.usecase';
 import { BloquearUsuarioUseCase } from '../aplicacao/casos-de-uso/bloquear-usuario.usecase';
 import { ConcederPermissaoUseCase } from '../aplicacao/casos-de-uso/conceder-permissao.usecase';
@@ -40,7 +42,9 @@ import { ObterTetoPermissoesUseCase } from '../aplicacao/casos-de-uso/obter-teto
 import { Permissao } from '../aplicacao/portas/permissoes-repositorio.port';
 import { RevogarPermissaoUseCase } from '../aplicacao/casos-de-uso/revogar-permissao.usecase';
 import { Usuario } from '../aplicacao/portas/usuarios-repositorio.port';
+import { AtualizarEmailUsuarioDto } from './dto/atualizar-email-usuario.dto';
 import { AtualizarPapelUsuarioDto } from './dto/atualizar-papel-usuario.dto';
+import { AtualizarSenhaUsuarioDto } from './dto/atualizar-senha-usuario.dto';
 import { AtualizarTetoPermissoesDto } from './dto/atualizar-teto-permissoes.dto';
 import { AtualizarPerfilProprioDto } from './dto/atualizar-perfil-proprio.dto';
 import { BloquearUsuarioDto } from './dto/bloquear-usuario.dto';
@@ -57,6 +61,8 @@ export class AuthController {
   constructor(
     private readonly criarUsuario: CriarUsuarioUseCase,
     private readonly atualizarNomeProprio: AtualizarNomeProprioUseCase,
+    private readonly atualizarEmailUsuario: AtualizarEmailUsuarioUseCase,
+    private readonly atualizarSenhaUsuario: AtualizarSenhaUsuarioUseCase,
     private readonly atualizarAvatarProprio: AtualizarAvatarProprioUseCase,
     private readonly atualizarPapelUsuario: AtualizarPapelUsuarioUseCase,
     private readonly bloquearUsuario: BloquearUsuarioUseCase,
@@ -85,6 +91,15 @@ export class AuthController {
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
   ): Promise<Usuario> {
     return this.atualizarNomeProprio.executar(usuarioAtual.id, dto.nome);
+  }
+
+  /** Auto-serviço: qualquer papel autenticado troca o próprio e-mail de login. Senha é trocada direto pelo client via `supabase.auth.updateUser` (nunca passa por aqui). */
+  @Patch('me/email')
+  async atualizarMeuEmail(
+    @Body() dto: AtualizarEmailUsuarioDto,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<Usuario> {
+    return this.atualizarEmailUsuario.executar(usuarioAtual.id, dto.novoEmail);
   }
 
   /** Auto-serviço: qualquer papel autenticado troca a própria foto de perfil. 2MB, JPG/PNG/WEBP. */
@@ -227,6 +242,35 @@ export class AuthController {
       novoContadorId: dto.contadorId ?? null,
       novoEmpresaId: dto.empresaId ?? null,
     });
+    return { ok: true };
+  }
+
+  /** Admin-on-behalf: SUPER_ADMIN troca o e-mail de login de qualquer usuário; contador/empresa só do próprio vínculo (mesma autoridade de bloquear/desbloquear). */
+  @Patch('usuarios/:id/email')
+  @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
+  async atualizarEmailDeUsuario(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AtualizarEmailUsuarioDto,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<Usuario> {
+    const alvo = await this.obterPerfil.executar(id);
+    this.exigirAutoridadeSobre(usuarioAtual, alvo);
+
+    return this.atualizarEmailUsuario.executar(id, dto.novoEmail);
+  }
+
+  /** Admin-on-behalf: SUPER_ADMIN define a senha de qualquer usuário; contador/empresa só do próprio vínculo. Nunca existe rota `/me/senha` -- o próprio usuário troca a senha direto no client (`supabase.auth.updateUser`). */
+  @Patch('usuarios/:id/senha')
+  @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
+  async atualizarSenhaDeUsuario(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AtualizarSenhaUsuarioDto,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ ok: true }> {
+    const alvo = await this.obterPerfil.executar(id);
+    this.exigirAutoridadeSobre(usuarioAtual, alvo);
+
+    await this.atualizarSenhaUsuario.executar(id, dto.novaSenha);
     return { ok: true };
   }
 

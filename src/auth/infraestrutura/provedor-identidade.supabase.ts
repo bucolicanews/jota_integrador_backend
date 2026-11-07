@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../../common/supabase/supabase.service';
 import {
@@ -83,6 +83,33 @@ export class ProvedorIdentidadeSupabase implements ProvedorIdentidadePort {
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao sincronizar claims: ${error.message}`);
+    }
+  }
+
+  async atualizarEmail(id: string, novoEmail: string): Promise<void> {
+    const { error } = await this.supabase.admin.auth.admin.updateUserById(id, {
+      email: novoEmail,
+      email_confirm: true,
+    });
+    if (error) {
+      const jaExiste = error.code === 'email_exists' || /already.*registered/i.test(error.message ?? '');
+      if (jaExiste) {
+        throw new InternalServerErrorException('E-mail já está em uso por outra identidade no provedor');
+      }
+      throw new InternalServerErrorException(`Falha ao atualizar e-mail: ${error.message}`);
+    }
+  }
+
+  async atualizarSenha(id: string, novaSenha: string): Promise<void> {
+    const { error } = await this.supabase.admin.auth.admin.updateUserById(id, {
+      password: novaSenha,
+    });
+    if (error) {
+      const senhaFraca = error.code === 'weak_password' || /password should be at least/i.test(error.message ?? '');
+      if (senhaFraca) {
+        throw new BadRequestException('Senha muito curta -- o provedor exige pelo menos 9 caracteres');
+      }
+      throw new InternalServerErrorException(`Falha ao atualizar senha: ${error.message}`);
     }
   }
 

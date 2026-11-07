@@ -47,6 +47,7 @@ export interface UsuariosRepositorioPort {
   marcarBloqueio(id: string, bloqueado: boolean, motivo: string | null, executadoPorId: string): Promise<void>;
   buscarIdPapelPorNome(nomePapel: Papel): Promise<string>;
   atualizarNome(id: string, nome: string): Promise<void>;
+  atualizarEmail(id: string, email: string): Promise<void>;
   atualizarAvatarRef(id: string, avatarRef: string | null): Promise<void>;
 }
 

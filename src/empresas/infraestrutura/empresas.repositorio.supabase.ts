@@ -89,7 +89,38 @@ export class EmpresasRepositorioSupabase implements EmpresasRepositorioPort {
     }
 
     const empresas = (data as LinhaEmpresa[]).map((linha) => this.mapear(linha));
-    return this.anexarPlanoAtivo(empresas);
+    return this.anexarEmailLogin(await this.anexarPlanoAtivo(empresas));
+  }
+
+  /** Carteira de Empresas mostra o e-mail de login do EMPRESARIO_DONO -- 1 query em lote, não N+1. */
+  private async anexarEmailLogin(empresas: Empresa[]): Promise<Empresa[]> {
+    if (empresas.length === 0) return empresas;
+
+    const { data, error } = await this.supabase.admin
+      .from('usuarios')
+      .select('id, empresa_id, email, papeis!inner(nome)')
+      .eq('papeis.nome', 'EMPRESARIO_DONO')
+      .in(
+        'empresa_id',
+        empresas.map((e) => e.id),
+      );
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao buscar login das empresas: ${error.message}`);
+    }
+
+    const loginPorEmpresa = new Map<string, { id: string; email: string }>(
+      (data as Array<{ id: string; empresa_id: string; email: string }>).map((linha) => [
+        linha.empresa_id,
+        { id: linha.id, email: linha.email },
+      ]),
+    );
+
+    return empresas.map((empresa) => ({
+      ...empresa,
+      emailLogin: loginPorEmpresa.get(empresa.id)?.email ?? null,
+      usuarioLoginId: loginPorEmpresa.get(empresa.id)?.id ?? null,
+    }));
   }
 
   /** Carteira de Empresas mostra o plano de crédito ativo de cada empresa -- 1 query em lote, não N+1. */
@@ -279,6 +310,8 @@ export class EmpresasRepositorioSupabase implements EmpresasRepositorioPort {
       status: linha.status,
       bloqueado: linha.bloqueado,
       planoNome: null,
+      emailLogin: null,
+      usuarioLoginId: null,
       pagbankAccountId: linha.pagbank_account_id,
       bancoPagbankId: linha.banco_pagbank_id,
       contaContabilPagbankId: linha.conta_contabil_pagbank_id,

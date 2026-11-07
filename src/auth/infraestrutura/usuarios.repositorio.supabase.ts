@@ -128,6 +128,14 @@ export class UsuariosRepositorioSupabase implements UsuariosRepositorioPort {
     }
   }
 
+  async atualizarEmail(id: string, email: string): Promise<void> {
+    const { error } = await this.supabase.admin.from('usuarios').update({ email }).eq('id', id);
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao atualizar e-mail: ${error.message}`);
+    }
+  }
+
   async atualizarAvatarRef(id: string, avatarRef: string | null): Promise<void> {
     const { error } = await this.supabase.admin.from('usuarios').update({ avatar_ref: avatarRef }).eq('id', id);
 

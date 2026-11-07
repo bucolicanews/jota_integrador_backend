@@ -1,8 +1,10 @@
 import { Global, Module } from '@nestjs/common';
 import { EmpresasModule } from '../empresas/empresas.module';
 import { AtualizarAvatarProprioUseCase } from './aplicacao/casos-de-uso/atualizar-avatar-proprio.usecase';
+import { AtualizarEmailUsuarioUseCase } from './aplicacao/casos-de-uso/atualizar-email-usuario.usecase';
 import { AtualizarNomeProprioUseCase } from './aplicacao/casos-de-uso/atualizar-nome-proprio.usecase';
 import { AtualizarPapelUsuarioUseCase } from './aplicacao/casos-de-uso/atualizar-papel-usuario.usecase';
+import { AtualizarSenhaUsuarioUseCase } from './aplicacao/casos-de-uso/atualizar-senha-usuario.usecase';
 import { AtualizarTetoPermissoesUseCase } from './aplicacao/casos-de-uso/atualizar-teto-permissoes.usecase';
 import { BloquearUsuarioUseCase } from './aplicacao/casos-de-uso/bloquear-usuario.usecase';
 import { ConcederPermissaoUseCase } from './aplicacao/casos-de-uso/conceder-permissao.usecase';
@@ -42,6 +44,8 @@ import { UsuariosRepositorioSupabase } from './infraestrutura/usuarios.repositor
     { provide: PERMISSOES_REPOSITORIO, useClass: PermissoesRepositorioSupabase },
     CriarUsuarioUseCase,
     AtualizarNomeProprioUseCase,
+    AtualizarEmailUsuarioUseCase,
+    AtualizarSenhaUsuarioUseCase,
     AtualizarAvatarProprioUseCase,
     StorageAvataresService,
     AtualizarPapelUsuarioUseCase,

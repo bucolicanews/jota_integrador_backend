@@ -17,6 +17,10 @@ export interface Empresa {
   bloqueado: boolean;
   /** Nome do plano de crédito SERPRO ativo -- só populado em `listarPorContador` (Carteira de Empresas), null nos demais métodos. */
   planoNome: string | null;
+  /** E-mail de login do EMPRESARIO_DONO desta empresa (tabela `usuarios`, não `empresas`) -- só populado em `listarPorContador`, null nos demais métodos. Null também se a empresa ainda não tem login criado. */
+  emailLogin: string | null;
+  /** id do usuário (tabela `usuarios`) por trás de `emailLogin` -- é o id que `PATCH /auth/usuarios/:id/email|senha` espera, nunca o id da empresa. Mesma disponibilidade de `emailLogin`. */
+  usuarioLoginId: string | null;
   /** Conta PagBank PRÓPRIA desta empresa -- recebe a parte "seller" de qualquer link de pagamento com split gerado em nome dela. */
   pagbankAccountId: string | null;
   /** Banco (bancos.id) que recebe automaticamente o lançamento quando um link de pagamento confirma. */

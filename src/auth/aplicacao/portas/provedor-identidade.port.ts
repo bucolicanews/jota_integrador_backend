@@ -54,6 +54,16 @@ export interface ProvedorIdentidadePort {
    */
   sincronizarClaims(id: string, claims: ClaimsIdentidade): Promise<void>;
 
+  /**
+   * Troca o e-mail de login (auth.users) -- já confirmado (`email_confirm: true`), nunca
+   * dependeu de SMTP pra funcionar, mesmo espírito de login 100% por link já usado no
+   * resto do provedor (nunca dupla-confirmação por e-mail antigo/novo).
+   */
+  atualizarEmail(id: string, novoEmail: string): Promise<void>;
+
+  /** Admin define a senha de login de outro usuário direto (sem fluxo de link) -- o próprio usuário troca a própria senha via `supabase.auth.updateUser` no client, nunca por aqui. */
+  atualizarSenha(id: string, novaSenha: string): Promise<void>;
+
   /** Ban nativo do provedor -- impede login imediatamente, não só marca flag no banco. */
   bloquearAcesso(id: string): Promise<void>;
   desbloquearAcesso(id: string): Promise<void>;
