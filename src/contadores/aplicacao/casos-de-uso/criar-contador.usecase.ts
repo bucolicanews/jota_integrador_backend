@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable } from '@nestjs/common';
 import { CONTRATOS_REPOSITORIO, ContratosRepositorioPort } from '../../../contratos/aplicacao/portas/contratos-repositorio.port';
 import { EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../../../empresas/aplicacao/portas/empresas-repositorio.port';
 import { PLANO_CONTAS_REPOSITORIO, PlanoContasRepositorioPort } from '../../../plano-de-contas/aplicacao/portas/plano-contas-repositorio.port';
@@ -39,7 +39,13 @@ export class CriarContadorUseCase {
       throw new BadRequestException('CPF/CNPJ inválido');
     }
 
-    const contador = await this.contadoresRepositorio.criar(entrada);
+    const digitos = entrada.cnpjCpf.replace(/\D/g, '');
+    const existente = await this.contadoresRepositorio.buscarPorCnpjCpf(digitos);
+    if (existente) {
+      throw new ConflictException('Este CPF/CNPJ já está cadastrado em outro contador');
+    }
+
+    const contador = await this.contadoresRepositorio.criar({ ...entrada, cnpjCpf: digitos });
 
     // Toda contador ganha a própria "empresa" (tipo='interna_contador') pra controlar o
     // próprio negócio -- reaproveita 100% o mesmo plano de contas/lançamentos/CP-CR já

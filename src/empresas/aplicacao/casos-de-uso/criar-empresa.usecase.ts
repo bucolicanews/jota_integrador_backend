@@ -26,6 +26,6 @@ export class CriarEmpresaUseCase {
       throw new BadRequestException('CNPJ inválido');
     }
 
-    return this.empresasRepositorio.criar(entrada);
+    return this.empresasRepositorio.criar({ ...entrada, cnpj: entrada.cnpj.replace(/\D/g, '') });
   }
 }

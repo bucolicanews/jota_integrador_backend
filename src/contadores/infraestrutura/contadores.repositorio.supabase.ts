@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { SupabaseService } from '../../common/supabase/supabase.service';
 import { StatusContador, TipoContador } from '../dominio/contador';
 import {
@@ -42,6 +42,11 @@ export class ContadoresRepositorioSupabase implements ContadoresRepositorioPort 
       .single();
 
     if (error || !data) {
+      // 23505 = violação do unique index em contadores.cnpj_cpf (migration
+      // 20261107000001) -- conflito de negócio (409), não bug nosso (500).
+      if (error?.code === '23505') {
+        throw new ConflictException('Este CPF/CNPJ já está cadastrado em outro contador');
+      }
       throw new InternalServerErrorException(`Falha ao criar contador: ${error?.message}`);
     }
 

@@ -50,6 +50,11 @@ export class EmpresasRepositorioSupabase implements EmpresasRepositorioPort {
       .single();
 
     if (error || !data) {
+      // 23505 = violação do unique index em empresas.cnpj -- conflito de negócio (409),
+      // não bug nosso (500), mesma exceção já usada em atualizarCnpj.
+      if (error?.code === '23505') {
+        throw new ConflictException('CNPJ já cadastrado em outra empresa');
+      }
       throw new InternalServerErrorException(`Falha ao criar empresa: ${error?.message}`);
     }
 
