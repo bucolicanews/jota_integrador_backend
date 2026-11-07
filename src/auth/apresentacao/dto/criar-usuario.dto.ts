@@ -1,16 +1,5 @@
-import {
-  IsEmail,
-  IsEnum,
-  IsOptional,
-  Matches,
-  MaxLength,
-  MinLength,
-  Validate,
-  ValidationArguments,
-  ValidatorConstraint,
-  ValidatorConstraintInterface,
-} from 'class-validator';
-import { ESCOPO_POR_PAPEL, Papel } from '../../dominio/papel';
+import { IsEmail, IsEnum, IsOptional, Matches, MaxLength, MinLength } from 'class-validator';
+import { Papel } from '../../dominio/papel';
 
 // `@IsUUID()` do class-validator rejeita o id sentinela 'Jota Contabilidade'
 // (00000000-0000-0000-0000-000000000001 -- dígito de versão '0', fora de 1-5) -- mesmo
@@ -18,28 +7,17 @@ import { ESCOPO_POR_PAPEL, Papel } from '../../dominio/papel';
 // a existência de verdade é garantida pela FK (23503 tratado no repositório).
 const REGEX_UUID_SOLTO = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-@ValidatorConstraint({ name: 'coerenciaEscopoPapel', async: false })
-class CoerenciaEscopoPapelConstraint implements ValidatorConstraintInterface {
-  validate(papel: Papel, args: ValidationArguments): boolean {
-    const dto = args.object as CriarUsuarioDto;
-    const escopo = ESCOPO_POR_PAPEL[papel];
-
-    if (escopo === 'plataforma') {
-      return !dto.contadorId && !dto.empresaId;
-    }
-    if (escopo === 'contador') {
-      return Boolean(dto.contadorId) && !dto.empresaId;
-    }
-    return Boolean(dto.empresaId) && !dto.contadorId; // escopo === 'empresa'
-  }
-
-  defaultMessage(): string {
-    return 'contadorId/empresaId precisam bater com o escopo do papel informado (ver docs/BANCO_DE_DADOS.md §1)';
-  }
-}
-
 // DTO com whitelist explícita de campos -- nunca aceitar o body inteiro (regra de mass
 // assignment já documentada no PENTEST_CODE_REVIEW_PROTOCOL.md do vault).
+//
+// Sem checagem de coerência papel×contadorId/empresaId aqui (ao contrário de
+// atualizar-papel-usuario.dto.ts) -- CONTADOR_DONO/EMPRESARIO_DONO nunca mandam
+// contadorId/empresaId no body (resolverVinculoPermitido() no controller resolve isso
+// pelo PRÓPRIO vínculo de quem chama, depois da validação do DTO); só SUPER_ADMIN manda
+// os dois ids de verdade. Validar a coerência aqui, sobre o valor CRU do cliente, rejeitava
+// toda criação de operador feita por um contador/empresa de verdade (bug real, 2026-11-06).
+// A coerência de fato é checada em CriarUsuarioUseCase (validarCoerenciaEscopo), já sobre
+// o vínculo RESOLVIDO -- esse é o lugar certo pra essa regra.
 export class CriarUsuarioDto {
   @MinLength(2)
   @MaxLength(120)
@@ -49,7 +27,6 @@ export class CriarUsuarioDto {
   email!: string;
 
   @IsEnum(Papel)
-  @Validate(CoerenciaEscopoPapelConstraint)
   papel!: Papel;
 
   @IsOptional()
