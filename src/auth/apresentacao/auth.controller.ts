@@ -398,7 +398,11 @@ export class AuthController {
    * sobre ele, 403 em bloquear/desbloquear/link-acesso/e-mail/senha).
    */
   private async exigirAutoridadeSobre(usuarioAtual: UsuarioAutenticado, alvo: Usuario): Promise<void> {
-    if (usuarioAtual.papel === Papel.SUPER_ADMIN) {
+    if (usuarioAtual.papel === Papel.SUPER_ADMIN || usuarioAtual.id === alvo.id) {
+      // Agir sobre si mesmo nunca passa por aqui -- contador/empresário dono já caem no
+      // mesmoContador/mesmaEmpresa abaixo (contador_id/empresa_id batem com o próprio), mas
+      // ADMIN_FINANCEIRO/ADMIN_SUPORTE (plataforma, ambos null) nunca bateriam -- MenuLateral
+      // consultando a PRÓPRIA lista de permissões (GET .../permissoes) dava 403 sem isso.
       return;
     }
     const mesmoContador = usuarioAtual.contadorId !== null && usuarioAtual.contadorId === alvo.contadorId;
