@@ -8,6 +8,8 @@ export interface FiltroListarUsuarios {
   empresaIdUnico: string | null;
   /** SUPER_ADMIN vendo usuários de plataforma (SUPER_ADMIN/ADMIN_FINANCEIRO/ADMIN_SUPORTE) -- nunca tinha como aparecer nesta listagem antes (contador_id e empresa_id são sempre null pra eles). */
   plataforma?: boolean;
+  /** Só a equipe do próprio escritório (OPERADOR_CONTADOR) -- exclui a equipe de toda empresa-cliente, ao contrário do default "carteira inteira" de hoje. Ignorado se `empresaIdUnico` também vier. */
+  somenteProprio?: boolean;
 }
 
 @Injectable()
@@ -30,6 +32,10 @@ export class ListarUsuariosUseCase {
 
     if (!filtro.contadorId) {
       return [];
+    }
+
+    if (filtro.somenteProprio) {
+      return this.usuariosRepositorio.listar({ contadorId: filtro.contadorId, empresaIds: [] });
     }
 
     const empresasDaCarteira = await this.listarEmpresas.executar(filtro.contadorId);

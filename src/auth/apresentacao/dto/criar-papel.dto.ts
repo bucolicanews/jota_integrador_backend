@@ -26,4 +26,9 @@ export class CriarPapelDto {
   @ArrayUnique()
   @IsUUID('all', { each: true })
   permissaoIds?: string[];
+
+  /** Só CONTADOR_DONO usa -- "criar este papel em nome desta empresa-cliente" (escopo empresa, posse confirmada no controller). Ignorado pra quem mais chamar. */
+  @IsOptional()
+  @IsUUID()
+  empresaId?: string;
 }

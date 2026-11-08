@@ -140,6 +140,7 @@ export class AuthController {
     @Query('contadorId') contadorIdConsulta: string | undefined,
     @Query('empresaId') empresaIdConsulta: string | undefined,
     @Query('plataforma') plataformaConsulta: string | undefined,
+    @Query('somenteProprio') somenteProprioConsulta: string | undefined,
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
   ): Promise<Usuario[]> {
     if (usuarioAtual.papel === Papel.EMPRESARIO_DONO) {
@@ -157,7 +158,7 @@ export class AuthController {
       throw new BadRequestException('contadorId ou empresaId é obrigatório (via query, quando plataforma)');
     }
 
-    return this.listarUsuarios.executar({ contadorId, empresaIdUnico });
+    return this.listarUsuarios.executar({ contadorId, empresaIdUnico, somenteProprio: somenteProprioConsulta === 'true' });
   }
 
   @Post('logout-global')

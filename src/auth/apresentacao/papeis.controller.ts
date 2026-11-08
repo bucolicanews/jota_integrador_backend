@@ -1,4 +1,5 @@
-import { BadRequestException, Body, Controller, ForbiddenException, Get, Inject, NotFoundException, Param, ParseUUIDPipe, Post, Put, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, ForbiddenException, Get, Inject, NotFoundException, Param, ParseUUIDPipe, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../../empresas/aplicacao/portas/empresas-repositorio.port';
 import { EscopoPapel, InfoPapel, Papel } from '../dominio/papel';
 import { FiltroDonoPapel, PERMISSOES_REPOSITORIO, Permissao, PermissoesRepositorioPort } from '../aplicacao/portas/permissoes-repositorio.port';
 import { AtualizarPapelDto } from './dto/atualizar-papel.dto';
@@ -12,10 +13,12 @@ import { UsuarioAutenticado } from './tipos/requisicao-autenticada';
 /**
  * CRUD de papéis customizados (/admin/papeis no frontend). SUPER_ADMIN gerencia papel
  * GLOBAL (visível/usável por qualquer contador/empresa); CONTADOR_DONO gerencia papel
- * PRIVADO da própria carteira (escopo contador); EMPRESARIO_DONO gerencia papel PRIVADO
- * da própria empresa (escopo empresa) -- nunca vê/edita o papel de outro dono. Dono é
- * SEMPRE derivado do `usuarioAtual` (JWT), nunca aceito do body (Zero Trust, mesmo
- * padrão de `resolverVinculoPermitido` em auth.controller.ts).
+ * PRIVADO da própria carteira (escopo contador) -- e, opcionalmente, papel PRIVADO de uma
+ * empresa-cliente da própria carteira (escopo empresa, "em nome dela", via `empresaId` na
+ * query/body); EMPRESARIO_DONO gerencia papel PRIVADO da própria empresa (escopo empresa).
+ * Nunca vê/edita o papel de outro dono fora dessa autoridade. Dono é SEMPRE derivado do
+ * `usuarioAtual` (JWT) + posse confirmada contra a carteira real, nunca aceito cru do
+ * body (Zero Trust, mesmo padrão de `resolverVinculoPermitido` em auth.controller.ts).
  *
  * RLS em `papeis`/`papel_permissoes` continua exigindo `eh_super_admin()` pra escrita
  * (migration 0002) -- não é o gate real aqui (repositório usa service-role), é defesa em
@@ -25,10 +28,22 @@ import { UsuarioAutenticado } from './tipos/requisicao-autenticada';
 @Controller('auth/papeis')
 @UseGuards(SupabaseAuthGuard, PapeisGuard)
 export class PapeisController {
-  constructor(@Inject(PERMISSOES_REPOSITORIO) private readonly permissoes: PermissoesRepositorioPort) {}
+  constructor(
+    @Inject(PERMISSOES_REPOSITORIO) private readonly permissoes: PermissoesRepositorioPort,
+    @Inject(EMPRESAS_REPOSITORIO) private readonly empresas: EmpresasRepositorioPort,
+  ) {}
 
-  private filtroDonoDe(usuarioAtual: UsuarioAutenticado): FiltroDonoPapel {
+  /**
+   * Resolve o filtro de dono pra listar -- se CONTADOR_DONO pedir `empresaIdConsulta`
+   * (agindo em nome de um cliente da própria carteira), confirma posse e troca pro
+   * filtro daquela empresa em vez do próprio contador.
+   */
+  private async filtroDonoDe(usuarioAtual: UsuarioAutenticado, empresaIdConsulta: string | undefined): Promise<FiltroDonoPapel> {
     if (usuarioAtual.papel === Papel.CONTADOR_DONO) {
+      if (empresaIdConsulta) {
+        await this.exigirEmpresaDaCarteira(empresaIdConsulta, usuarioAtual.contadorId!);
+        return { contadorId: null, empresaId: empresaIdConsulta };
+      }
       return { contadorId: usuarioAtual.contadorId, empresaId: null };
     }
     if (usuarioAtual.papel === Papel.EMPRESARIO_DONO) {
@@ -37,11 +52,14 @@ export class PapeisController {
     return { contadorId: null, empresaId: null }; // SUPER_ADMIN -- só global
   }
 
-  /** Catálogo de papéis (globais + os privados do próprio dono) -- alimenta a tabela de /admin/papeis e o select de "Papel" na criação de usuário. */
+  /** Catálogo de papéis (globais + os privados do dono, ou da empresa-cliente informada) -- alimenta a tabela de /admin/papeis e o select de "Papel" na criação de usuário. */
   @Get()
   @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
-  async listar(@UsuarioAtual() usuarioAtual: UsuarioAutenticado): Promise<InfoPapel[]> {
-    return this.permissoes.listarPapeis(this.filtroDonoDe(usuarioAtual));
+  async listar(
+    @Query('empresaId') empresaIdConsulta: string | undefined,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<InfoPapel[]> {
+    return this.permissoes.listarPapeis(await this.filtroDonoDe(usuarioAtual, empresaIdConsulta));
   }
 
   /** Teto atual (papel_permissoes) desse papel -- preenche o checklist de edição. */
@@ -58,17 +76,24 @@ export class PapeisController {
   @Post()
   @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
   async criar(@Body() dto: CriarPapelDto, @UsuarioAtual() usuarioAtual: UsuarioAutenticado): Promise<InfoPapel> {
-    // Dono e escopo são FORÇADOS pelo papel de quem chama, nunca aceitos do body --
-    // CONTADOR_DONO só cria papel pra própria carteira (escopo contador), EMPRESARIO_DONO
-    // só pra própria empresa (escopo empresa). SUPER_ADMIN mantém o comportamento
-    // original: cria papel GLOBAL com o escopo que escolher.
+    // Dono e escopo são FORÇADOS pelo papel de quem chama (+ posse confirmada quando
+    // aplicável), nunca aceitos crus do body -- CONTADOR_DONO cria pra própria carteira
+    // (escopo contador) OU, se informar `empresaId`, em nome de um cliente da própria
+    // carteira (escopo empresa, posse confirmada); EMPRESARIO_DONO só pra própria empresa.
+    // SUPER_ADMIN mantém o comportamento original: cria papel GLOBAL com o escopo que escolher.
     let escopo: EscopoPapel;
     let contadorId: string | null = null;
     let empresaId: string | null = null;
 
     if (usuarioAtual.papel === Papel.CONTADOR_DONO) {
-      escopo = 'contador';
-      contadorId = usuarioAtual.contadorId;
+      if (dto.empresaId) {
+        await this.exigirEmpresaDaCarteira(dto.empresaId, usuarioAtual.contadorId!);
+        escopo = 'empresa';
+        empresaId = dto.empresaId;
+      } else {
+        escopo = 'contador';
+        contadorId = usuarioAtual.contadorId;
+      }
     } else if (usuarioAtual.papel === Papel.EMPRESARIO_DONO) {
       escopo = 'empresa';
       empresaId = usuarioAtual.empresaId;
@@ -93,8 +118,8 @@ export class PapeisController {
    * SUPER_ADMIN edita descrição+teto de qualquer papel GLOBAL, inclusive os 7 de sistema
    * -- nome/escopo continuam imutáveis (nem chegam no `AtualizarPapelDto`), são usados em
    * ~45 pontos do código (`@Papeis(Papel.X)` etc) e trocar isso por aqui quebraria esses
-   * pontos. CONTADOR_DONO/EMPRESARIO_DONO só editam o PRÓPRIO papel privado -- nunca o
-   * global nem o de outro dono.
+   * pontos. CONTADOR_DONO edita o próprio papel privado OU o de uma empresa-cliente da
+   * própria carteira (posse confirmada); EMPRESARIO_DONO só o próprio.
    */
   @Put(':id')
   @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
@@ -113,7 +138,18 @@ export class PapeisController {
     return (await this.permissoes.buscarPapelPorId(id))!;
   }
 
-  /** SUPER_ADMIN só age sobre papel global; CONTADOR_DONO/EMPRESARIO_DONO só sobre o próprio -- nunca o de outro dono nem o global. */
+  /** Lança se a empresa não pertence à carteira deste contador -- Zero Trust, `empresaId` pode ter vindo de query/body cru. */
+  private async exigirEmpresaDaCarteira(empresaId: string, contadorId: string): Promise<void> {
+    const pertence = await this.empresas.pertenceAoContador(empresaId, contadorId);
+    if (!pertence) {
+      throw new ForbiddenException('Esta empresa não pertence à sua carteira');
+    }
+  }
+
+  /**
+   * SUPER_ADMIN só age sobre papel global; EMPRESARIO_DONO só sobre o próprio; CONTADOR_DONO
+   * sobre o próprio OU o de qualquer empresa da própria carteira -- nunca o de outro dono.
+   */
   private async exigirPosseOuGlobal(papelId: string, usuarioAtual: UsuarioAutenticado): Promise<void> {
     const papel = await this.permissoes.buscarPapelPorId(papelId);
     if (!papel) {
@@ -121,10 +157,12 @@ export class PapeisController {
     }
 
     if (usuarioAtual.papel === Papel.CONTADOR_DONO) {
-      if (papel.contadorId !== usuarioAtual.contadorId) {
-        throw new ForbiddenException('Este papel não pertence à sua carteira');
+      if (papel.contadorId === usuarioAtual.contadorId) return;
+      if (papel.empresaId) {
+        const pertence = await this.empresas.pertenceAoContador(papel.empresaId, usuarioAtual.contadorId!);
+        if (pertence) return;
       }
-      return;
+      throw new ForbiddenException('Este papel não pertence à sua carteira');
     }
     if (usuarioAtual.papel === Papel.EMPRESARIO_DONO) {
       if (papel.empresaId !== usuarioAtual.empresaId) {
