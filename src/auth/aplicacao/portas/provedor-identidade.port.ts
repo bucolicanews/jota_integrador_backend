@@ -1,7 +1,16 @@
-import { Papel } from '../../dominio/papel';
+import { EscopoPapel, Papel } from '../../dominio/papel';
 
 export interface ClaimsIdentidade {
   papel: Papel;
+  /**
+   * Escopo e "nunca restringe" do papel no momento da sincronização -- embutidos no
+   * app_metadata junto com papel/contadorId/empresaId (mesmo motivo de sempre: evitar
+   * round-trip ao banco a cada requisição autenticada). Resolvido pelo caller consultando
+   * `papeis` por nome antes de chamar `sincronizarClaims` -- nunca derivado de um Record
+   * TS fechado, já que papel é dinâmico desde 2026-11-08.
+   */
+  escopo: EscopoPapel;
+  nuncaRestringe: boolean;
   contadorId: string | null;
   empresaId: string | null;
 }

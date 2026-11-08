@@ -1,6 +1,6 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../../common/supabase/supabase.service';
-import { Papel } from '../dominio/papel';
+import { InfoPapel, Papel } from '../dominio/papel';
 import {
   DadosNovoUsuario,
   Usuario,
@@ -183,6 +183,28 @@ export class UsuariosRepositorioSupabase implements UsuariosRepositorioPort {
     }
 
     return (data as { id: string }).id;
+  }
+
+  async buscarPapelPorNome(nomePapel: Papel): Promise<InfoPapel> {
+    const { data, error } = await this.supabase.admin
+      .from('papeis')
+      .select('id, nome, escopo, descricao, sistema, nunca_restringe')
+      .eq('nome', nomePapel)
+      .single();
+
+    if (error || !data) {
+      throw new NotFoundException(`Papel ${nomePapel} não encontrado no catálogo`);
+    }
+
+    const linha = data as { id: string; nome: string; escopo: InfoPapel['escopo']; descricao: string | null; sistema: boolean; nunca_restringe: boolean };
+    return {
+      id: linha.id,
+      nome: linha.nome,
+      escopo: linha.escopo,
+      descricao: linha.descricao,
+      sistema: linha.sistema,
+      nuncaRestringe: linha.nunca_restringe,
+    };
   }
 
   private mapear(linha: LinhaUsuario): Usuario {

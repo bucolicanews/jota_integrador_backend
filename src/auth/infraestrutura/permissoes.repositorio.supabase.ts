@@ -1,6 +1,12 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { SupabaseService } from '../../common/supabase/supabase.service';
-import { Permissao, PermissoesRepositorioPort } from '../aplicacao/portas/permissoes-repositorio.port';
+import { InfoPapel } from '../dominio/papel';
+import {
+  DadosAtualizarPapel,
+  DadosNovoPapel,
+  Permissao,
+  PermissoesRepositorioPort,
+} from '../aplicacao/portas/permissoes-repositorio.port';
 
 interface LinhaPermissao {
   id: string;
@@ -9,11 +15,80 @@ interface LinhaPermissao {
   chave: string;
 }
 
+interface LinhaPapel {
+  id: string;
+  nome: string;
+  escopo: InfoPapel['escopo'];
+  descricao: string | null;
+  sistema: boolean;
+  nunca_restringe: boolean;
+}
+
 const COLUNAS_PERMISSAO = 'id, recurso, acao, chave';
+const COLUNAS_PAPEL = 'id, nome, escopo, descricao, sistema, nunca_restringe';
 
 @Injectable()
 export class PermissoesRepositorioSupabase implements PermissoesRepositorioPort {
   constructor(private readonly supabase: SupabaseService) {}
+
+  async listarPapeis(): Promise<InfoPapel[]> {
+    const { data, error } = await this.supabase.admin.from('papeis').select(COLUNAS_PAPEL).order('sistema', { ascending: false }).order('nome');
+    if (error) throw new InternalServerErrorException(`Falha ao listar papéis: ${error.message}`);
+    return (data as LinhaPapel[]).map((linha) => this.mapearPapel(linha));
+  }
+
+  async buscarPapelPorId(id: string): Promise<InfoPapel | null> {
+    const { data, error } = await this.supabase.admin.from('papeis').select(COLUNAS_PAPEL).eq('id', id).maybeSingle();
+    if (error) throw new InternalServerErrorException(`Falha ao buscar papel: ${error.message}`);
+    return data ? this.mapearPapel(data as LinhaPapel) : null;
+  }
+
+  async criarPapel(dados: DadosNovoPapel): Promise<InfoPapel> {
+    const { data, error } = await this.supabase.admin
+      .from('papeis')
+      .insert({ nome: dados.nome, escopo: dados.escopo, descricao: dados.descricao, sistema: false, nunca_restringe: false })
+      .select(COLUNAS_PAPEL)
+      .single();
+    if (error) {
+      // 23505 = violação do unique index em papeis.nome -- conflito de negócio (409), não erro de infra.
+      if (error.code === '23505') throw new ConflictException(`Já existe um papel com o nome "${dados.nome}"`);
+      throw new InternalServerErrorException(`Falha ao criar papel: ${error.message}`);
+    }
+
+    const papel = this.mapearPapel(data as LinhaPapel);
+
+    if (dados.permissaoIds.length > 0) {
+      const linhas = dados.permissaoIds.map((permissaoId) => ({ papel_id: papel.id, permissao_id: permissaoId }));
+      const { error: erroTeto } = await this.supabase.admin.from('papel_permissoes').insert(linhas);
+      if (erroTeto) throw new InternalServerErrorException(`Falha ao gravar teto do papel: ${erroTeto.message}`);
+    }
+
+    return papel;
+  }
+
+  async atualizarPapel(id: string, dados: DadosAtualizarPapel): Promise<void> {
+    const { error: erroUpdate } = await this.supabase.admin.from('papeis').update({ descricao: dados.descricao }).eq('id', id);
+    if (erroUpdate) throw new InternalServerErrorException(`Falha ao atualizar papel: ${erroUpdate.message}`);
+
+    const { error: erroDelete } = await this.supabase.admin.from('papel_permissoes').delete().eq('papel_id', id);
+    if (erroDelete) throw new InternalServerErrorException(`Falha ao limpar teto do papel: ${erroDelete.message}`);
+
+    if (dados.permissaoIds.length === 0) return;
+    const linhas = dados.permissaoIds.map((permissaoId) => ({ papel_id: id, permissao_id: permissaoId }));
+    const { error: erroInsert } = await this.supabase.admin.from('papel_permissoes').insert(linhas);
+    if (erroInsert) throw new InternalServerErrorException(`Falha ao gravar teto do papel: ${erroInsert.message}`);
+  }
+
+  private mapearPapel(linha: LinhaPapel): InfoPapel {
+    return {
+      id: linha.id,
+      nome: linha.nome,
+      escopo: linha.escopo,
+      descricao: linha.descricao,
+      sistema: linha.sistema,
+      nuncaRestringe: linha.nunca_restringe,
+    };
+  }
 
   async listarPermissoesDoPapel(papelId: string): Promise<Permissao[]> {
     const { data, error } = await this.supabase.admin

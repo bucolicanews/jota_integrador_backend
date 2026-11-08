@@ -7,7 +7,7 @@ import {
   ProvedorIdentidadePort,
   ResultadoCriarUsuarioComConvite,
 } from '../aplicacao/portas/provedor-identidade.port';
-import { Papel } from '../dominio/papel';
+import { EscopoPapel, Papel } from '../dominio/papel';
 
 // "876000h" (~100 anos) -- mesmo valor usado no ban nativo do DeliveryHub
 // (/admin/usuarios), efetivamente permanente até alguém desbloquear explicitamente.
@@ -76,6 +76,8 @@ export class ProvedorIdentidadeSupabase implements ProvedorIdentidadePort {
     const { error } = await this.supabase.admin.auth.admin.updateUserById(id, {
       app_metadata: {
         papel: claims.papel,
+        escopo: claims.escopo,
+        nunca_restringe: claims.nuncaRestringe,
         contador_id: claims.contadorId,
         empresa_id: claims.empresaId,
       },
@@ -164,11 +166,13 @@ export class ProvedorIdentidadeSupabase implements ProvedorIdentidadePort {
 
     const metadata = data.user.app_metadata as {
       papel?: Papel;
+      escopo?: EscopoPapel;
+      nunca_restringe?: boolean;
       contador_id?: string | null;
       empresa_id?: string | null;
     };
 
-    if (!metadata.papel) {
+    if (!metadata.papel || !metadata.escopo) {
       // Usuário existe no Auth mas nunca teve claims sincronizados (ex: convite aceito
       // mas CriarUsuarioUseCase falhou no meio) -- não deixar passar sem papel definido,
       // nenhuma policy de RLS reconheceria esse usuário como pertencente a nada.
@@ -178,6 +182,8 @@ export class ProvedorIdentidadeSupabase implements ProvedorIdentidadePort {
     return {
       id: data.user.id,
       papel: metadata.papel,
+      escopo: metadata.escopo,
+      nuncaRestringe: metadata.nunca_restringe ?? false,
       contadorId: metadata.contador_id ?? null,
       empresaId: metadata.empresa_id ?? null,
     };

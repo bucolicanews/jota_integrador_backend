@@ -24,7 +24,7 @@ export class PlanosController {
   /** Catálogo público (qualquer autenticado) -- não-plataforma só vê ativo=true, mesmo pedindo o contrário. */
   @Get()
   async listar(@UsuarioAtual() usuarioAtual: UsuarioAutenticado): Promise<Plano[]> {
-    const somenteAtivos = !ehPapelDePlataforma(usuarioAtual.papel);
+    const somenteAtivos = !ehPapelDePlataforma(usuarioAtual.escopo);
     return this.listarPlanos.executar(somenteAtivos);
   }
 

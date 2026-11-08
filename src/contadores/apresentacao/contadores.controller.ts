@@ -11,9 +11,11 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { ExigirPermissao } from '../../auth/apresentacao/decorators/exigir-permissao.decorator';
 import { Papeis } from '../../auth/apresentacao/decorators/papeis.decorator';
 import { UsuarioAtual } from '../../auth/apresentacao/decorators/usuario-atual.decorator';
 import { PapeisGuard } from '../../auth/apresentacao/guards/papeis.guard';
+import { PermissoesGuard } from '../../auth/apresentacao/guards/permissoes.guard';
 import { SupabaseAuthGuard } from '../../auth/apresentacao/guards/supabase-auth.guard';
 import { UsuarioAutenticado } from '../../auth/apresentacao/tipos/requisicao-autenticada';
 import { ehPapelDePlataforma, Papel } from '../../auth/dominio/papel';
@@ -34,7 +36,7 @@ import { CorrigirCnpjCpfContadorDto } from './dto/corrigir-cnpj-cpf-contador.dto
 import { CriarContadorDto } from './dto/criar-contador.dto';
 
 @Controller('contadores')
-@UseGuards(SupabaseAuthGuard, PapeisGuard)
+@UseGuards(SupabaseAuthGuard, PapeisGuard, PermissoesGuard)
 export class ContadoresController {
   constructor(
     private readonly criarContador: CriarContadorUseCase,
@@ -61,6 +63,7 @@ export class ContadoresController {
 
   @Get()
   @Papeis(Papel.SUPER_ADMIN, Papel.ADMIN_FINANCEIRO, Papel.ADMIN_SUPORTE)
+  @ExigirPermissao('contadores:visualizar')
   async listar(): Promise<Contador[]> {
     return this.listarContadores.executar();
   }
@@ -158,7 +161,7 @@ export class ContadoresController {
    * permissivo de propósito: financeiro/suporte também precisam corrigir cadastro.
    */
   private exigirPosse(usuarioAtual: UsuarioAutenticado, contadorId: string): void {
-    if (ehPapelDePlataforma(usuarioAtual.papel)) {
+    if (ehPapelDePlataforma(usuarioAtual.escopo)) {
       return;
     }
     if (usuarioAtual.contadorId !== contadorId) {

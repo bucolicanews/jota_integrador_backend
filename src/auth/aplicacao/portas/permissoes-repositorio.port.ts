@@ -1,3 +1,5 @@
+import { EscopoPapel, InfoPapel } from '../../dominio/papel';
+
 export interface Permissao {
   id: string;
   recurso: string;
@@ -5,7 +7,26 @@ export interface Permissao {
   chave: string; // "recurso:acao", coluna gerada no banco
 }
 
+export interface DadosNovoPapel {
+  nome: string;
+  escopo: EscopoPapel;
+  descricao: string | null;
+  permissaoIds: string[];
+}
+
+export interface DadosAtualizarPapel {
+  descricao: string | null;
+  permissaoIds: string[];
+}
+
 export interface PermissoesRepositorioPort {
+  /** Catálogo de papéis (os 7 de sistema + customizados) -- pra tela /admin/papeis e pro select de "Papel" na criação de usuário. */
+  listarPapeis(): Promise<InfoPapel[]>;
+  buscarPapelPorId(id: string): Promise<InfoPapel | null>;
+  /** Cria papel customizado (sempre `sistema=false`, `nunca_restringe=false`) + grava o teto inicial em `papel_permissoes`. Nome único -- erro de conflito já vira 409 na camada de apresentação. */
+  criarPapel(dados: DadosNovoPapel): Promise<InfoPapel>;
+  /** Nome/escopo são imutáveis (papéis de sistema nem chegam aqui -- bloqueado na camada de aplicação). Substitui `permissaoIds` (delete+insert), igual padrão de `definirTetoDono`. */
+  atualizarPapel(id: string, dados: DadosAtualizarPapel): Promise<void>;
   /** Teto global: quais permissões fazem sentido pro escopo desse papel (papel_permissoes) -- catálogo assinalável, não concessão de fato. */
   listarPermissoesDoPapel(papelId: string): Promise<Permissao[]>;
   /** Catálogo completo (todas as permissões cadastradas), pra montar o checklist de configuração do teto. */

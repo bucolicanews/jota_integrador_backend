@@ -32,7 +32,7 @@ export class PacotesCreditosAvulsosController {
 
   @Get()
   async listar(@UsuarioAtual() usuarioAtual: UsuarioAutenticado): Promise<PacoteCreditoAvulso[]> {
-    const somenteAtivos = !ehPapelDePlataforma(usuarioAtual.papel);
+    const somenteAtivos = !ehPapelDePlataforma(usuarioAtual.escopo);
     return this.listarPacotes.executar(somenteAtivos);
   }
 

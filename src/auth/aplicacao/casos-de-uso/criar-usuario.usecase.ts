@@ -46,7 +46,8 @@ export class CriarUsuarioUseCase {
   ) {}
 
   async executar(entrada: EntradaCriarUsuario): Promise<ResultadoCriarUsuario> {
-    validarCoerenciaEscopo(entrada.papel, entrada.contadorId, entrada.empresaId);
+    const infoPapel = await this.usuariosRepositorio.buscarPapelPorNome(entrada.papel);
+    validarCoerenciaEscopo(infoPapel.escopo, entrada.contadorId, entrada.empresaId);
 
     // 1. Identidade primeiro (provedor de auth) -- o id gerado lá é o mesmo usado no perfil.
     const { id, jaExistiaNoProvedor } = await this.provedorIdentidade.criarUsuarioComConvite(entrada.email);
@@ -69,48 +70,52 @@ export class CriarUsuarioUseCase {
     //    "manco" (perfil sem claims, que quebraria RLS pra ele depois).
     await this.provedorIdentidade.sincronizarClaims(id, {
       papel: entrada.papel,
+      escopo: infoPapel.escopo,
+      nuncaRestringe: infoPapel.nuncaRestringe,
       contadorId: entrada.contadorId,
       empresaId: entrada.empresaId,
     });
 
     // 3. Perfil de domínio.
-    const papelId = await this.usuariosRepositorio.buscarIdPapelPorNome(entrada.papel);
     const usuario = await this.usuariosRepositorio.criar({
       id,
       nome: entrada.nome,
       email: entrada.email,
-      papelId,
+      papelId: infoPapel.id,
       contadorId: entrada.contadorId,
       empresaId: entrada.empresaId,
     });
 
-    // 4. Suporte é concedido por padrão pra todo papel restringível (OPERADOR_CONTADOR/
-    //    OPERADOR_EMPRESA/ADMIN_FINANCEIRO/ADMIN_SUPORTE) -- sem isso, um recém-criado sem
-    //    nenhuma concessão fica só com Painel no menu, sem nem conseguir abrir um ticket.
-    //    `concedido_por` aponta pro próprio usuário (concessão automática de sistema, não
-    //    ação de um admin de verdade).
-    if (papelExigeChecagemGranular(entrada.papel)) {
-      const catalogo = await this.permissoesRepositorio.listarCatalogoPermissoes();
-      const chavesPadrao = new Set(['suporte:visualizar']);
+    // 4. Teto do papel (papel_permissoes, template configurado em /admin/papeis) é
+    //    concedido por padrão pra todo papel restringível -- sem isso, um recém-criado
+    //    sem nenhuma concessão fica só com Painel no menu, sem nem conseguir abrir um
+    //    ticket. `concedido_por` aponta pro próprio usuário (concessão automática de
+    //    sistema, não ação de um admin de verdade).
+    if (papelExigeChecagemGranular(infoPapel.nuncaRestringe)) {
+      const teto = await this.permissoesRepositorio.obterTetoEfetivo(infoPapel.id, entrada.contadorId, entrada.empresaId);
+      const permissoesAConceder = new Map(teto.map((permissao) => [permissao.chave, permissao.id]));
 
       // OPERADOR_EMPRESA também herda o que o PLANO da empresa define como padrão (ver
-      // "Editar plano" > permissões incluídas) -- só aplicado aqui na criação, nunca
-      // retroativo pra quem já existe. Falha silenciosa se a empresa não tiver assinatura
-      // ativa ainda (ex: convite enviado antes de ativar o plano) -- não é motivo pra
-      // travar a criação do login.
+      // "Editar plano" > permissões incluídas), em cima do teto do papel -- só aplicado
+      // aqui na criação, nunca retroativo pra quem já existe. Falha silenciosa se a
+      // empresa não tiver assinatura ativa ainda (ex: convite enviado antes de ativar o
+      // plano) -- não é motivo pra travar a criação do login.
       if (entrada.papel === Papel.OPERADOR_EMPRESA && entrada.empresaId) {
         const assinatura = await this.assinaturasRepositorio.buscarAtivaPorEmpresa(entrada.empresaId);
         if (assinatura) {
           const plano = await this.planosRepositorio.buscarPorId(assinatura.planoId);
-          plano?.permissoesPadrao.forEach((chave) => chavesPadrao.add(chave));
+          if (plano && plano.permissoesPadrao.length > 0) {
+            const catalogo = await this.permissoesRepositorio.listarCatalogoPermissoes();
+            for (const chave of plano.permissoesPadrao) {
+              const permissao = catalogo.find((p) => p.chave === chave);
+              if (permissao) permissoesAConceder.set(chave, permissao.id);
+            }
+          }
         }
       }
 
-      for (const chave of chavesPadrao) {
-        const permissao = catalogo.find((p) => p.chave === chave);
-        if (permissao) {
-          await this.permissoesRepositorio.conceder(usuario.id, permissao.id, usuario.id);
-        }
+      for (const permissaoId of permissoesAConceder.values()) {
+        await this.permissoesRepositorio.conceder(usuario.id, permissaoId, usuario.id);
       }
     }
 

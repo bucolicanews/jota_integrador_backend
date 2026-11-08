@@ -84,7 +84,7 @@ export class AssinaturaEmpresaController {
 
   /** Só a própria empresa ou a plataforma -- nunca o contador (ele já tem AssinaturasController pra isso). */
   private exigirPosse(usuarioAtual: UsuarioAutenticado, empresaId: string): void {
-    if (ehPapelDePlataforma(usuarioAtual.papel)) return;
+    if (ehPapelDePlataforma(usuarioAtual.escopo)) return;
     if (usuarioAtual.empresaId === empresaId) return;
     throw new ForbiddenException('Sem autoridade sobre a assinatura desta empresa');
   }

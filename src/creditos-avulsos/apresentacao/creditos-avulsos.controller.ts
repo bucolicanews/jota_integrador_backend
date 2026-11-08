@@ -61,7 +61,7 @@ export class CreditosAvulsosController {
 
   /** Plataforma, contador dono da carteira, ou a própria empresa comprando pra si mesma. */
   private async exigirPosse(usuarioAtual: UsuarioAutenticado, empresaId: string): Promise<void> {
-    if (ehPapelDePlataforma(usuarioAtual.papel)) return;
+    if (ehPapelDePlataforma(usuarioAtual.escopo)) return;
     if (usuarioAtual.empresaId === empresaId) return;
 
     const empresa = await this.empresasRepositorio.buscarPorId(empresaId);
@@ -75,7 +75,7 @@ export class CreditosAvulsosController {
 
   /** Compra via pacote de revenda: só a própria empresa ou a plataforma -- nunca o contador em nome dela (ver comentário em `comprar`). */
   private exigirPosseEmpresaOuPlataforma(usuarioAtual: UsuarioAutenticado, empresaId: string): void {
-    if (ehPapelDePlataforma(usuarioAtual.papel)) return;
+    if (ehPapelDePlataforma(usuarioAtual.escopo)) return;
     if (usuarioAtual.empresaId === empresaId) return;
     throw new ForbiddenException('Só a própria empresa pode comprar um pacote de revenda de crédito avulso');
   }

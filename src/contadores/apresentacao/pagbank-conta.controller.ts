@@ -49,7 +49,7 @@ export class PagbankContaController {
   }
 
   private exigirPosse(usuarioAtual: UsuarioAutenticado, contadorId: string): void {
-    if (ehPapelDePlataforma(usuarioAtual.papel)) return;
+    if (ehPapelDePlataforma(usuarioAtual.escopo)) return;
     if (usuarioAtual.contadorId !== contadorId) {
       throw new ForbiddenException('Sem autoridade sobre a conta PagBank deste contador');
     }

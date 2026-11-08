@@ -1,7 +1,6 @@
 import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { AuditoriaService } from '../../../common/auditoria/auditoria.service';
 import { UsuarioAutenticado } from '../../../auth/apresentacao/tipos/requisicao-autenticada';
-import { ESCOPO_POR_PAPEL } from '../../../auth/dominio/papel';
 import { EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../../../empresas/aplicacao/portas/empresas-repositorio.port';
 import { ladoDoRemetente, PrioridadeTicket } from '../../dominio/ticket';
 import { MENSAGENS_REPOSITORIO, MensagemTicket, MensagensRepositorioPort } from '../portas/mensagens-repositorio.port';
@@ -46,7 +45,7 @@ export class CriarTicketUseCase {
 
   async executar(dados: DadosCriarTicket): Promise<ResultadoCriarTicket> {
     const { usuarioAtual } = dados;
-    const escopo = ESCOPO_POR_PAPEL[usuarioAtual.papel];
+    const escopo = usuarioAtual.escopo;
 
     let contadorId: string;
     let empresaId: string | null = null;

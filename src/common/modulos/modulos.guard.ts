@@ -29,7 +29,7 @@ export class ModulosGuard implements CanActivate {
     }
 
     const requisicao = context.switchToHttp().getRequest<RequisicaoAutenticada>();
-    if (ehPapelDePlataforma(requisicao.usuario.papel)) {
+    if (ehPapelDePlataforma(requisicao.usuario.escopo)) {
       return true;
     }
 

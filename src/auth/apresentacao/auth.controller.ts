@@ -22,7 +22,7 @@ import {
   EMPRESAS_REPOSITORIO,
   EmpresasRepositorioPort,
 } from '../../empresas/aplicacao/portas/empresas-repositorio.port';
-import { ESCOPO_POR_PAPEL, Papel } from '../dominio/papel';
+import { Papel } from '../dominio/papel';
 import { AtualizarAvatarProprioUseCase } from '../aplicacao/casos-de-uso/atualizar-avatar-proprio.usecase';
 import { AtualizarEmailUsuarioUseCase } from '../aplicacao/casos-de-uso/atualizar-email-usuario.usecase';
 import { AtualizarNomeProprioUseCase } from '../aplicacao/casos-de-uso/atualizar-nome-proprio.usecase';
@@ -41,7 +41,7 @@ import { ObterPerfilUseCase } from '../aplicacao/casos-de-uso/obter-perfil.useca
 import { ObterTetoPermissoesUseCase } from '../aplicacao/casos-de-uso/obter-teto-permissoes.usecase';
 import { PERMISSOES_REPOSITORIO, Permissao, PermissoesRepositorioPort } from '../aplicacao/portas/permissoes-repositorio.port';
 import { RevogarPermissaoUseCase } from '../aplicacao/casos-de-uso/revogar-permissao.usecase';
-import { Usuario } from '../aplicacao/portas/usuarios-repositorio.port';
+import { USUARIOS_REPOSITORIO, Usuario, UsuariosRepositorioPort } from '../aplicacao/portas/usuarios-repositorio.port';
 import { AtualizarEmailUsuarioDto } from './dto/atualizar-email-usuario.dto';
 import { AtualizarPapelUsuarioDto } from './dto/atualizar-papel-usuario.dto';
 import { AtualizarSenhaUsuarioDto } from './dto/atualizar-senha-usuario.dto';
@@ -78,6 +78,7 @@ export class AuthController {
     private readonly atualizarTetoPermissoes: AtualizarTetoPermissoesUseCase,
     @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,
     @Inject(PERMISSOES_REPOSITORIO) private readonly permissoesRepositorio: PermissoesRepositorioPort,
+    @Inject(USUARIOS_REPOSITORIO) private readonly usuariosRepositorio: UsuariosRepositorioPort,
   ) {}
 
   /** Catálogo completo (todos os recursos/ações cadastrados), sem filtrar por teto de papel nenhum -- usado por "Editar plano" (permissoesPadrao) e qualquer outra tela que precise montar um checklist genérico. */
@@ -370,7 +371,8 @@ export class AuthController {
       return { contadorId: contadorIdSolicitado, empresaId: empresaIdSolicitado };
     }
 
-    const escopoNovo = ESCOPO_POR_PAPEL[papelNovo];
+    const infoPapelNovo = await this.usuariosRepositorio.buscarPapelPorNome(papelNovo);
+    const escopoNovo = infoPapelNovo.escopo;
 
     if (usuarioAtual.papel === Papel.CONTADOR_DONO && escopoNovo === 'contador') {
       return { contadorId: usuarioAtual.contadorId, empresaId: null };

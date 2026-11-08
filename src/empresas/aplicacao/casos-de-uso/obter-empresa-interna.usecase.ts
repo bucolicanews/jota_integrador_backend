@@ -1,5 +1,5 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { ehPapelDePlataforma, Papel } from '../../../auth/dominio/papel';
+import { EscopoPapel, ehPapelDePlataforma } from '../../../auth/dominio/papel';
 import {
   EMPRESAS_REPOSITORIO,
   Empresa,
@@ -7,7 +7,7 @@ import {
 } from '../portas/empresas-repositorio.port';
 
 export interface EntradaObterEmpresaInterna {
-  papel: Papel;
+  escopo: EscopoPapel;
   contadorId: string | null;
 }
 
@@ -23,7 +23,7 @@ export class ObterEmpresaInternaUseCase {
   ) {}
 
   async executar(entrada: EntradaObterEmpresaInterna): Promise<Empresa> {
-    const empresa = ehPapelDePlataforma(entrada.papel)
+    const empresa = ehPapelDePlataforma(entrada.escopo)
       ? await this.empresasRepositorio.buscarEmpresaInternaDaPlataforma()
       : entrada.contadorId
         ? await this.empresasRepositorio.buscarEmpresaInternaDoContador(entrada.contadorId)

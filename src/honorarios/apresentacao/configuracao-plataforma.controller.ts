@@ -1,7 +1,9 @@
 import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
+import { ExigirPermissao } from '../../auth/apresentacao/decorators/exigir-permissao.decorator';
 import { Papeis } from '../../auth/apresentacao/decorators/papeis.decorator';
 import { UsuarioAtual } from '../../auth/apresentacao/decorators/usuario-atual.decorator';
 import { PapeisGuard } from '../../auth/apresentacao/guards/papeis.guard';
+import { PermissoesGuard } from '../../auth/apresentacao/guards/permissoes.guard';
 import { SupabaseAuthGuard } from '../../auth/apresentacao/guards/supabase-auth.guard';
 import { UsuarioAutenticado } from '../../auth/apresentacao/tipos/requisicao-autenticada';
 import { Papel } from '../../auth/dominio/papel';
@@ -13,7 +15,7 @@ import { AtualizarComissaoContratosDto } from './dto/atualizar-comissao-contrato
 import { AtualizarConfiguracaoPagbankDto } from './dto/atualizar-configuracao-pagbank.dto';
 
 @Controller('configuracoes-plataforma')
-@UseGuards(SupabaseAuthGuard, PapeisGuard)
+@UseGuards(SupabaseAuthGuard, PapeisGuard, PermissoesGuard)
 @Papeis(Papel.SUPER_ADMIN, Papel.ADMIN_FINANCEIRO)
 export class ConfiguracaoPlataformaController {
   constructor(
@@ -22,6 +24,7 @@ export class ConfiguracaoPlataformaController {
   ) {}
 
   @Get('comissao-honorarios')
+  @ExigirPermissao('configuracoes:visualizar')
   async obterComissao(): Promise<{ comissaoHonorariosPct: number }> {
     return { comissaoHonorariosPct: await this.comissao.obter() };
   }
@@ -36,6 +39,7 @@ export class ConfiguracaoPlataformaController {
   }
 
   @Get('comissao-contratos')
+  @ExigirPermissao('configuracoes:visualizar')
   async obterComissaoContratos(): Promise<{ comissaoContratosPct: number }> {
     return { comissaoContratosPct: await this.comissao.obterContratos() };
   }
@@ -50,6 +54,7 @@ export class ConfiguracaoPlataformaController {
   }
 
   @Get('pagbank')
+  @ExigirPermissao('configuracoes:visualizar')
   async obterPagbank(): Promise<ConfiguracaoPagbank> {
     return this.pagbank.obter();
   }

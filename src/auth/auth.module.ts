@@ -23,6 +23,7 @@ import { PERMISSOES_REPOSITORIO } from './aplicacao/portas/permissoes-repositori
 import { PROVEDOR_IDENTIDADE } from './aplicacao/portas/provedor-identidade.port';
 import { USUARIOS_REPOSITORIO } from './aplicacao/portas/usuarios-repositorio.port';
 import { AuthController } from './apresentacao/auth.controller';
+import { PapeisController } from './apresentacao/papeis.controller';
 import { PapeisGuard } from './apresentacao/guards/papeis.guard';
 import { PermissoesGuard } from './apresentacao/guards/permissoes.guard';
 import { SupabaseAuthGuard } from './apresentacao/guards/supabase-auth.guard';
@@ -42,7 +43,7 @@ import { UsuariosRepositorioSupabase } from './infraestrutura/usuarios.repositor
   // CriarUsuarioUseCase lê permissoesPadrao do plano ativo da empresa pra conceder de cara
   // a um OPERADOR_EMPRESA recém-criado (ver comentário no próprio usecase).
   imports: [EmpresasModule, AssinaturasModule, PlanosModule],
-  controllers: [AuthController],
+  controllers: [AuthController, PapeisController],
   providers: [
     { provide: USUARIOS_REPOSITORIO, useClass: UsuariosRepositorioSupabase },
     { provide: PROVEDOR_IDENTIDADE, useClass: ProvedorIdentidadeSupabase },

@@ -25,13 +25,13 @@ export class ConcederPermissaoUseCase {
       throw new NotFoundException('Permissão não encontrada');
     }
 
-    const papelId = await this.usuarios.buscarIdPapelPorNome(alvo.papel);
-    const teto = await this.permissoes.obterTetoEfetivo(papelId, alvo.contadorId, alvo.empresaId);
+    const infoPapel = await this.usuarios.buscarPapelPorNome(alvo.papel);
+    const teto = await this.permissoes.obterTetoEfetivo(infoPapel.id, alvo.contadorId, alvo.empresaId);
     if (!teto.some((p) => p.id === permissaoId)) {
       throw new ForbiddenException(`Permissão "${permissao.chave}" não está disponível pro papel ${alvo.papel}`);
     }
 
-    if (!papelExigeChecagemGranular(alvo.papel)) {
+    if (!papelExigeChecagemGranular(infoPapel.nuncaRestringe)) {
       throw new BadRequestException(`Permissão granular não se aplica ao papel ${alvo.papel}`);
     }
 

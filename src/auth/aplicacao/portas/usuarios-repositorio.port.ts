@@ -1,4 +1,4 @@
-import { Papel } from '../../dominio/papel';
+import { InfoPapel, Papel } from '../../dominio/papel';
 
 export interface Usuario {
   id: string;
@@ -46,6 +46,8 @@ export interface UsuariosRepositorioPort {
   ): Promise<void>;
   marcarBloqueio(id: string, bloqueado: boolean, motivo: string | null, executadoPorId: string): Promise<void>;
   buscarIdPapelPorNome(nomePapel: Papel): Promise<string>;
+  /** Metadados completos (escopo, nuncaRestringe, sistema) -- usado por quem precisa validar coerência de escopo ou decidir concessão granular, não só o id. */
+  buscarPapelPorNome(nomePapel: Papel): Promise<InfoPapel>;
   atualizarNome(id: string, nome: string): Promise<void>;
   atualizarEmail(id: string, email: string): Promise<void>;
   atualizarAvatarRef(id: string, avatarRef: string | null): Promise<void>;

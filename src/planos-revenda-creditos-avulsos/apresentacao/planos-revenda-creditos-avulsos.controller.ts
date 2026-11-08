@@ -59,7 +59,7 @@ export class PlanosRevendaCreditosAvulsosController {
   }
 
   private exigirPosse(usuarioAtual: UsuarioAutenticado, contadorId: string): void {
-    if (ehPapelDePlataforma(usuarioAtual.papel)) return;
+    if (ehPapelDePlataforma(usuarioAtual.escopo)) return;
     if (usuarioAtual.contadorId !== contadorId) {
       throw new ForbiddenException('Sem autoridade sobre os planos de revenda deste contador');
     }

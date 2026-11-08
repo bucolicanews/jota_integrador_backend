@@ -213,7 +213,7 @@ export class SuporteController {
   }
 
   private exigirPosse(usuarioAtual: UsuarioAutenticado, ticket: Ticket): void {
-    if (ehPapelDePlataforma(usuarioAtual.papel)) return;
+    if (ehPapelDePlataforma(usuarioAtual.escopo)) return;
     const ehDoContador = usuarioAtual.contadorId !== null && usuarioAtual.contadorId === ticket.contadorId;
     const ehDaEmpresa = usuarioAtual.empresaId !== null && usuarioAtual.empresaId === ticket.empresaId;
     if (!ehDoContador && !ehDaEmpresa) {

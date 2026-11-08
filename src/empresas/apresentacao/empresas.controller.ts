@@ -87,7 +87,7 @@ export class EmpresasController {
   )
   async obterInterna(@UsuarioAtual() usuarioAtual: UsuarioAutenticado): Promise<Empresa> {
     return this.obterEmpresaInterna.executar({
-      papel: usuarioAtual.papel,
+      escopo: usuarioAtual.escopo,
       contadorId: usuarioAtual.contadorId,
     });
   }
@@ -203,7 +203,7 @@ export class EmpresasController {
 
   /** Contador dono ou usuário da própria empresa (ou plataforma) -- leitura/edição básica. */
   private exigirPosse(usuarioAtual: UsuarioAutenticado, empresa: Empresa): void {
-    if (ehPapelDePlataforma(usuarioAtual.papel)) {
+    if (ehPapelDePlataforma(usuarioAtual.escopo)) {
       return;
     }
     const ehContadorDono = usuarioAtual.contadorId !== null && usuarioAtual.contadorId === empresa.contadorId;
@@ -219,7 +219,7 @@ export class EmpresasController {
    * empresário (não faz sentido a empresa se autobloquear, ver docs/BANCO_DE_DADOS.md §7).
    */
   private exigirPosseDeContador(usuarioAtual: UsuarioAutenticado, empresa: Empresa): void {
-    if (ehPapelDePlataforma(usuarioAtual.papel)) {
+    if (ehPapelDePlataforma(usuarioAtual.escopo)) {
       return;
     }
     if (usuarioAtual.contadorId !== empresa.contadorId) {

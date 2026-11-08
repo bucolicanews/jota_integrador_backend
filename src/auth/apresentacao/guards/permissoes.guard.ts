@@ -22,7 +22,10 @@ export class PermissoesGuard implements CanActivate {
     const requisicao = context.switchToHttp().getRequest<RequisicaoAutenticada>();
     const usuario = requisicao.usuario;
 
-    if (!papelExigeChecagemGranular(usuario.papel)) {
+    // `nuncaRestringe` vem direto do claim (sincronizado por sincronizarClaims, mesmo
+    // motivo de sempre: evitar round-trip ao banco a cada requisição) -- nunca mais uma
+    // lista fixa de 4 nomes, já que papel é dinâmico desde 2026-11-08.
+    if (!papelExigeChecagemGranular(usuario.nuncaRestringe)) {
       return true; // dono/plataforma nunca restrito por permissão granular
     }
 

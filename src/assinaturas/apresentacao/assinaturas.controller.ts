@@ -54,7 +54,7 @@ export class AssinaturasController {
     // de graça (regra já existia só no frontend, ModalCadastrarEmpresa; endpoint deixava
     // qualquer contador chamar direto e furar isso). Contador sempre tem que cobrar (PIX
     // dele mesmo ou "cliente paga depois"), nunca "grátis".
-    if (!ehPapelDePlataforma(usuarioAtual.papel)) {
+    if (!ehPapelDePlataforma(usuarioAtual.escopo)) {
       throw new ForbiddenException('Só a plataforma pode ativar uma assinatura sem cobrar');
     }
     return this.ativarManual.executar({
@@ -126,7 +126,7 @@ export class AssinaturasController {
 
   /** Plataforma ou o próprio contador -- assinatura/crédito é dado financeiro, mesma regra do CreditosController. */
   private exigirPosse(usuarioAtual: UsuarioAutenticado, contadorId: string): void {
-    if (ehPapelDePlataforma(usuarioAtual.papel)) return;
+    if (ehPapelDePlataforma(usuarioAtual.escopo)) return;
     if (usuarioAtual.contadorId !== contadorId) {
       throw new ForbiddenException('Sem autoridade sobre a assinatura desta empresa');
     }

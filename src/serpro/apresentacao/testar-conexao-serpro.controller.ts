@@ -37,7 +37,7 @@ export class TestarConexaoSerproController {
 
   /** Mesmo padrão de posse de SerproController/EmpresasController. */
   private exigirPosse(usuarioAtual: UsuarioAutenticado, empresa: Empresa): void {
-    if (ehPapelDePlataforma(usuarioAtual.papel)) return;
+    if (ehPapelDePlataforma(usuarioAtual.escopo)) return;
     const ehContadorDono = usuarioAtual.contadorId !== null && usuarioAtual.contadorId === empresa.contadorId;
     const ehDaPropriaEmpresa = usuarioAtual.empresaId !== null && usuarioAtual.empresaId === empresa.id;
     if (!ehContadorDono && !ehDaPropriaEmpresa) {

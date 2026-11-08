@@ -69,14 +69,14 @@ export class HonorariosController {
   }
 
   private exigirPosseContador(usuarioAtual: UsuarioAutenticado, contadorId: string): void {
-    if (ehPapelDePlataforma(usuarioAtual.papel)) return;
+    if (ehPapelDePlataforma(usuarioAtual.escopo)) return;
     if (usuarioAtual.contadorId !== contadorId) {
       throw new ForbiddenException('Sem autoridade sobre os honorários deste contador');
     }
   }
 
   private exigirPosseEmpresa(usuarioAtual: UsuarioAutenticado, empresa: Empresa): void {
-    if (ehPapelDePlataforma(usuarioAtual.papel)) return;
+    if (ehPapelDePlataforma(usuarioAtual.escopo)) return;
     const ehContadorDono = usuarioAtual.contadorId !== null && usuarioAtual.contadorId === empresa.contadorId;
     const ehDaPropriaEmpresa = usuarioAtual.empresaId !== null && usuarioAtual.empresaId === empresa.id;
     if (!ehContadorDono && !ehDaPropriaEmpresa) {

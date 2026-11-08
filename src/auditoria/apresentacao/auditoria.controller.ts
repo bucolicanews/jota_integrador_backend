@@ -48,7 +48,7 @@ export class AuditoriaController {
       offset: dto.offset ?? 0,
     };
 
-    if (ehPapelDePlataforma(usuarioAtual.papel)) {
+    if (ehPapelDePlataforma(usuarioAtual.escopo)) {
       return { ...base, contadorId: dto.contadorId, empresaId: dto.empresaId };
     }
 

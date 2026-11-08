@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsOptional, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsOptional, Matches, MaxLength, MinLength } from 'class-validator';
 import { Papel } from '../../dominio/papel';
 
 // `@IsUUID()` do class-validator rejeita o id sentinela 'Jota Contabilidade'
@@ -26,7 +26,11 @@ export class CriarUsuarioDto {
   @IsEmail()
   email!: string;
 
-  @IsEnum(Papel)
+  // Papel é dinâmico desde 2026-11-08 (qualquer linha de `papeis`, não um enum fechado) --
+  // sem @IsEnum aqui, a existência de verdade é garantida pela FK (papel_id) + buscarPapelPorNome
+  // (NotFoundException se o nome não existir no catálogo), mesmo princípio do REGEX_UUID_SOLTO acima.
+  @MinLength(1)
+  @MaxLength(60)
   papel!: Papel;
 
   @IsOptional()

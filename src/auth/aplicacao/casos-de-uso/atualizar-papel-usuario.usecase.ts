@@ -24,15 +24,14 @@ export class AtualizarPapelUsuarioUseCase {
   ) {}
 
   async executar(entrada: EntradaAtualizarPapel): Promise<void> {
-    validarCoerenciaEscopo(entrada.novoPapel, entrada.novoContadorId, entrada.novoEmpresaId);
-
-    const papelId = await this.usuariosRepositorio.buscarIdPapelPorNome(entrada.novoPapel);
+    const infoPapel = await this.usuariosRepositorio.buscarPapelPorNome(entrada.novoPapel);
+    validarCoerenciaEscopo(infoPapel.escopo, entrada.novoContadorId, entrada.novoEmpresaId);
 
     // Banco primeiro: se falhar aqui, os claims antigos continuam consistentes com o
     // perfil antigo -- não há intervalo onde o app_metadata mente sobre o perfil real.
     await this.usuariosRepositorio.atualizarPapelEVinculo(
       entrada.usuarioId,
-      papelId,
+      infoPapel.id,
       entrada.novoContadorId,
       entrada.novoEmpresaId,
     );
@@ -41,6 +40,8 @@ export class AtualizarPapelUsuarioUseCase {
     // usuário forçar um novo login (docs/BANCO_DE_DADOS.md §1).
     await this.provedorIdentidade.sincronizarClaims(entrada.usuarioId, {
       papel: entrada.novoPapel,
+      escopo: infoPapel.escopo,
+      nuncaRestringe: infoPapel.nuncaRestringe,
       contadorId: entrada.novoContadorId,
       empresaId: entrada.novoEmpresaId,
     });

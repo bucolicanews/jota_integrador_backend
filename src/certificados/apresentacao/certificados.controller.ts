@@ -148,7 +148,7 @@ export class CertificadosController {
 
   /** Mesmo padrão de posse de EmpresasController/SerproController -- contador dono ou usuário da própria empresa. */
   private exigirPosse(usuarioAtual: UsuarioAutenticado, empresa: Empresa): void {
-    if (ehPapelDePlataforma(usuarioAtual.papel)) {
+    if (ehPapelDePlataforma(usuarioAtual.escopo)) {
       return;
     }
     const ehContadorDono = usuarioAtual.contadorId !== null && usuarioAtual.contadorId === empresa.contadorId;

@@ -74,7 +74,7 @@ export class CreditosController {
 
   /** Leitura: plataforma, contador dono da carteira, ou a própria empresa vendo o próprio saldo. */
   private async exigirPosse(usuarioAtual: UsuarioAutenticado, empresaId: string): Promise<void> {
-    if (ehPapelDePlataforma(usuarioAtual.papel)) return;
+    if (ehPapelDePlataforma(usuarioAtual.escopo)) return;
     if (usuarioAtual.empresaId === empresaId) return;
     await this.exigirPosseDeGestao(usuarioAtual, empresaId);
   }
@@ -85,7 +85,7 @@ export class CreditosController {
     if (!empresa) {
       throw new NotFoundException('Empresa não encontrada');
     }
-    if (ehPapelDePlataforma(usuarioAtual.papel)) return empresa.contadorId;
+    if (ehPapelDePlataforma(usuarioAtual.escopo)) return empresa.contadorId;
     if (usuarioAtual.contadorId !== empresa.contadorId) {
       throw new ForbiddenException('Sem autoridade sobre os créditos desta empresa');
     }
