@@ -9,8 +9,12 @@ export class CriarPapelDto {
   @MaxLength(60)
   nome!: string;
 
+  // Opcional -- só SUPER_ADMIN de fato usa esse valor (papel global, escopo livre).
+  // CONTADOR_DONO/EMPRESARIO_DONO têm o escopo FORÇADO pelo controller (contador/empresa
+  // respectivamente), o que vier aqui é ignorado pra eles.
+  @IsOptional()
   @IsIn(['plataforma', 'contador', 'empresa'])
-  escopo!: EscopoPapel;
+  escopo?: EscopoPapel;
 
   @IsOptional()
   @IsString()

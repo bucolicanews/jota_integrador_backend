@@ -29,6 +29,10 @@ export interface InfoPapel {
   descricao: string | null;
   sistema: boolean;
   nuncaRestringe: boolean;
+  /** Dono do papel customizado (CONTADOR_DONO criou pra própria equipe) -- null = global (sistema ou customizado-global de SUPER_ADMIN). */
+  contadorId: string | null;
+  /** Dono do papel customizado (EMPRESARIO_DONO criou pra própria equipe) -- null = global. */
+  empresaId: string | null;
 }
 
 export function ehPapelDePlataforma(escopo: EscopoPapel): boolean {

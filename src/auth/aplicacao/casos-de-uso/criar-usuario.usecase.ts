@@ -2,7 +2,7 @@ import { ConflictException, Inject, Injectable } from '@nestjs/common';
 import { ASSINATURAS_REPOSITORIO, AssinaturasRepositorioPort } from '../../../assinaturas/aplicacao/portas/assinaturas-repositorio.port';
 import { PLANOS_REPOSITORIO, PlanosRepositorioPort } from '../../../planos/aplicacao/portas/planos-repositorio.port';
 import { papelExigeChecagemGranular } from '../../dominio/permissao';
-import { Papel, validarCoerenciaEscopo } from '../../dominio/papel';
+import { InfoPapel, validarCoerenciaEscopo } from '../../dominio/papel';
 import {
   PERMISSOES_REPOSITORIO,
   PermissoesRepositorioPort,
@@ -20,7 +20,12 @@ import {
 export interface EntradaCriarUsuario {
   nome: string;
   email: string;
-  papel: Papel;
+  /**
+   * Já resolvido por quem chama (controller, via `buscarPapelPorNome` escopado ao ATOR) --
+   * evita repetir uma busca por nome que seria ambígua aqui dentro (papel não é mais
+   * único global desde que CONTADOR_DONO/EMPRESARIO_DONO criam o próprio).
+   */
+  infoPapel: InfoPapel;
   contadorId: string | null;
   empresaId: string | null;
 }
@@ -46,7 +51,7 @@ export class CriarUsuarioUseCase {
   ) {}
 
   async executar(entrada: EntradaCriarUsuario): Promise<ResultadoCriarUsuario> {
-    const infoPapel = await this.usuariosRepositorio.buscarPapelPorNome(entrada.papel);
+    const { infoPapel } = entrada;
     validarCoerenciaEscopo(infoPapel.escopo, entrada.contadorId, entrada.empresaId);
 
     // 1. Identidade primeiro (provedor de auth) -- o id gerado lá é o mesmo usado no perfil.
@@ -69,7 +74,7 @@ export class CriarUsuarioUseCase {
     // 2. Sincroniza claims ANTES do perfil existir -- se falhar aqui, não sobra usuário
     //    "manco" (perfil sem claims, que quebraria RLS pra ele depois).
     await this.provedorIdentidade.sincronizarClaims(id, {
-      papel: entrada.papel,
+      papel: infoPapel.nome,
       escopo: infoPapel.escopo,
       nuncaRestringe: infoPapel.nuncaRestringe,
       contadorId: entrada.contadorId,
@@ -95,12 +100,13 @@ export class CriarUsuarioUseCase {
       const teto = await this.permissoesRepositorio.obterTetoEfetivo(infoPapel.id, entrada.contadorId, entrada.empresaId);
       const permissoesAConceder = new Map(teto.map((permissao) => [permissao.chave, permissao.id]));
 
-      // OPERADOR_EMPRESA também herda o que o PLANO da empresa define como padrão (ver
-      // "Editar plano" > permissões incluídas), em cima do teto do papel -- só aplicado
-      // aqui na criação, nunca retroativo pra quem já existe. Falha silenciosa se a
-      // empresa não tiver assinatura ativa ainda (ex: convite enviado antes de ativar o
-      // plano) -- não é motivo pra travar a criação do login.
-      if (entrada.papel === Papel.OPERADOR_EMPRESA && entrada.empresaId) {
+      // Todo funcionário de escopo empresa (OPERADOR_EMPRESA de sistema OU papel
+      // customizado que a própria EMPRESARIO_DONO criou) também herda o que o PLANO da
+      // empresa define como padrão (ver "Editar plano" > permissões incluídas), em cima
+      // do teto do papel -- só aplicado aqui na criação, nunca retroativo pra quem já
+      // existe. Falha silenciosa se a empresa não tiver assinatura ativa ainda (ex:
+      // convite enviado antes de ativar o plano) -- não é motivo pra travar o login.
+      if (infoPapel.escopo === 'empresa' && entrada.empresaId) {
         const assinatura = await this.assinaturasRepositorio.buscarAtivaPorEmpresa(entrada.empresaId);
         if (assinatura) {
           const plano = await this.planosRepositorio.buscarPorId(assinatura.planoId);

@@ -25,7 +25,7 @@ export class ConcederPermissaoUseCase {
       throw new NotFoundException('Permissão não encontrada');
     }
 
-    const infoPapel = await this.usuarios.buscarPapelPorNome(alvo.papel);
+    const infoPapel = await this.usuarios.buscarPapelPorNome(alvo.papel, { contadorId: alvo.contadorId, empresaId: alvo.empresaId });
     const teto = await this.permissoes.obterTetoEfetivo(infoPapel.id, alvo.contadorId, alvo.empresaId);
     if (!teto.some((p) => p.id === permissaoId)) {
       throw new ForbiddenException(`Permissão "${permissao.chave}" não está disponível pro papel ${alvo.papel}`);

@@ -24,7 +24,10 @@ export class AtualizarPapelUsuarioUseCase {
   ) {}
 
   async executar(entrada: EntradaAtualizarPapel): Promise<void> {
-    const infoPapel = await this.usuariosRepositorio.buscarPapelPorNome(entrada.novoPapel);
+    // Rota é SUPER_ADMIN-only hoje (ator sempre de escopo plataforma) -- resolve só papel
+    // global. Vira contextual quando o TODO de permitir CONTADOR_DONO nessa rota (ver
+    // auth.controller.ts) for implementado.
+    const infoPapel = await this.usuariosRepositorio.buscarPapelPorNome(entrada.novoPapel, { contadorId: null, empresaId: null });
     validarCoerenciaEscopo(infoPapel.escopo, entrada.novoContadorId, entrada.novoEmpresaId);
 
     // Banco primeiro: se falhar aqui, os claims antigos continuam consistentes com o

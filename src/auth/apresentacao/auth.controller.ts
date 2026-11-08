@@ -22,7 +22,7 @@ import {
   EMPRESAS_REPOSITORIO,
   EmpresasRepositorioPort,
 } from '../../empresas/aplicacao/portas/empresas-repositorio.port';
-import { Papel } from '../dominio/papel';
+import { InfoPapel, Papel } from '../dominio/papel';
 import { AtualizarAvatarProprioUseCase } from '../aplicacao/casos-de-uso/atualizar-avatar-proprio.usecase';
 import { AtualizarEmailUsuarioUseCase } from '../aplicacao/casos-de-uso/atualizar-email-usuario.usecase';
 import { AtualizarNomeProprioUseCase } from '../aplicacao/casos-de-uso/atualizar-nome-proprio.usecase';
@@ -81,9 +81,14 @@ export class AuthController {
     @Inject(USUARIOS_REPOSITORIO) private readonly usuariosRepositorio: UsuariosRepositorioPort,
   ) {}
 
-  /** Catálogo completo (todos os recursos/ações cadastrados), sem filtrar por teto de papel nenhum -- usado por "Editar plano" (permissoesPadrao) e qualquer outra tela que precise montar um checklist genérico. */
+  /**
+   * Catálogo completo (todos os recursos/ações cadastrados), sem filtrar por teto de
+   * papel nenhum -- usado por "Editar plano" (permissoesPadrao) e qualquer outra tela
+   * que precise montar um checklist genérico, inclusive o form de criar/editar papel em
+   * /admin/papeis pra CONTADOR_DONO/EMPRESARIO_DONO (desde 2026-11-09).
+   */
   @Get('permissoes-catalogo')
-  @Papeis(Papel.SUPER_ADMIN, Papel.ADMIN_FINANCEIRO)
+  @Papeis(Papel.SUPER_ADMIN, Papel.ADMIN_FINANCEIRO, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
   async listarCatalogoPermissoes(): Promise<Permissao[]> {
     return this.permissoesRepositorio.listarCatalogoPermissoes();
   }
@@ -177,7 +182,7 @@ export class AuthController {
     return this.criarUsuario.executar({
       nome: dto.nome,
       email: dto.email,
-      papel: dto.papel,
+      infoPapel: vinculo.infoPapel,
       contadorId: vinculo.contadorId,
       empresaId: vinculo.empresaId,
     });
@@ -366,16 +371,29 @@ export class AuthController {
     papelNovo: Papel,
     contadorIdSolicitado: string | null,
     empresaIdSolicitado: string | null,
-  ): Promise<{ contadorId: string | null; empresaId: string | null }> {
+  ): Promise<{ contadorId: string | null; empresaId: string | null; infoPapel: InfoPapel }> {
+    // Resolve o papel dentro do escopo do PRÓPRIO ATOR (nunca do alvo, que ainda nem foi
+    // decidido) -- SUPER_ADMIN só vê papel global aqui (forma genérica não tem campo de
+    // "qual contador", mesma limitação de sempre); CONTADOR_DONO vê global + o próprio;
+    // EMPRESARIO_DONO vê global + o próprio. Nome não é mais único global, resolver sem
+    // esse filtro seria ambíguo entre donos diferentes.
+    const filtroAtor =
+      usuarioAtual.papel === Papel.CONTADOR_DONO
+        ? { contadorId: usuarioAtual.contadorId, empresaId: null }
+        : usuarioAtual.papel === Papel.EMPRESARIO_DONO
+          ? { contadorId: null, empresaId: usuarioAtual.empresaId }
+          : { contadorId: null, empresaId: null };
+
+    const infoPapel = await this.usuariosRepositorio.buscarPapelPorNome(papelNovo, filtroAtor);
+
     if (usuarioAtual.papel === Papel.SUPER_ADMIN) {
-      return { contadorId: contadorIdSolicitado, empresaId: empresaIdSolicitado };
+      return { contadorId: contadorIdSolicitado, empresaId: empresaIdSolicitado, infoPapel };
     }
 
-    const infoPapelNovo = await this.usuariosRepositorio.buscarPapelPorNome(papelNovo);
-    const escopoNovo = infoPapelNovo.escopo;
+    const escopoNovo = infoPapel.escopo;
 
     if (usuarioAtual.papel === Papel.CONTADOR_DONO && escopoNovo === 'contador') {
-      return { contadorId: usuarioAtual.contadorId, empresaId: null };
+      return { contadorId: usuarioAtual.contadorId, empresaId: null, infoPapel };
     }
 
     if (usuarioAtual.papel === Papel.CONTADOR_DONO && escopoNovo === 'empresa') {
@@ -389,11 +407,11 @@ export class AuthController {
       if (!pertence) {
         throw new ForbiddenException('Esta empresa não pertence à sua carteira');
       }
-      return { contadorId: null, empresaId: empresaIdSolicitado };
+      return { contadorId: null, empresaId: empresaIdSolicitado, infoPapel };
     }
 
     if (usuarioAtual.papel === Papel.EMPRESARIO_DONO && escopoNovo === 'empresa') {
-      return { contadorId: null, empresaId: usuarioAtual.empresaId };
+      return { contadorId: null, empresaId: usuarioAtual.empresaId, infoPapel };
     }
 
     throw new ForbiddenException('Sem autoridade para criar usuário com este papel/vínculo');

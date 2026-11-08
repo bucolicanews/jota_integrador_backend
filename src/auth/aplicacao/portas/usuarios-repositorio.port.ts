@@ -1,3 +1,4 @@
+import { FiltroDonoPapel } from './permissoes-repositorio.port';
 import { InfoPapel, Papel } from '../../dominio/papel';
 
 export interface Usuario {
@@ -45,9 +46,15 @@ export interface UsuariosRepositorioPort {
     empresaId: string | null,
   ): Promise<void>;
   marcarBloqueio(id: string, bloqueado: boolean, motivo: string | null, executadoPorId: string): Promise<void>;
+  /** Resolve só papel GLOBAL (sistema ou customizado-global) -- os 3 call sites que usam isso hoje (teto por dono) só tratam dos 4 papéis restringíveis de sistema, sempre globais. */
   buscarIdPapelPorNome(nomePapel: Papel): Promise<string>;
-  /** Metadados completos (escopo, nuncaRestringe, sistema) -- usado por quem precisa validar coerência de escopo ou decidir concessão granular, não só o id. */
-  buscarPapelPorNome(nomePapel: Papel): Promise<InfoPapel>;
+  /**
+   * Metadados completos (escopo, nuncaRestringe, sistema, dono) -- usado por quem precisa
+   * validar coerência de escopo ou decidir concessão granular, não só o id. Resolve dentro
+   * do filtro de dono informado (global OU o dono específico) -- nome não é mais único
+   * global, resolver sem esse filtro seria ambíguo entre contadores/empresas diferentes.
+   */
+  buscarPapelPorNome(nomePapel: Papel, filtro: FiltroDonoPapel): Promise<InfoPapel>;
   atualizarNome(id: string, nome: string): Promise<void>;
   atualizarEmail(id: string, email: string): Promise<void>;
   atualizarAvatarRef(id: string, avatarRef: string | null): Promise<void>;

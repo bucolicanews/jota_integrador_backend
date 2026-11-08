@@ -4,6 +4,7 @@ import { InfoPapel } from '../dominio/papel';
 import {
   DadosAtualizarPapel,
   DadosNovoPapel,
+  FiltroDonoPapel,
   Permissao,
   PermissoesRepositorioPort,
 } from '../aplicacao/portas/permissoes-repositorio.port';
@@ -22,17 +23,29 @@ interface LinhaPapel {
   descricao: string | null;
   sistema: boolean;
   nunca_restringe: boolean;
+  contador_id: string | null;
+  empresa_id: string | null;
 }
 
 const COLUNAS_PERMISSAO = 'id, recurso, acao, chave';
-const COLUNAS_PAPEL = 'id, nome, escopo, descricao, sistema, nunca_restringe';
+const COLUNAS_PAPEL = 'id, nome, escopo, descricao, sistema, nunca_restringe, contador_id, empresa_id';
 
 @Injectable()
 export class PermissoesRepositorioSupabase implements PermissoesRepositorioPort {
   constructor(private readonly supabase: SupabaseService) {}
 
-  async listarPapeis(): Promise<InfoPapel[]> {
-    const { data, error } = await this.supabase.admin.from('papeis').select(COLUNAS_PAPEL).order('sistema', { ascending: false }).order('nome');
+  async listarPapeis(filtro: FiltroDonoPapel): Promise<InfoPapel[]> {
+    let query = this.supabase.admin.from('papeis').select(COLUNAS_PAPEL);
+    // Globais (contador_id/empresa_id ambos null) OU os do dono pedido -- nunca de outro dono.
+    if (filtro.contadorId) {
+      query = query.or(`and(contador_id.is.null,empresa_id.is.null),contador_id.eq.${filtro.contadorId}`);
+    } else if (filtro.empresaId) {
+      query = query.or(`and(contador_id.is.null,empresa_id.is.null),empresa_id.eq.${filtro.empresaId}`);
+    } else {
+      query = query.is('contador_id', null).is('empresa_id', null);
+    }
+
+    const { data, error } = await query.order('sistema', { ascending: false }).order('nome');
     if (error) throw new InternalServerErrorException(`Falha ao listar papéis: ${error.message}`);
     return (data as LinhaPapel[]).map((linha) => this.mapearPapel(linha));
   }
@@ -46,11 +59,19 @@ export class PermissoesRepositorioSupabase implements PermissoesRepositorioPort 
   async criarPapel(dados: DadosNovoPapel): Promise<InfoPapel> {
     const { data, error } = await this.supabase.admin
       .from('papeis')
-      .insert({ nome: dados.nome, escopo: dados.escopo, descricao: dados.descricao, sistema: false, nunca_restringe: false })
+      .insert({
+        nome: dados.nome,
+        escopo: dados.escopo,
+        descricao: dados.descricao,
+        sistema: false,
+        nunca_restringe: false,
+        contador_id: dados.contadorId,
+        empresa_id: dados.empresaId,
+      })
       .select(COLUNAS_PAPEL)
       .single();
     if (error) {
-      // 23505 = violação do unique index em papeis.nome -- conflito de negócio (409), não erro de infra.
+      // 23505 = violação de um dos unique index parciais de papeis.nome (global/por contador/por empresa) -- conflito de negócio (409), não erro de infra.
       if (error.code === '23505') throw new ConflictException(`Já existe um papel com o nome "${dados.nome}"`);
       throw new InternalServerErrorException(`Falha ao criar papel: ${error.message}`);
     }
@@ -87,6 +108,8 @@ export class PermissoesRepositorioSupabase implements PermissoesRepositorioPort 
       descricao: linha.descricao,
       sistema: linha.sistema,
       nuncaRestringe: linha.nunca_restringe,
+      contadorId: linha.contador_id,
+      empresaId: linha.empresa_id,
     };
   }
 

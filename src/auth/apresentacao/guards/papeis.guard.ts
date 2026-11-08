@@ -11,13 +11,14 @@ import { RequisicaoAutenticada } from '../tipos/requisicao-autenticada';
  * Fast-path literal (comportamento 100% inalterado pros 7 papéis de sistema): papel do
  * usuário bate com algum nome da lista -- passa, igual sempre foi.
  *
- * Fallback (só pra papel customizado, criado via /admin/papeis desde 2026-11-08): se o
- * literal não bateu, só deixa passar pro `PermissoesGuard` decidir de verdade quando a
- * MESMA rota também declara `@ExigirPermissao(...)` **e** o papel do usuário é de escopo
- * plataforma. Rota só com `@Papeis()` (sem `@ExigirPermissao`) continua 100% fechada pra
- * qualquer papel novo -- é onde vivem as ações exclusivas de papel de sistema (bloquear,
- * excluir, certificados, criar plano, conceder crédito). Nunca abre pra escopo
- * contador/empresa customizado (fora de escopo desta primeira versão).
+ * Fallback (só pra papel customizado, criado via /admin/papeis desde 2026-11-08, por
+ * SUPER_ADMIN/CONTADOR_DONO/EMPRESARIO_DONO cada um no próprio escopo): se o literal não
+ * bateu, só deixa passar pro `PermissoesGuard` decidir de verdade quando a MESMA rota
+ * também declara `@ExigirPermissao(...)` -- qualquer escopo (plataforma/contador/
+ * empresa), já que os 3 donos criam papel customizado desde 2026-11-09. Rota só com
+ * `@Papeis()` (sem `@ExigirPermissao`) continua 100% fechada pra qualquer papel novo --
+ * é onde vivem as ações exclusivas de papel de sistema (bloquear, excluir, certificados,
+ * criar plano, conceder crédito).
  */
 @Injectable()
 export class PapeisGuard implements CanActivate {
@@ -42,7 +43,7 @@ export class PapeisGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
-    if (exigePermissaoGranular && requisicao.usuario.escopo === 'plataforma') {
+    if (exigePermissaoGranular) {
       return true; // PermissoesGuard (roda depois) exige a chave de fato
     }
 

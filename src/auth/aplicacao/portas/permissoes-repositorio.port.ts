@@ -7,11 +7,19 @@ export interface Permissao {
   chave: string; // "recurso:acao", coluna gerada no banco
 }
 
+/** `contadorId`/`empresaId` ambos null = só papéis globais (sistema + customizado-global de SUPER_ADMIN). Um dos dois preenchido = globais + os privados daquele dono (nunca os de outro dono). */
+export interface FiltroDonoPapel {
+  contadorId: string | null;
+  empresaId: string | null;
+}
+
 export interface DadosNovoPapel {
   nome: string;
   escopo: EscopoPapel;
   descricao: string | null;
   permissaoIds: string[];
+  contadorId: string | null;
+  empresaId: string | null;
 }
 
 export interface DadosAtualizarPapel {
@@ -20,10 +28,10 @@ export interface DadosAtualizarPapel {
 }
 
 export interface PermissoesRepositorioPort {
-  /** Catálogo de papéis (os 7 de sistema + customizados) -- pra tela /admin/papeis e pro select de "Papel" na criação de usuário. */
-  listarPapeis(): Promise<InfoPapel[]>;
+  /** Catálogo de papéis (os 7 de sistema + customizados) -- pra tela /admin/papeis e pro select de "Papel" na criação de usuário. Filtra globais + os privados do dono informado, nunca de outro dono. */
+  listarPapeis(filtro: FiltroDonoPapel): Promise<InfoPapel[]>;
   buscarPapelPorId(id: string): Promise<InfoPapel | null>;
-  /** Cria papel customizado (sempre `sistema=false`, `nunca_restringe=false`) + grava o teto inicial em `papel_permissoes`. Nome único -- erro de conflito já vira 409 na camada de apresentação. */
+  /** Cria papel customizado (sempre `sistema=false`, `nunca_restringe=false`) + grava o teto inicial em `papel_permissoes`. Nome único só dentro do mesmo dono (ou entre os globais) -- erro de conflito já vira 409 na camada de apresentação. */
   criarPapel(dados: DadosNovoPapel): Promise<InfoPapel>;
   /** Nome/escopo são imutáveis (papéis de sistema nem chegam aqui -- bloqueado na camada de aplicação). Substitui `permissaoIds` (delete+insert), igual padrão de `definirTetoDono`. */
   atualizarPapel(id: string, dados: DadosAtualizarPapel): Promise<void>;

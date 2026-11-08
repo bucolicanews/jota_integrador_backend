@@ -1,8 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { AtivarAssinaturaManualUseCase } from '../../../assinaturas/aplicacao/casos-de-uso/ativar-assinatura-manual.usecase';
 import { IniciarPagamentoAssinaturaCreditosUseCase } from '../../../assinaturas/aplicacao/casos-de-uso/iniciar-pagamento-assinatura-creditos.usecase';
 import { Assinatura } from '../../../assinaturas/aplicacao/portas/assinaturas-repositorio.port';
 import { CriarUsuarioUseCase, ResultadoCriarUsuario } from '../../../auth/aplicacao/casos-de-uso/criar-usuario.usecase';
+import { USUARIOS_REPOSITORIO, UsuariosRepositorioPort } from '../../../auth/aplicacao/portas/usuarios-repositorio.port';
 import { Papel } from '../../../auth/dominio/papel';
 import { CriarEmpresaUseCase } from '../../../empresas/aplicacao/casos-de-uso/criar-empresa.usecase';
 import { Empresa } from '../../../empresas/aplicacao/portas/empresas-repositorio.port';
@@ -65,6 +66,7 @@ export class CadastrarEmpresaComPlanoUseCase {
     private readonly iniciarPagamento: IniciarPagamentoAssinaturaCreditosUseCase,
     private readonly criarUsuario: CriarUsuarioUseCase,
     private readonly semearPlanoContas: SemearPlanoContasUseCase,
+    @Inject(USUARIOS_REPOSITORIO) private readonly usuariosRepositorio: UsuariosRepositorioPort,
   ) {}
 
   async executar(dados: EntradaCadastrarEmpresaComPlano): Promise<ResultadoCadastrarEmpresaComPlano> {
@@ -87,10 +89,11 @@ export class CadastrarEmpresaComPlanoUseCase {
       await this.semearPlanoContas.executar(empresa.id, dados.planoContasModelo);
     }
 
+    const infoPapel = await this.usuariosRepositorio.buscarPapelPorNome(Papel.EMPRESARIO_DONO, { contadorId: null, empresaId: null });
     const usuario = await this.criarUsuario.executar({
       nome: dados.clienteNome,
       email: dados.clienteEmail,
-      papel: Papel.EMPRESARIO_DONO,
+      infoPapel,
       contadorId: null,
       empresaId: empresa.id,
     });

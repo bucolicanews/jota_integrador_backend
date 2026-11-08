@@ -1,6 +1,7 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../../common/supabase/supabase.service';
 import { InfoPapel, Papel } from '../dominio/papel';
+import { FiltroDonoPapel } from '../aplicacao/portas/permissoes-repositorio.port';
 import {
   DadosNovoUsuario,
   Usuario,
@@ -172,10 +173,15 @@ export class UsuariosRepositorioSupabase implements UsuariosRepositorioPort {
   }
 
   async buscarIdPapelPorNome(nomePapel: Papel): Promise<string> {
+    // Só papel GLOBAL -- os 3 call sites de hoje (teto por dono) só tratam papel de
+    // sistema restringível (sempre contador_id/empresa_id null). Filtrar global explícito
+    // evita colidir com um papel customizado de outro dono que reuse o mesmo nome.
     const { data, error } = await this.supabase.admin
       .from('papeis')
       .select('id')
       .eq('nome', nomePapel)
+      .is('contador_id', null)
+      .is('empresa_id', null)
       .single();
 
     if (error || !data) {
@@ -185,18 +191,33 @@ export class UsuariosRepositorioSupabase implements UsuariosRepositorioPort {
     return (data as { id: string }).id;
   }
 
-  async buscarPapelPorNome(nomePapel: Papel): Promise<InfoPapel> {
-    const { data, error } = await this.supabase.admin
-      .from('papeis')
-      .select('id, nome, escopo, descricao, sistema, nunca_restringe')
-      .eq('nome', nomePapel)
-      .single();
+  async buscarPapelPorNome(nomePapel: Papel, filtro: FiltroDonoPapel): Promise<InfoPapel> {
+    let query = this.supabase.admin.from('papeis').select('id, nome, escopo, descricao, sistema, nunca_restringe, contador_id, empresa_id').eq('nome', nomePapel);
+    // Global OU do dono informado -- nunca de outro dono (nome não é mais único global).
+    if (filtro.contadorId) {
+      query = query.or(`and(contador_id.is.null,empresa_id.is.null),contador_id.eq.${filtro.contadorId}`);
+    } else if (filtro.empresaId) {
+      query = query.or(`and(contador_id.is.null,empresa_id.is.null),empresa_id.eq.${filtro.empresaId}`);
+    } else {
+      query = query.is('contador_id', null).is('empresa_id', null);
+    }
+
+    const { data, error } = await query.maybeSingle();
 
     if (error || !data) {
       throw new NotFoundException(`Papel ${nomePapel} não encontrado no catálogo`);
     }
 
-    const linha = data as { id: string; nome: string; escopo: InfoPapel['escopo']; descricao: string | null; sistema: boolean; nunca_restringe: boolean };
+    const linha = data as {
+      id: string;
+      nome: string;
+      escopo: InfoPapel['escopo'];
+      descricao: string | null;
+      sistema: boolean;
+      nunca_restringe: boolean;
+      contador_id: string | null;
+      empresa_id: string | null;
+    };
     return {
       id: linha.id,
       nome: linha.nome,
@@ -204,6 +225,8 @@ export class UsuariosRepositorioSupabase implements UsuariosRepositorioPort {
       descricao: linha.descricao,
       sistema: linha.sistema,
       nuncaRestringe: linha.nunca_restringe,
+      contadorId: linha.contador_id,
+      empresaId: linha.empresa_id,
     };
   }
 
