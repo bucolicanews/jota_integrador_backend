@@ -79,6 +79,7 @@ export class CriarUsuarioUseCase {
       nuncaRestringe: infoPapel.nuncaRestringe,
       contadorId: entrada.contadorId,
       empresaId: entrada.empresaId,
+      metodo2fa: 'nenhum',
     });
 
     // 3. Perfil de domínio.

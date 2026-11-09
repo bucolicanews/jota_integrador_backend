@@ -6,7 +6,10 @@ import { AppModule } from './app.module';
 import { SaldoInsuficienteFilter } from './common/filtros/saldo-insuficiente.filter';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  // rawBody: mantém req.rawBody (Buffer) junto com o body já parseado -- necessário pro
+  // Auth Hook do Supabase (src/supabase-hooks/) verificar a assinatura HMAC sobre o
+  // corpo EXATO que foi enviado, sem reserializar.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   const config = app.get(ConfigService);
 
   app.use(helmet());

@@ -17,6 +17,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 import { memoryStorage } from 'multer';
 import {
   EMPRESAS_REPOSITORIO,
@@ -31,8 +32,12 @@ import { AtualizarSenhaUsuarioUseCase } from '../aplicacao/casos-de-uso/atualiza
 import { AtualizarTetoPermissoesUseCase } from '../aplicacao/casos-de-uso/atualizar-teto-permissoes.usecase';
 import { BloquearUsuarioUseCase } from '../aplicacao/casos-de-uso/bloquear-usuario.usecase';
 import { ConcederPermissaoUseCase } from '../aplicacao/casos-de-uso/conceder-permissao.usecase';
+import { ConfirmarTotp2faUseCase } from '../aplicacao/casos-de-uso/confirmar-totp-2fa.usecase';
 import { CriarUsuarioUseCase, ResultadoCriarUsuario } from '../aplicacao/casos-de-uso/criar-usuario.usecase';
+import { DefinirMetodo2faNenhumUseCase } from '../aplicacao/casos-de-uso/definir-metodo-2fa-nenhum.usecase';
 import { DesbloquearUsuarioUseCase } from '../aplicacao/casos-de-uso/desbloquear-usuario.usecase';
+import { EnviarCodigoEmail2faUseCase } from '../aplicacao/casos-de-uso/enviar-codigo-email-2fa.usecase';
+import { VerificarCodigoEmail2faUseCase } from '../aplicacao/casos-de-uso/verificar-codigo-email-2fa.usecase';
 import { GerarLinkAcessoUseCase } from '../aplicacao/casos-de-uso/gerar-link-acesso.usecase';
 import { ListarPermissoesUsuarioUseCase, PermissoesDoUsuario } from '../aplicacao/casos-de-uso/listar-permissoes-usuario.usecase';
 import { ListarUsuariosUseCase } from '../aplicacao/casos-de-uso/listar-usuarios.usecase';
@@ -41,6 +46,10 @@ import { ObterPerfilUseCase } from '../aplicacao/casos-de-uso/obter-perfil.useca
 import { ObterTetoPermissoesUseCase } from '../aplicacao/casos-de-uso/obter-teto-permissoes.usecase';
 import { PERMISSOES_REPOSITORIO, Permissao, PermissoesRepositorioPort } from '../aplicacao/portas/permissoes-repositorio.port';
 import { RevogarPermissaoUseCase } from '../aplicacao/casos-de-uso/revogar-permissao.usecase';
+import {
+  SESSOES_2FA_EMAIL_REPOSITORIO,
+  Sessoes2faEmailRepositorioPort,
+} from '../aplicacao/portas/sessoes-2fa-email-repositorio.port';
 import { USUARIOS_REPOSITORIO, Usuario, UsuariosRepositorioPort } from '../aplicacao/portas/usuarios-repositorio.port';
 import { AtualizarEmailUsuarioDto } from './dto/atualizar-email-usuario.dto';
 import { AtualizarPapelUsuarioDto } from './dto/atualizar-papel-usuario.dto';
@@ -48,8 +57,11 @@ import { AtualizarSenhaUsuarioDto } from './dto/atualizar-senha-usuario.dto';
 import { AtualizarTetoPermissoesDto } from './dto/atualizar-teto-permissoes.dto';
 import { AtualizarPerfilProprioDto } from './dto/atualizar-perfil-proprio.dto';
 import { BloquearUsuarioDto } from './dto/bloquear-usuario.dto';
+import { ConfirmarTotp2faDto } from './dto/confirmar-totp-2fa.dto';
+import { VerificarCodigoEmail2faDto } from './dto/verificar-codigo-email-2fa.dto';
 import { CriarUsuarioDto } from './dto/criar-usuario.dto';
 import { Papeis } from './decorators/papeis.decorator';
+import { IsentoMfa } from './decorators/isento-mfa.decorator';
 import { UsuarioAtual } from './decorators/usuario-atual.decorator';
 import { PapeisGuard } from './guards/papeis.guard';
 import { SupabaseAuthGuard } from './guards/supabase-auth.guard';
@@ -74,11 +86,16 @@ export class AuthController {
     private readonly listarUsuarios: ListarUsuariosUseCase,
     private readonly concederPermissao: ConcederPermissaoUseCase,
     private readonly revogarPermissao: RevogarPermissaoUseCase,
+    private readonly confirmarTotp2fa: ConfirmarTotp2faUseCase,
+    private readonly enviarCodigoEmail2fa: EnviarCodigoEmail2faUseCase,
+    private readonly verificarCodigoEmail2fa: VerificarCodigoEmail2faUseCase,
+    private readonly definirMetodo2faNenhum: DefinirMetodo2faNenhumUseCase,
     private readonly obterTetoPermissoes: ObterTetoPermissoesUseCase,
     private readonly atualizarTetoPermissoes: AtualizarTetoPermissoesUseCase,
     @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,
     @Inject(PERMISSOES_REPOSITORIO) private readonly permissoesRepositorio: PermissoesRepositorioPort,
     @Inject(USUARIOS_REPOSITORIO) private readonly usuariosRepositorio: UsuariosRepositorioPort,
+    @Inject(SESSOES_2FA_EMAIL_REPOSITORIO) private readonly sessoes2faEmail: Sessoes2faEmailRepositorioPort,
   ) {}
 
   /**
@@ -93,9 +110,66 @@ export class AuthController {
     return this.permissoesRepositorio.listarCatalogoPermissoes();
   }
 
+  /** Isento de 2FA de propósito -- é a rota que o frontend usa pra DETECTAR "sem 2FA configurado"/estado pendente; se ela também travasse, ninguém saía do estado pendente. */
   @Get('me')
+  @IsentoMfa()
   async me(@UsuarioAtual() usuarioAtual: UsuarioAutenticado): Promise<Usuario> {
     return this.obterPerfil.executar(usuarioAtual.id);
+  }
+
+  /**
+   * Status do segundo fator da sessão ATUAL -- `precisaVerificar` só é relevante pro
+   * método 'email' (TOTP o frontend já sabe resolver sozinho via
+   * `supabase.auth.mfa.getAuthenticatorAssuranceLevel()`, sem precisar nos perguntar).
+   */
+  @Get('me/2fa')
+  @IsentoMfa()
+  async statusMeu2fa(@UsuarioAtual() usuarioAtual: UsuarioAutenticado): Promise<{ metodo: Usuario['metodo2fa']; precisaVerificar: boolean }> {
+    if (usuarioAtual.metodo2fa !== 'email') {
+      return { metodo: usuarioAtual.metodo2fa, precisaVerificar: false };
+    }
+    const verificada = await this.sessoes2faEmail.estaVerificada(usuarioAtual.sessionId);
+    return { metodo: 'email', precisaVerificar: !verificada };
+  }
+
+  /** Confirma (server-truth via admin API, nunca confia no client) o fator TOTP que o usuário acabou de cadastrar+verificar direto no Supabase (`auth.mfa.enroll`+`challengeAndVerify`) -- passa a exigir TOTP a partir de agora. */
+  @Post('me/2fa/totp/confirmar')
+  @IsentoMfa()
+  async confirmarMeuTotp(
+    @Body() dto: ConfirmarTotp2faDto,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ ok: true }> {
+    await this.confirmarTotp2fa.executar(usuarioAtual.id, dto.factorId);
+    return { ok: true };
+  }
+
+  /** Dispara o código por email -- usado tanto no cadastro do método 'email' quanto no desafio normal de cada login (mesmo envio, ver confirmação abaixo). */
+  @Post('me/2fa/email/enviar-codigo')
+  @IsentoMfa()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  async enviarCodigoMeuEmail2fa(@UsuarioAtual() usuarioAtual: UsuarioAutenticado): Promise<{ ok: true }> {
+    await this.enviarCodigoEmail2fa.executar(usuarioAtual.id);
+    return { ok: true };
+  }
+
+  /** Confirma o código -- marca a SESSÃO atual como verificada e, se ainda não era, passa a exigir email como método. */
+  @Post('me/2fa/email/verificar')
+  @IsentoMfa()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  async verificarMeuCodigoEmail2fa(
+    @Body() dto: VerificarCodigoEmail2faDto,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ ok: true }> {
+    await this.verificarCodigoEmail2fa.executar(usuarioAtual.id, usuarioAtual.sessionId, dto.codigo);
+    return { ok: true };
+  }
+
+  /** Desativa o segundo fator -- opcional pra qualquer papel, inclusive plataforma (docs/SEGURANCA.md §8). Não desinscreve o fator TOTP do Supabase (isso é `auth.mfa.unenroll`, client-side). */
+  @Post('me/2fa/nenhum')
+  @IsentoMfa()
+  async definirMeuMetodo2faNenhum(@UsuarioAtual() usuarioAtual: UsuarioAutenticado): Promise<{ ok: true }> {
+    await this.definirMetodo2faNenhum.executar(usuarioAtual.id);
+    return { ok: true };
   }
 
   /** Auto-serviço: qualquer papel autenticado edita o próprio nome. Sem `@Papeis(...)` de propósito -- diferente das rotas administrativas abaixo, aqui não há vínculo alheio a proteger. */
@@ -162,6 +236,7 @@ export class AuthController {
   }
 
   @Post('logout-global')
+  @IsentoMfa()
   async logout(@UsuarioAtual() usuarioAtual: UsuarioAutenticado): Promise<{ ok: true }> {
     await this.logoutGlobal.executar(usuarioAtual.id);
     return { ok: true };
@@ -169,6 +244,7 @@ export class AuthController {
 
   @Post('usuarios')
   @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   async criar(
     @Body() dto: CriarUsuarioDto,
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
@@ -192,6 +268,7 @@ export class AuthController {
   /** Reemite o link pra um usuário que já existe -- nunca recebeu o convite, perdeu, etc. */
   @Post('usuarios/:id/link-acesso')
   @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   async reemitirLinkAcesso(
     @Param('id', ParseUUIDPipe) id: string,
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
@@ -268,6 +345,7 @@ export class AuthController {
   /** Admin-on-behalf: SUPER_ADMIN troca o e-mail de login de qualquer usuário; contador/empresa só do próprio vínculo (mesma autoridade de bloquear/desbloquear). */
   @Patch('usuarios/:id/email')
   @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   async atualizarEmailDeUsuario(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AtualizarEmailUsuarioDto,
@@ -282,6 +360,7 @@ export class AuthController {
   /** Admin-on-behalf: SUPER_ADMIN define a senha de qualquer usuário; contador/empresa só do próprio vínculo. Nunca existe rota `/me/senha` -- o próprio usuário troca a senha direto no client (`supabase.auth.updateUser`). */
   @Patch('usuarios/:id/senha')
   @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   async atualizarSenhaDeUsuario(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AtualizarSenhaUsuarioDto,
@@ -296,6 +375,7 @@ export class AuthController {
 
   @Post('usuarios/:id/bloquear')
   @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   async bloquear(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: BloquearUsuarioDto,
@@ -310,6 +390,7 @@ export class AuthController {
 
   @Post('usuarios/:id/desbloquear')
   @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   async desbloquear(
     @Param('id', ParseUUIDPipe) id: string,
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,

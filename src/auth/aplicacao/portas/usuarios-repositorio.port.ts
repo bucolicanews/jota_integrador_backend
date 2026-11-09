@@ -1,4 +1,5 @@
 import { FiltroDonoPapel } from './permissoes-repositorio.port';
+import { Metodo2FA } from './provedor-identidade.port';
 import { InfoPapel, Papel } from '../../dominio/papel';
 
 export interface Usuario {
@@ -8,9 +9,12 @@ export interface Usuario {
   papel: Papel;
   contadorId: string | null;
   empresaId: string | null;
-  mfaHabilitado: boolean;
+  /** Preferência de segundo fator do PRÓPRIO usuário -- ver docs/SEGURANCA.md §8 (2026-11-09). */
+  metodo2fa: Metodo2FA;
   status: 'ativo' | 'inativo';
   bloqueado: boolean;
+  /** Lockout automático por senha errada repetida (hook de auth, nunca ação de admin) -- null = sem lockout ativo. Distinto de `bloqueado` (manual). */
+  bloqueioAutomaticoAte: string | null;
   /**
    * Antes de passar por ObterPerfilUseCase/AtualizarAvatarProprioUseCase isso é o `avatar_ref`
    * crú (path no bucket) ou null -- esses dois usecases resolvem pra signed URL antes de
@@ -55,9 +59,24 @@ export interface UsuariosRepositorioPort {
    * global, resolver sem esse filtro seria ambíguo entre contadores/empresas diferentes.
    */
   buscarPapelPorNome(nomePapel: Papel, filtro: FiltroDonoPapel): Promise<InfoPapel>;
+  /** Resolve direto pelo `papel_id` já gravado no usuário -- sem ambiguidade de nome/dono (ver buscarPapelPorNome). Usado pra ressincronizar claims preservando papel/vínculo atuais ao mudar só a preferência de 2FA. */
+  buscarInfoPapelDoUsuario(usuarioId: string): Promise<InfoPapel>;
   atualizarNome(id: string, nome: string): Promise<void>;
   atualizarEmail(id: string, email: string): Promise<void>;
   atualizarAvatarRef(id: string, avatarRef: string | null): Promise<void>;
+  /** Preferência de 2FA escolhida pelo próprio usuário (ver dominio/papel.ts -- já não existe mais exigência fixa por escopo). */
+  atualizarMetodo2fa(id: string, metodo: Metodo2FA): Promise<void>;
+  /** Gera e guarda (hash, nunca texto puro) o código de 2FA por email enviado agora -- zera tentativas. */
+  salvarCodigoEmail2fa(id: string, codigo: string, ttlMs: number): Promise<void>;
+  /** Confirma o código de 2FA por email -- incrementa tentativas a cada chamada, nunca deixa passar do limite nem reusar código já consumido. */
+  verificarCodigoEmail2fa(id: string, codigo: string): Promise<'valido' | 'invalido' | 'expirado' | 'muitas_tentativas'>;
+  /**
+   * Chamado pelo hook "Password Verification Attempt" do Supabase (ver src/supabase-hooks/)
+   * pra cada tentativa de login -- sucesso zera o contador, falha incrementa e, ao
+   * atingir o limite, grava `bloqueio_automatico_ate` e zera o contador de novo (próxima
+   * janela começa limpa). Retorna o novo `bloqueio_automatico_ate` (null = sem lockout).
+   */
+  registrarTentativaLogin(id: string, sucesso: boolean): Promise<string | null>;
 }
 
 export const USUARIOS_REPOSITORIO = Symbol('USUARIOS_REPOSITORIO');

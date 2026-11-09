@@ -49,7 +49,7 @@ export class BancosController {
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
   ): Promise<Banco> {
     const empresa = await this.buscarEmpresaOuFalhar(empresaId);
-    this.exigirPosseDeContador(usuarioAtual, empresa);
+    this.exigirPosse(usuarioAtual, empresa);
     return this.criarBanco.executar({ empresaId, nome: dto.nome, contaContabilId: dto.contaContabilId, usuarioId: usuarioAtual.id });
   }
 
@@ -62,7 +62,7 @@ export class BancosController {
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
   ): Promise<{ ok: true }> {
     const empresa = await this.buscarEmpresaOuFalhar(empresaId);
-    this.exigirPosseDeContador(usuarioAtual, empresa);
+    this.exigirPosse(usuarioAtual, empresa);
     await this.atualizarBanco.executar(id, empresaId, dto, usuarioAtual.id);
     return { ok: true };
   }
@@ -75,7 +75,7 @@ export class BancosController {
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
   ): Promise<{ ok: true }> {
     const empresa = await this.buscarEmpresaOuFalhar(empresaId);
-    this.exigirPosseDeContador(usuarioAtual, empresa);
+    this.exigirPosse(usuarioAtual, empresa);
     await this.alternarAtivo.executar(id, empresaId, false, usuarioAtual.id);
     return { ok: true };
   }
@@ -88,7 +88,7 @@ export class BancosController {
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
   ): Promise<{ ok: true }> {
     const empresa = await this.buscarEmpresaOuFalhar(empresaId);
-    this.exigirPosseDeContador(usuarioAtual, empresa);
+    this.exigirPosse(usuarioAtual, empresa);
     await this.alternarAtivo.executar(id, empresaId, true, usuarioAtual.id);
     return { ok: true };
   }
@@ -108,10 +108,4 @@ export class BancosController {
     }
   }
 
-  private exigirPosseDeContador(usuarioAtual: UsuarioAutenticado, empresa: Empresa): void {
-    if (usuarioAtual.papel === Papel.SUPER_ADMIN) return;
-    if (usuarioAtual.contadorId !== empresa.contadorId) {
-      throw new ForbiddenException('Sem autoridade sobre esta empresa');
-    }
-  }
 }

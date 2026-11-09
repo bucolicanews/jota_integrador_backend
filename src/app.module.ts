@@ -46,6 +46,7 @@ import { PontoEletronicoModule } from './ponto-eletronico/ponto-eletronico.modul
 import { DasModule } from './das/das.module';
 import { CreditosAvulsosModule } from './creditos-avulsos/creditos-avulsos.module';
 import { PlanosRevendaCreditosAvulsosModule } from './planos-revenda-creditos-avulsos/planos-revenda-creditos-avulsos.module';
+import { SupabaseHooksModule } from './supabase-hooks/supabase-hooks.module';
 
 @Module({
   imports: [
@@ -104,6 +105,7 @@ import { PlanosRevendaCreditosAvulsosModule } from './planos-revenda-creditos-av
     DasModule,
     CreditosAvulsosModule,
     PlanosRevendaCreditosAvulsosModule,
+    SupabaseHooksModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

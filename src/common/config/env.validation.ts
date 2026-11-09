@@ -26,6 +26,13 @@ class EnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   CERTIFICADO_CHAVE_MESTRA!: string;
+
+  // Segredo do Auth Hook "Password Verification Attempt" (ver src/supabase-hooks/) --
+  // mesmo valor configurado no painel do Supabase (produção) ou em
+  // supabase/config.toml (local). Formato "v1,whsec_<base64>".
+  @IsString()
+  @IsNotEmpty()
+  SUPABASE_AUTH_HOOK_SECRET!: string;
 }
 
 export function validate(config: Record<string, unknown>): EnvironmentVariables {

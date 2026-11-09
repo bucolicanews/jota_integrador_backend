@@ -1,5 +1,7 @@
 import { EscopoPapel, Papel } from '../../dominio/papel';
 
+export type Metodo2FA = 'nenhum' | 'totp' | 'email';
+
 export interface ClaimsIdentidade {
   papel: Papel;
   /**
@@ -13,10 +15,39 @@ export interface ClaimsIdentidade {
   nuncaRestringe: boolean;
   contadorId: string | null;
   empresaId: string | null;
+  /**
+   * Preferência de segundo fator do PRÓPRIO usuário (docs/SEGURANCA.md §8, atualização
+   * 2026-11-09) -- opcional pra qualquer papel, inclusive plataforma; nunca mais um
+   * bloqueio fixo por escopo. Sincronizado no app_metadata pelo mesmo motivo de sempre
+   * (SupabaseAuthGuard decide sem consultar o banco a cada requisição).
+   */
+  metodo2fa: Metodo2FA;
 }
 
 export interface IdentidadeValidada extends ClaimsIdentidade {
   id: string;
+  /**
+   * true se o usuário tem pelo menos um fator MFA (TOTP) com status `verified` no
+   * provedor -- lido direto de `data.user.factors` no mesmo `getUser()` que já valida o
+   * token (sem round-trip extra). Só é consultado quando `metodo2fa === 'totp'` -- a
+   * fonte de verdade pra enforcement é sempre o estado vivo do provedor, pra ninguém
+   * conseguir "escolher TOTP" sem ter de fato um fator verificado.
+   */
+  mfaVerificado: boolean;
+  /**
+   * Authenticator Assurance Level do token atual ('aal1' = só senha, 'aal2' = completou
+   * desafio MFA). Claim de sessão do próprio JWT (não vem de `getUser()`) -- decodificado
+   * direto do payload, sem verificar assinatura de novo (o `getUser()` já validou a
+   * autenticidade do token junto ao provedor nesta mesma chamada).
+   */
+  aal: 'aal1' | 'aal2';
+  /**
+   * `session_id` do JWT -- estável entre refreshes do MESMO login (só muda em novo
+   * login). Usado só quando `metodo2fa === 'email'`, pra saber se ESTA sessão já
+   * confirmou o código (tabela `sessoes_2fa_email_verificadas`) -- Supabase não tem
+   * conceito de "aal" pra um fator que ele não conhece (email não é fator nativo dele).
+   */
+  sessionId: string;
 }
 
 /**
@@ -86,6 +117,17 @@ export interface ProvedorIdentidadePort {
    * requisição (esse é o motivo de sincronizar claims no JWT em primeiro lugar).
    */
   validarToken(token: string): Promise<IdentidadeValidada>;
+
+  /**
+   * Checagem autoritativa (admin API, não confia no client) de que o `factorId`
+   * informado existe, pertence a este usuário e está `verified` -- usada depois que o
+   * client termina `supabase.auth.mfa.enroll()+verify()`, antes de aceitar
+   * `metodo_2fa = 'totp'` como escolha (nunca aceitar só porque o client disse que deu certo).
+   */
+  fatorMfaVerificado(usuarioId: string, factorId: string): Promise<boolean>;
+
+  /** true se o usuário ainda tem algum fator `verified` -- usado pela tela de Perfil pra saber se pode oferecer "TOTP" como opção sem precisar reenrolar. */
+  possuiFatorMfaVerificado(usuarioId: string): Promise<boolean>;
 }
 
 export const PROVEDOR_IDENTIDADE = Symbol('PROVEDOR_IDENTIDADE');

@@ -35,8 +35,9 @@ if echo "$DIFF" | grep -qE '(AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----
 fi
 ok "Nenhum segredo/chave aparente no diff"
 
-if git diff --cached --name-only | grep -qE '(^|/)\.env($|\.[a-z]+$)'; then
-  falhou "Nenhum arquivo .env sendo commitado (achou um .env staged)"
+ARQUIVOS_ENV=$(git diff --cached --name-only | grep -E '(^|/)\.env($|\.[a-zA-Z0-9_.-]*$)' | grep -vE '\.(example|sample|template)$' || true)
+if [ -n "$ARQUIVOS_ENV" ]; then
+  falhou "Nenhum arquivo .env sendo commitado (achou: $ARQUIVOS_ENV)"
 fi
 ok "Nenhum arquivo .env staged"
 

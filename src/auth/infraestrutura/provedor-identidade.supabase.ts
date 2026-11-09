@@ -4,6 +4,7 @@ import { SupabaseService } from '../../common/supabase/supabase.service';
 import {
   ClaimsIdentidade,
   IdentidadeValidada,
+  Metodo2FA,
   ProvedorIdentidadePort,
   ResultadoCriarUsuarioComConvite,
 } from '../aplicacao/portas/provedor-identidade.port';
@@ -80,6 +81,7 @@ export class ProvedorIdentidadeSupabase implements ProvedorIdentidadePort {
         nunca_restringe: claims.nuncaRestringe,
         contador_id: claims.contadorId,
         empresa_id: claims.empresaId,
+        metodo_2fa: claims.metodo2fa,
       },
     });
 
@@ -170,6 +172,7 @@ export class ProvedorIdentidadeSupabase implements ProvedorIdentidadePort {
       nunca_restringe?: boolean;
       contador_id?: string | null;
       empresa_id?: string | null;
+      metodo_2fa?: Metodo2FA;
     };
 
     if (!metadata.papel || !metadata.escopo) {
@@ -179,6 +182,8 @@ export class ProvedorIdentidadeSupabase implements ProvedorIdentidadePort {
       throw new UnauthorizedException('Usuário sem papel definido -- contate o suporte');
     }
 
+    const { aal, sessionId } = this.decodificarClaimsSessao(token);
+
     return {
       id: data.user.id,
       papel: metadata.papel,
@@ -186,6 +191,45 @@ export class ProvedorIdentidadeSupabase implements ProvedorIdentidadePort {
       nuncaRestringe: metadata.nunca_restringe ?? false,
       contadorId: metadata.contador_id ?? null,
       empresaId: metadata.empresa_id ?? null,
+      metodo2fa: metadata.metodo_2fa ?? 'nenhum',
+      mfaVerificado: (data.user.factors ?? []).some((fator) => fator.status === 'verified'),
+      aal,
+      sessionId,
     };
+  }
+
+  async fatorMfaVerificado(usuarioId: string, factorId: string): Promise<boolean> {
+    const { data, error } = await this.supabase.admin.auth.admin.getUserById(usuarioId);
+    if (error || !data.user) {
+      return false;
+    }
+    return (data.user.factors ?? []).some((fator) => fator.id === factorId && fator.status === 'verified');
+  }
+
+  async possuiFatorMfaVerificado(usuarioId: string): Promise<boolean> {
+    const { data, error } = await this.supabase.admin.auth.admin.getUserById(usuarioId);
+    if (error || !data.user) {
+      return false;
+    }
+    return (data.user.factors ?? []).some((fator) => fator.status === 'verified');
+  }
+
+  /**
+   * `aal`/`session_id` são claims de nível superior do JWT do GoTrue (não vêm em
+   * `app_metadata`, nem no objeto `User` de `getUser()`) -- decodifica o payload direto
+   * (base64url), sem verificar assinatura: a chamada a `getUser()` acima já validou o
+   * token junto ao provedor nesta mesma requisição.
+   */
+  private decodificarClaimsSessao(token: string): { aal: 'aal1' | 'aal2'; sessionId: string } {
+    try {
+      const payloadBase64 = token.split('.')[1];
+      const payload = JSON.parse(Buffer.from(payloadBase64, 'base64url').toString('utf8')) as {
+        aal?: string;
+        session_id?: string;
+      };
+      return { aal: payload.aal === 'aal2' ? 'aal2' : 'aal1', sessionId: payload.session_id ?? '' };
+    } catch {
+      return { aal: 'aal1', sessionId: '' };
+    }
   }
 }

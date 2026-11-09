@@ -67,8 +67,3 @@ export function validarCoerenciaEscopo(
     throw new Error('Usuário não pode ter contador_id e empresa_id preenchidos ao mesmo tempo');
   }
 }
-
-/** MFA obrigatório para papéis de plataforma (docs/SEGURANCA.md/POLITICAS.md: admin/financeiro/operações críticas). */
-export function exigeMfa(escopo: EscopoPapel): boolean {
-  return ehPapelDePlataforma(escopo);
-}

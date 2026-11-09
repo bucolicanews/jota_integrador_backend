@@ -30,6 +30,9 @@ export class AtualizarPapelUsuarioUseCase {
     const infoPapel = await this.usuariosRepositorio.buscarPapelPorNome(entrada.novoPapel, { contadorId: null, empresaId: null });
     validarCoerenciaEscopo(infoPapel.escopo, entrada.novoContadorId, entrada.novoEmpresaId);
 
+    // Preferência de 2FA é do usuário, não do papel -- nunca resetar ao trocar papel/vínculo.
+    const usuarioAtual = await this.usuariosRepositorio.buscarPorId(entrada.usuarioId);
+
     // Banco primeiro: se falhar aqui, os claims antigos continuam consistentes com o
     // perfil antigo -- não há intervalo onde o app_metadata mente sobre o perfil real.
     await this.usuariosRepositorio.atualizarPapelEVinculo(
@@ -47,6 +50,7 @@ export class AtualizarPapelUsuarioUseCase {
       nuncaRestringe: infoPapel.nuncaRestringe,
       contadorId: entrada.novoContadorId,
       empresaId: entrada.novoEmpresaId,
+      metodo2fa: usuarioAtual?.metodo2fa ?? 'nenhum',
     });
   }
 }

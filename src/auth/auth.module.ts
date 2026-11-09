@@ -10,8 +10,13 @@ import { AtualizarSenhaUsuarioUseCase } from './aplicacao/casos-de-uso/atualizar
 import { AtualizarTetoPermissoesUseCase } from './aplicacao/casos-de-uso/atualizar-teto-permissoes.usecase';
 import { BloquearUsuarioUseCase } from './aplicacao/casos-de-uso/bloquear-usuario.usecase';
 import { ConcederPermissaoUseCase } from './aplicacao/casos-de-uso/conceder-permissao.usecase';
+import { ConfirmarTotp2faUseCase } from './aplicacao/casos-de-uso/confirmar-totp-2fa.usecase';
 import { CriarUsuarioUseCase } from './aplicacao/casos-de-uso/criar-usuario.usecase';
+import { DefinirMetodo2faNenhumUseCase } from './aplicacao/casos-de-uso/definir-metodo-2fa-nenhum.usecase';
 import { DesbloquearUsuarioUseCase } from './aplicacao/casos-de-uso/desbloquear-usuario.usecase';
+import { EnviarCodigoEmail2faUseCase } from './aplicacao/casos-de-uso/enviar-codigo-email-2fa.usecase';
+import { VerificarCodigoEmail2faUseCase } from './aplicacao/casos-de-uso/verificar-codigo-email-2fa.usecase';
+import { SincronizarMetodo2faUseCase } from './aplicacao/casos-de-uso/sincronizar-metodo-2fa.usecase';
 import { GerarLinkAcessoUseCase } from './aplicacao/casos-de-uso/gerar-link-acesso.usecase';
 import { ListarPermissoesUsuarioUseCase } from './aplicacao/casos-de-uso/listar-permissoes-usuario.usecase';
 import { ListarUsuariosUseCase } from './aplicacao/casos-de-uso/listar-usuarios.usecase';
@@ -21,14 +26,17 @@ import { ObterTetoPermissoesUseCase } from './aplicacao/casos-de-uso/obter-teto-
 import { RevogarPermissaoUseCase } from './aplicacao/casos-de-uso/revogar-permissao.usecase';
 import { PERMISSOES_REPOSITORIO } from './aplicacao/portas/permissoes-repositorio.port';
 import { PROVEDOR_IDENTIDADE } from './aplicacao/portas/provedor-identidade.port';
+import { SESSOES_2FA_EMAIL_REPOSITORIO } from './aplicacao/portas/sessoes-2fa-email-repositorio.port';
 import { USUARIOS_REPOSITORIO } from './aplicacao/portas/usuarios-repositorio.port';
 import { AuthController } from './apresentacao/auth.controller';
 import { PapeisController } from './apresentacao/papeis.controller';
 import { PapeisGuard } from './apresentacao/guards/papeis.guard';
 import { PermissoesGuard } from './apresentacao/guards/permissoes.guard';
 import { SupabaseAuthGuard } from './apresentacao/guards/supabase-auth.guard';
+import { Email2faService } from '../common/email/email-2fa.service';
 import { PermissoesRepositorioSupabase } from './infraestrutura/permissoes.repositorio.supabase';
 import { ProvedorIdentidadeSupabase } from './infraestrutura/provedor-identidade.supabase';
+import { Sessoes2faEmailRepositorioSupabase } from './infraestrutura/sessoes-2fa-email.repositorio.supabase';
 import { StorageAvataresService } from './infraestrutura/storage-avatares.service';
 import { UsuariosRepositorioSupabase } from './infraestrutura/usuarios.repositorio.supabase';
 
@@ -48,6 +56,8 @@ import { UsuariosRepositorioSupabase } from './infraestrutura/usuarios.repositor
     { provide: USUARIOS_REPOSITORIO, useClass: UsuariosRepositorioSupabase },
     { provide: PROVEDOR_IDENTIDADE, useClass: ProvedorIdentidadeSupabase },
     { provide: PERMISSOES_REPOSITORIO, useClass: PermissoesRepositorioSupabase },
+    { provide: SESSOES_2FA_EMAIL_REPOSITORIO, useClass: Sessoes2faEmailRepositorioSupabase },
+    Email2faService,
     CriarUsuarioUseCase,
     AtualizarNomeProprioUseCase,
     AtualizarEmailUsuarioUseCase,
@@ -66,6 +76,11 @@ import { UsuariosRepositorioSupabase } from './infraestrutura/usuarios.repositor
     RevogarPermissaoUseCase,
     ObterTetoPermissoesUseCase,
     AtualizarTetoPermissoesUseCase,
+    ConfirmarTotp2faUseCase,
+    EnviarCodigoEmail2faUseCase,
+    VerificarCodigoEmail2faUseCase,
+    DefinirMetodo2faNenhumUseCase,
+    SincronizarMetodo2faUseCase,
     SupabaseAuthGuard,
     PapeisGuard,
     PermissoesGuard,
@@ -79,6 +94,7 @@ import { UsuariosRepositorioSupabase } from './infraestrutura/usuarios.repositor
     PROVEDOR_IDENTIDADE,
     USUARIOS_REPOSITORIO,
     PERMISSOES_REPOSITORIO,
+    SESSOES_2FA_EMAIL_REPOSITORIO,
     CriarUsuarioUseCase,
   ],
 })

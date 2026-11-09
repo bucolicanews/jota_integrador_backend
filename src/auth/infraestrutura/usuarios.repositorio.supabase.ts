@@ -1,6 +1,8 @@
+import { createHash } from 'crypto';
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../../common/supabase/supabase.service';
 import { InfoPapel, Papel } from '../dominio/papel';
+import { Metodo2FA } from '../aplicacao/portas/provedor-identidade.port';
 import { FiltroDonoPapel } from '../aplicacao/portas/permissoes-repositorio.port';
 import {
   DadosNovoUsuario,
@@ -14,14 +16,27 @@ interface LinhaUsuario {
   email: string;
   contador_id: string | null;
   empresa_id: string | null;
-  mfa_habilitado: boolean;
+  metodo_2fa: Metodo2FA;
   status: 'ativo' | 'inativo';
   bloqueado: boolean;
+  bloqueio_automatico_ate: string | null;
   avatar_ref: string | null;
   papeis: { nome: Papel } | { nome: Papel }[] | null;
 }
 
-const COLUNAS_SELECT = 'id, nome, email, contador_id, empresa_id, mfa_habilitado, status, bloqueado, avatar_ref, papeis(nome)';
+const COLUNAS_SELECT =
+  'id, nome, email, contador_id, empresa_id, metodo_2fa, status, bloqueado, bloqueio_automatico_ate, avatar_ref, papeis(nome)';
+
+// Código de 2FA por email é curto-prazo (TTL minutos) e de 6 dígitos -- hash simples
+// (sem segredo HMAC, diferente de PII real) só pra não ficar texto puro em repouso;
+// comparação sempre contra o hash, nunca guarda o código em claro.
+const hashCodigo2fa = (codigo: string) => createHash('sha256').update(codigo).digest('hex');
+const MAX_TENTATIVAS_CODIGO_2FA = 5;
+
+// Mesmo limite documentado no comentário de AuthLoginService do DeliveryHub (referência
+// cross-project já validada) -- 5 tentativas, 5 minutos de lockout.
+const MAX_TENTATIVAS_LOGIN_FALHAS = 5;
+const DURACAO_BLOQUEIO_AUTOMATICO_MS = 5 * 60 * 1000;
 
 @Injectable()
 export class UsuariosRepositorioSupabase implements UsuariosRepositorioPort {
@@ -145,6 +160,121 @@ export class UsuariosRepositorioSupabase implements UsuariosRepositorioPort {
     }
   }
 
+  async atualizarMetodo2fa(id: string, metodo: Metodo2FA): Promise<void> {
+    const { error } = await this.supabase.admin.from('usuarios').update({ metodo_2fa: metodo }).eq('id', id);
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao atualizar método de 2FA: ${error.message}`);
+    }
+  }
+
+  async salvarCodigoEmail2fa(id: string, codigo: string, ttlMs: number): Promise<void> {
+    const { error } = await this.supabase.admin
+      .from('usuarios')
+      .update({
+        email_2fa_codigo_hash: hashCodigo2fa(codigo),
+        email_2fa_codigo_expira_em: new Date(Date.now() + ttlMs).toISOString(),
+        email_2fa_tentativas: 0,
+      })
+      .eq('id', id);
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao salvar código de 2FA por email: ${error.message}`);
+    }
+  }
+
+  async verificarCodigoEmail2fa(id: string, codigo: string): Promise<'valido' | 'invalido' | 'expirado' | 'muitas_tentativas'> {
+    const { data, error } = await this.supabase.admin
+      .from('usuarios')
+      .select('email_2fa_codigo_hash, email_2fa_codigo_expira_em, email_2fa_tentativas')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao ler código de 2FA por email: ${error.message}`);
+    }
+
+    const linha = data as { email_2fa_codigo_hash: string | null; email_2fa_codigo_expira_em: string | null; email_2fa_tentativas: number } | null;
+    if (!linha?.email_2fa_codigo_hash || !linha.email_2fa_codigo_expira_em) {
+      return 'invalido';
+    }
+
+    if (linha.email_2fa_tentativas >= MAX_TENTATIVAS_CODIGO_2FA) {
+      return 'muitas_tentativas';
+    }
+
+    // Sempre incrementa ANTES de checar o resultado -- cada chamada consome uma
+    // tentativa, acerto ou erro, senão o limite nunca é alcançado por tentativa errada.
+    const { error: erroIncremento } = await this.supabase.admin
+      .from('usuarios')
+      .update({ email_2fa_tentativas: linha.email_2fa_tentativas + 1 })
+      .eq('id', id);
+    if (erroIncremento) {
+      throw new InternalServerErrorException(`Falha ao registrar tentativa de 2FA por email: ${erroIncremento.message}`);
+    }
+
+    if (new Date(linha.email_2fa_codigo_expira_em).getTime() < Date.now()) {
+      return 'expirado';
+    }
+
+    if (hashCodigo2fa(codigo) !== linha.email_2fa_codigo_hash) {
+      return 'invalido';
+    }
+
+    // Código consumido -- nunca reutilizável, mesmo dentro do TTL.
+    const { error: erroLimpeza } = await this.supabase.admin
+      .from('usuarios')
+      .update({ email_2fa_codigo_hash: null, email_2fa_codigo_expira_em: null, email_2fa_tentativas: 0 })
+      .eq('id', id);
+    if (erroLimpeza) {
+      throw new InternalServerErrorException(`Falha ao limpar código de 2FA por email: ${erroLimpeza.message}`);
+    }
+
+    return 'valido';
+  }
+
+  async registrarTentativaLogin(id: string, sucesso: boolean): Promise<string | null> {
+    if (sucesso) {
+      const { error } = await this.supabase.admin
+        .from('usuarios')
+        .update({ tentativas_login_falhas: 0, bloqueio_automatico_ate: null })
+        .eq('id', id);
+      if (error) {
+        throw new InternalServerErrorException(`Falha ao zerar tentativas de login: ${error.message}`);
+      }
+      return null;
+    }
+
+    const { data, error } = await this.supabase.admin
+      .from('usuarios')
+      .select('tentativas_login_falhas')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao ler tentativas de login: ${error.message}`);
+    }
+    // Usuário sem perfil em `usuarios` (ex: identidade órfã do provedor) -- nada pra
+    // contar, quem chama decide o que fazer (hook não pode travar login de ninguém fora
+    // da nossa tabela por conta disso).
+    if (!data) return null;
+
+    const novasTentativas = (data as { tentativas_login_falhas: number }).tentativas_login_falhas + 1;
+    const atingiuLimite = novasTentativas >= MAX_TENTATIVAS_LOGIN_FALHAS;
+    const bloqueioAutomaticoAte = atingiuLimite ? new Date(Date.now() + DURACAO_BLOQUEIO_AUTOMATICO_MS).toISOString() : null;
+
+    const { error: erroUpdate } = await this.supabase.admin
+      .from('usuarios')
+      .update({
+        tentativas_login_falhas: atingiuLimite ? 0 : novasTentativas,
+        bloqueio_automatico_ate: bloqueioAutomaticoAte,
+      })
+      .eq('id', id);
+    if (erroUpdate) {
+      throw new InternalServerErrorException(`Falha ao registrar tentativa de login: ${erroUpdate.message}`);
+    }
+
+    return bloqueioAutomaticoAte;
+  }
+
   async listar(filtro: { contadorId: string | null; empresaIds: string[]; plataforma?: boolean }): Promise<Usuario[]> {
     let consulta = this.supabase.admin
       .from('usuarios')
@@ -230,6 +360,41 @@ export class UsuariosRepositorioSupabase implements UsuariosRepositorioPort {
     };
   }
 
+  async buscarInfoPapelDoUsuario(usuarioId: string): Promise<InfoPapel> {
+    const { data, error } = await this.supabase.admin
+      .from('usuarios')
+      .select('papeis(id, nome, escopo, descricao, sistema, nunca_restringe, contador_id, empresa_id)')
+      .eq('id', usuarioId)
+      .maybeSingle();
+
+    const linha = data as { papeis: InfoPapel | { id: string; nome: Papel; escopo: InfoPapel['escopo']; descricao: string | null; sistema: boolean; nunca_restringe: boolean; contador_id: string | null; empresa_id: string | null } | null } | null;
+    const papelRelacionado = linha?.papeis;
+    if (error || !papelRelacionado) {
+      throw new NotFoundException(`Usuário ${usuarioId} sem papel associado`);
+    }
+
+    const bruto = papelRelacionado as unknown as {
+      id: string;
+      nome: Papel;
+      escopo: InfoPapel['escopo'];
+      descricao: string | null;
+      sistema: boolean;
+      nunca_restringe: boolean;
+      contador_id: string | null;
+      empresa_id: string | null;
+    };
+    return {
+      id: bruto.id,
+      nome: bruto.nome,
+      escopo: bruto.escopo,
+      descricao: bruto.descricao,
+      sistema: bruto.sistema,
+      nuncaRestringe: bruto.nunca_restringe,
+      contadorId: bruto.contador_id,
+      empresaId: bruto.empresa_id,
+    };
+  }
+
   private mapear(linha: LinhaUsuario): Usuario {
     const papelRelacionado = Array.isArray(linha.papeis) ? linha.papeis[0] : linha.papeis;
     if (!papelRelacionado) {
@@ -243,9 +408,10 @@ export class UsuariosRepositorioSupabase implements UsuariosRepositorioPort {
       papel: papelRelacionado.nome,
       contadorId: linha.contador_id,
       empresaId: linha.empresa_id,
-      mfaHabilitado: linha.mfa_habilitado,
+      metodo2fa: linha.metodo_2fa,
       status: linha.status,
       bloqueado: linha.bloqueado,
+      bloqueioAutomaticoAte: linha.bloqueio_automatico_ate,
       avatarUrl: linha.avatar_ref,
     };
   }
