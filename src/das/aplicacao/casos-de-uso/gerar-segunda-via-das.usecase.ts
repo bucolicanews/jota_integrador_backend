@@ -3,10 +3,7 @@ import { DebitarCreditosUseCase } from '../../../creditos/aplicacao/casos-de-uso
 import { EstornarCreditosUseCase } from '../../../creditos/aplicacao/casos-de-uso/estornar-creditos.usecase';
 import { custoDaOperacao } from '../../../creditos/dominio/credito';
 import { SaldoInsuficienteError } from '../../../creditos/aplicacao/portas/creditos-repositorio.port';
-import {
-  ASSINATURAS_REPOSITORIO,
-  AssinaturasRepositorioPort,
-} from '../../../assinaturas/aplicacao/portas/assinaturas-repositorio.port';
+import { ExigirAssinaturaAtivaUseCase } from '../../../assinaturas/aplicacao/casos-de-uso/exigir-assinatura-ativa.usecase';
 import {
   EMPRESAS_REPOSITORIO,
   Empresa,
@@ -56,7 +53,7 @@ export class GerarSegundaViaDasUseCase {
     @Inject(VERIFICAR_ACESSO_SERPRO) private readonly verificarAcesso: VerificarAcessoSerproPort,
     @Inject(SERPRO_GATEWAY) private readonly gateway: SerproGatewayPort,
     @Inject(CONSULTAS_SERPRO_REPOSITORIO) private readonly consultasRepositorio: ConsultasSerproRepositorioPort,
-    @Inject(ASSINATURAS_REPOSITORIO) private readonly assinaturasRepositorio: AssinaturasRepositorioPort,
+    private readonly exigirAssinaturaAtiva: ExigirAssinaturaAtivaUseCase,
     @Inject(DAS_REPOSITORIO) private readonly dasRepositorio: DasRepositorioPort,
     private readonly storage: StorageDasService,
     private readonly debitarCreditos: DebitarCreditosUseCase,
@@ -83,10 +80,7 @@ export class GerarSegundaViaDasUseCase {
       throw new NotFoundException('DAS não encontrado');
     }
 
-    const assinatura = await this.assinaturasRepositorio.buscarAtivaPorEmpresa(empresaId);
-    if (!assinatura) {
-      throw new ForbiddenException('Empresa sem plano de créditos ativo -- contate seu contador');
-    }
+    const planoId = await this.exigirAssinaturaAtiva.executar(empresaId);
 
     // SERPRO rejeita "hoje" ou antes (confirmado contra produção: "Data de consolidação
     // em formato incorreto ou anterior/igual à data atual") -- precisa ser estritamente
@@ -106,7 +100,7 @@ export class GerarSegundaViaDasUseCase {
       dataAlvo.setDate(dataAlvo.getDate() + 1);
     }
     const dataConsolidacao = dataAlvo.toISOString().slice(0, 10).replace(/-/g, '');
-    const dentroDaCota = await this.verificarCotaIncluida.executar(empresaId, assinatura.planoId, ID_SISTEMA_PGDASD);
+    const dentroDaCota = await this.verificarCotaIncluida.executar(empresaId, planoId, ID_SISTEMA_PGDASD);
     if (!dentroDaCota) {
       try {
         await this.debitarCreditos.executar(empresa.contadorId, empresaId, CUSTO_SIMPLES_NACIONAL, `Gerar 2ª via do DAS -- competência ${item.competencia}`);

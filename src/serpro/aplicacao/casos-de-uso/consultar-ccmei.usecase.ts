@@ -2,10 +2,7 @@ import { ForbiddenException, Inject, Injectable, InternalServerErrorException } 
 import { custoDaOperacao } from '../../../creditos/dominio/credito';
 import { DebitarCreditosUseCase } from '../../../creditos/aplicacao/casos-de-uso/debitar-creditos.usecase';
 import { EstornarCreditosUseCase } from '../../../creditos/aplicacao/casos-de-uso/estornar-creditos.usecase';
-import {
-  ASSINATURAS_REPOSITORIO,
-  AssinaturasRepositorioPort,
-} from '../../../assinaturas/aplicacao/portas/assinaturas-repositorio.port';
+import { ExigirAssinaturaAtivaUseCase } from '../../../assinaturas/aplicacao/casos-de-uso/exigir-assinatura-ativa.usecase';
 import {
   EMPRESAS_REPOSITORIO,
   EmpresasRepositorioPort,
@@ -30,7 +27,7 @@ export class ConsultarCcmeiUseCase {
     @Inject(VERIFICAR_ACESSO_SERPRO) private readonly verificarAcesso: VerificarAcessoSerproPort,
     @Inject(SERPRO_GATEWAY) private readonly gateway: SerproGatewayPort,
     @Inject(CONSULTAS_SERPRO_REPOSITORIO) private readonly consultasRepositorio: ConsultasSerproRepositorioPort,
-    @Inject(ASSINATURAS_REPOSITORIO) private readonly assinaturasRepositorio: AssinaturasRepositorioPort,
+    private readonly exigirAssinaturaAtiva: ExigirAssinaturaAtivaUseCase,
     private readonly debitarCreditos: DebitarCreditosUseCase,
     private readonly estornarCreditos: EstornarCreditosUseCase,
   ) {}
@@ -51,10 +48,7 @@ export class ConsultarCcmeiUseCase {
     // Gate de créditos por EMPRESA (mudança de 2026-10-14) -- checagem explícita antes
     // do débito, pra dar uma mensagem clara ("sem plano ativo") em vez de deixar cair no
     // erro genérico de "sem registro de saldo" que debitar_creditos lançaria depois.
-    const assinatura = await this.assinaturasRepositorio.buscarAtivaPorEmpresa(empresaId);
-    if (!assinatura) {
-      throw new ForbiddenException('Empresa sem plano de créditos ativo -- contate seu contador');
-    }
+    await this.exigirAssinaturaAtiva.executar(empresaId);
 
     // Débito ANTES da chamada -- falha rápido (sem gastar cota do SERPRO) se a
     // empresa não tem crédito. SaldoInsuficienteError sobe crua daqui -- convertida

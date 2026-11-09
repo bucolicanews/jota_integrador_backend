@@ -1,10 +1,7 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import { custoDaOperacao } from '../../../creditos/dominio/credito';
 import { CREDITOS_REPOSITORIO, CreditosRepositorioPort } from '../../../creditos/aplicacao/portas/creditos-repositorio.port';
-import {
-  ASSINATURAS_REPOSITORIO,
-  AssinaturasRepositorioPort,
-} from '../../../assinaturas/aplicacao/portas/assinaturas-repositorio.port';
+import { ExigirAssinaturaAtivaUseCase } from '../../../assinaturas/aplicacao/casos-de-uso/exigir-assinatura-ativa.usecase';
 import { EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../../../empresas/aplicacao/portas/empresas-repositorio.port';
 import {
   PLANO_CONSULTAS_INCLUIDAS_REPOSITORIO,
@@ -54,7 +51,7 @@ export interface ResultadoEstimativa {
 export class EstimarSincronizacaoDasUseCase {
   constructor(
     @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,
-    @Inject(ASSINATURAS_REPOSITORIO) private readonly assinaturasRepositorio: AssinaturasRepositorioPort,
+    private readonly exigirAssinaturaAtiva: ExigirAssinaturaAtivaUseCase,
     @Inject(DAS_REPOSITORIO) private readonly dasRepositorio: DasRepositorioPort,
     @Inject(CREDITOS_REPOSITORIO) private readonly creditosRepositorio: CreditosRepositorioPort,
     @Inject(PLANO_CONSULTAS_INCLUIDAS_REPOSITORIO)
@@ -71,10 +68,7 @@ export class EstimarSincronizacaoDasUseCase {
       throw new BadRequestException('Módulo de DAS só se aplica a empresas MEI ou Simples Nacional ME/EPP');
     }
 
-    const assinatura = await this.assinaturasRepositorio.buscarAtivaPorEmpresa(empresaId);
-    if (!assinatura) {
-      throw new ForbiddenException('Empresa sem plano de créditos ativo -- contate seu contador');
-    }
+    const planoId = await this.exigirAssinaturaAtiva.executar(empresaId);
 
     const competencias =
       filtro?.competenciaInicio && filtro?.competenciaFim
@@ -87,16 +81,16 @@ export class EstimarSincronizacaoDasUseCase {
       const existentes = new Set((await this.dasRepositorio.listarPorEmpresa(empresaId, 'mei')).map((item) => item.competencia));
       const faltantes = competencias.filter((c) => !existentes.has(c));
       if (faltantes.length > 0) {
-        detalhamento.push(await this.montarItem(empresaId, assinatura.planoId, ID_SISTEMA_PGMEI, CUSTO_MEI, faltantes.length, false));
+        detalhamento.push(await this.montarItem(empresaId, planoId, ID_SISTEMA_PGMEI, CUSTO_MEI, faltantes.length, false));
       }
 
       const pendentes = await this.dasRepositorio.listarPendentesComNumeroDocumento(empresaId, 'mei');
       if (pendentes.length > 0) {
-        detalhamento.push(await this.montarItem(empresaId, assinatura.planoId, ID_SISTEMA_PAGTOWEB, CUSTO_PAGAMENTO, 1, false));
+        detalhamento.push(await this.montarItem(empresaId, planoId, ID_SISTEMA_PAGTOWEB, CUSTO_PAGAMENTO, 1, false));
       }
     } else {
       // CONSDECLARACAO13 é por ano inteiro, não por competência -- sempre 1 chamada, não dá pra reduzir escolhendo intervalo.
-      detalhamento.push(await this.montarItem(empresaId, assinatura.planoId, ID_SISTEMA_PGDASD, CUSTO_SIMPLES_NACIONAL, 1, false));
+      detalhamento.push(await this.montarItem(empresaId, planoId, ID_SISTEMA_PGDASD, CUSTO_SIMPLES_NACIONAL, 1, false));
 
       // Upper bound: assume que toda competência faltante no intervalo tem declaração transmitida (só
       // confirmado de verdade depois da chamada acima) -- por isso aproximado=true aqui.
@@ -106,7 +100,7 @@ export class EstimarSincronizacaoDasUseCase {
       const faltantes = competencias.filter((c) => !existentes.has(c));
       if (faltantes.length > 0) {
         detalhamento.push(
-          await this.montarItem(empresaId, assinatura.planoId, ID_SISTEMA_PGDASD, CUSTO_SIMPLES_NACIONAL, faltantes.length, true),
+          await this.montarItem(empresaId, planoId, ID_SISTEMA_PGDASD, CUSTO_SIMPLES_NACIONAL, faltantes.length, true),
         );
       }
     }

@@ -9,10 +9,7 @@ import { DebitarCreditosUseCase } from '../../../creditos/aplicacao/casos-de-uso
 import { EstornarCreditosUseCase } from '../../../creditos/aplicacao/casos-de-uso/estornar-creditos.usecase';
 import { custoDaOperacao } from '../../../creditos/dominio/credito';
 import { SaldoInsuficienteError } from '../../../creditos/aplicacao/portas/creditos-repositorio.port';
-import {
-  ASSINATURAS_REPOSITORIO,
-  AssinaturasRepositorioPort,
-} from '../../../assinaturas/aplicacao/portas/assinaturas-repositorio.port';
+import { ExigirAssinaturaAtivaUseCase } from '../../../assinaturas/aplicacao/casos-de-uso/exigir-assinatura-ativa.usecase';
 import {
   EMPRESAS_REPOSITORIO,
   EmpresasRepositorioPort,
@@ -47,7 +44,7 @@ export class ObterDetalheMensagemUseCase {
     @Inject(CONSULTAS_SERPRO_REPOSITORIO) private readonly consultasRepositorio: ConsultasSerproRepositorioPort,
     @Inject(MENSAGENS_CAIXA_POSTAL_REPOSITORIO)
     private readonly mensagensRepositorio: MensagensCaixaPostalRepositorioPort,
-    @Inject(ASSINATURAS_REPOSITORIO) private readonly assinaturasRepositorio: AssinaturasRepositorioPort,
+    private readonly exigirAssinaturaAtiva: ExigirAssinaturaAtivaUseCase,
     private readonly storage: StorageMensagensCaixaPostalService,
     private readonly debitarCreditos: DebitarCreditosUseCase,
     private readonly estornarCreditos: EstornarCreditosUseCase,
@@ -73,10 +70,7 @@ export class ObterDetalheMensagemUseCase {
       throw new ForbiddenException(acesso.motivo ?? 'Empresa sem acesso válido ao SERPRO');
     }
 
-    const assinatura = await this.assinaturasRepositorio.buscarAtivaPorEmpresa(mensagem.empresaId);
-    if (!assinatura) {
-      throw new ForbiddenException('Empresa sem plano de créditos ativo -- contate seu contador');
-    }
+    await this.exigirAssinaturaAtiva.executar(mensagem.empresaId);
 
     try {
       await this.debitarCreditos.executar(

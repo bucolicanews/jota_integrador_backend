@@ -9,10 +9,7 @@ import { DebitarCreditosUseCase } from '../../../creditos/aplicacao/casos-de-uso
 import { EstornarCreditosUseCase } from '../../../creditos/aplicacao/casos-de-uso/estornar-creditos.usecase';
 import { custoDaOperacao } from '../../../creditos/dominio/credito';
 import { SaldoInsuficienteError } from '../../../creditos/aplicacao/portas/creditos-repositorio.port';
-import {
-  ASSINATURAS_REPOSITORIO,
-  AssinaturasRepositorioPort,
-} from '../../../assinaturas/aplicacao/portas/assinaturas-repositorio.port';
+import { ExigirAssinaturaAtivaUseCase } from '../../../assinaturas/aplicacao/casos-de-uso/exigir-assinatura-ativa.usecase';
 import {
   EMPRESAS_REPOSITORIO,
   Empresa,
@@ -94,7 +91,7 @@ export class SincronizarDasEmpresaUseCase {
     @Inject(VERIFICAR_ACESSO_SERPRO) private readonly verificarAcesso: VerificarAcessoSerproPort,
     @Inject(SERPRO_GATEWAY) private readonly gateway: SerproGatewayPort,
     @Inject(CONSULTAS_SERPRO_REPOSITORIO) private readonly consultasRepositorio: ConsultasSerproRepositorioPort,
-    @Inject(ASSINATURAS_REPOSITORIO) private readonly assinaturasRepositorio: AssinaturasRepositorioPort,
+    private readonly exigirAssinaturaAtiva: ExigirAssinaturaAtivaUseCase,
     @Inject(DAS_REPOSITORIO) private readonly dasRepositorio: DasRepositorioPort,
     private readonly storage: StorageDasService,
     private readonly debitarCreditos: DebitarCreditosUseCase,
@@ -116,17 +113,14 @@ export class SincronizarDasEmpresaUseCase {
       throw new ForbiddenException(acesso.motivo ?? 'Empresa sem acesso válido ao SERPRO');
     }
 
-    const assinatura = await this.assinaturasRepositorio.buscarAtivaPorEmpresa(empresaId);
-    if (!assinatura) {
-      throw new ForbiddenException('Empresa sem plano de créditos ativo -- contate seu contador');
-    }
+    const planoId = await this.exigirAssinaturaAtiva.executar(empresaId);
 
     const competenciasNovas =
       empresa.regimeTributario === 'mei'
-        ? await this.sincronizarMei(empresa, assinatura.planoId, filtro)
-        : await this.sincronizarSimplesNacional(empresa, assinatura.planoId, filtro);
+        ? await this.sincronizarMei(empresa, planoId, filtro)
+        : await this.sincronizarSimplesNacional(empresa, planoId, filtro);
 
-    const pagamentosAtualizados = await this.verificarPagamentos(empresa, assinatura.planoId);
+    const pagamentosAtualizados = await this.verificarPagamentos(empresa, planoId);
 
     return { competenciasNovas, pagamentosAtualizados };
   }

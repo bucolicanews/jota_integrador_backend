@@ -10,6 +10,7 @@ import { AtivarAssinaturaManualUseCase } from './aplicacao/casos-de-uso/ativar-a
 import { AtualizarVencimentoAssinaturaUseCase } from './aplicacao/casos-de-uso/atualizar-vencimento-assinatura.usecase';
 import { BloquearAssinaturaUseCase } from './aplicacao/casos-de-uso/bloquear-assinatura.usecase';
 import { CancelarAssinaturaCreditoUseCase } from './aplicacao/casos-de-uso/cancelar-assinatura-credito.usecase';
+import { ExigirAssinaturaAtivaUseCase } from './aplicacao/casos-de-uso/exigir-assinatura-ativa.usecase';
 import { IniciarPagamentoAssinaturaCreditosUseCase } from './aplicacao/casos-de-uso/iniciar-pagamento-assinatura-creditos.usecase';
 import { ListarPlanosRevendaDisponiveisUseCase } from './aplicacao/casos-de-uso/listar-planos-revenda-disponiveis.usecase';
 import { ObterAssinaturaAtualUseCase } from './aplicacao/casos-de-uso/obter-assinatura-atual.usecase';
@@ -40,6 +41,7 @@ import { PagamentosAssinaturaCreditosRepositorioSupabase } from './infraestrutur
     AtualizarVencimentoAssinaturaUseCase,
     BloquearAssinaturaUseCase,
     CancelarAssinaturaCreditoUseCase,
+    ExigirAssinaturaAtivaUseCase,
     IniciarPagamentoAssinaturaCreditosUseCase,
     ListarPlanosRevendaDisponiveisUseCase,
     ProcessarWebhookPagbankCreditosUseCase,
@@ -49,6 +51,6 @@ import { PagamentosAssinaturaCreditosRepositorioSupabase } from './infraestrutur
   // buscarAtivaPorEmpresa antes de debitar crédito (gate de acesso por empresa).
   // AtivarAssinaturaManualUseCase/IniciarPagamentoAssinaturaCreditosUseCase exportados --
   // CadastroEmpresaModule reusa os dois como 2º passo do orquestrador (empresa+plano+login).
-  exports: [ASSINATURAS_REPOSITORIO, AtivarAssinaturaManualUseCase, IniciarPagamentoAssinaturaCreditosUseCase],
+  exports: [ASSINATURAS_REPOSITORIO, AtivarAssinaturaManualUseCase, IniciarPagamentoAssinaturaCreditosUseCase, ExigirAssinaturaAtivaUseCase],
 })
 export class AssinaturasModule {}
