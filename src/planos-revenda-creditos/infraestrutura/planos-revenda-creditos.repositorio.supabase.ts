@@ -45,6 +45,7 @@ export class PlanosRevendaCreditosRepositorioSupabase implements PlanosRevendaCr
       .from('planos_revenda_creditos')
       .select(COLUNAS)
       .eq('contador_id', contadorId)
+      .eq('ativo', true)
       .order('criado_em', { ascending: false });
 
     if (error) {
