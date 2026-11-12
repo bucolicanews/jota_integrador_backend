@@ -27,6 +27,6 @@ import { ContasPagarRepositorioSupabase } from './infraestrutura/contas-pagar.re
     EstornarPagamentoUseCase,
     ListarPagamentosParcelaUseCase,
   ],
-  exports: [CONTAS_PAGAR_REPOSITORIO, RegistrarPagamentoUseCase],
+  exports: [CONTAS_PAGAR_REPOSITORIO, RegistrarPagamentoUseCase, CriarContaPagarUseCase],
 })
 export class ContasAPagarModule {}

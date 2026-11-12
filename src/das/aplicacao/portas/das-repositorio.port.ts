@@ -13,6 +13,19 @@ export interface DadosUpsertDasMei {
   dasPago: boolean;
 }
 
+export interface ConfiguracaoLancamentosDas {
+  empresaId: string;
+  contaDebitoId: string;
+  contaCreditoId: string;
+}
+
+export interface DadosSalvarConfiguracaoLancamentosDas {
+  empresaId: string;
+  contaDebitoId: string;
+  contaCreditoId: string;
+  atualizadoPor: string;
+}
+
 export interface DadosUpsertDasSimplesNacional {
   empresaId: string;
   competencia: string;
@@ -49,6 +62,14 @@ export interface DasRepositorioPort {
     id: string,
     dados: { valorDas: number | null; vencimento: string | null; pdfSegundaViaStorageRef: string },
   ): Promise<void>;
+  /** Idempotência da provisão automática -- nunca gera 2x pro mesmo DAS. */
+  marcarContaPagarProvisao(id: string, regime: RegimeDas, contaPagarId: string): Promise<void>;
+  /** Marca a baixa (quitação) já resolvida -- sai da lista de pendências. */
+  marcarLancamentoBaixa(id: string, regime: RegimeDas, lancamentoId: string): Promise<void>;
+  /** status='pago' e ainda sem lancamento_baixa_id -- pendência aguardando o contador escolher caixa/banco. */
+  listarPendentesDeBaixa(empresaId: string, regime: RegimeDas): Promise<DasItem[]>;
+  buscarConfiguracaoLancamentos(empresaId: string): Promise<ConfiguracaoLancamentosDas | null>;
+  salvarConfiguracaoLancamentos(dados: DadosSalvarConfiguracaoLancamentosDas): Promise<void>;
 }
 
 export const DAS_REPOSITORIO = Symbol('DAS_REPOSITORIO');

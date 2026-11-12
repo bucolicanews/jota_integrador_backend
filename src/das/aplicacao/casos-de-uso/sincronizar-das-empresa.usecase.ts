@@ -27,6 +27,7 @@ import {
 import { RegimeDas, competenciaParaAAAAMM, competenciasNoIntervalo, janelaPadraoCompetencias, vencimentoPadrao } from '../../dominio/das';
 import { StorageDasService } from '../../infraestrutura/storage-das.service';
 import { DAS_REPOSITORIO, DasRepositorioPort } from '../portas/das-repositorio.port';
+import { GerarProvisaoDasUseCase } from './gerar-provisao-das.usecase';
 import { VerificarCotaIncluidaUseCase } from './verificar-cota-incluida.usecase';
 
 const ID_SISTEMA_PGMEI = 'PGMEI';
@@ -49,6 +50,8 @@ export const MESES_JANELA_SINCRONIZACAO = 3;
 interface ResultadoSincronizacao {
   competenciasNovas: number;
   pagamentosAtualizados: number;
+  /** Quantos DAS a vencer/vencido ficaram sem lançamento de provisão por falta de config -- sinaliza o frontend a mostrar o aviso (ver GerarProvisaoDasUseCase). */
+  pendentesSemConfiguracao: number;
 }
 
 export interface FiltroCompetenciaSincronizacao {
@@ -97,6 +100,7 @@ export class SincronizarDasEmpresaUseCase {
     private readonly debitarCreditos: DebitarCreditosUseCase,
     private readonly estornarCreditos: EstornarCreditosUseCase,
     private readonly verificarCotaIncluida: VerificarCotaIncluidaUseCase,
+    private readonly gerarProvisaoDas: GerarProvisaoDasUseCase,
   ) {}
 
   async executar(empresaId: string, filtro?: FiltroCompetenciaSincronizacao): Promise<ResultadoSincronizacao> {
@@ -122,7 +126,26 @@ export class SincronizarDasEmpresaUseCase {
 
     const pagamentosAtualizados = await this.verificarPagamentos(empresa, planoId);
 
-    return { competenciasNovas, pagamentosAtualizados };
+    // Passo final, roda em TODO sync (não só nas competências novas desta chamada) --
+    // cobre tanto DAS recém-sincronizado quanto o histórico que já existia antes desta
+    // feature (ou que ficou sem provisão porque a config ainda não existia na hora).
+    // Idempotente via lancamentoProvisaoId, então reprocessar o que já tem lançamento é
+    // barato (um SELECT a mais por empresa). `pendentesSemConfiguracao` avisa o frontend
+    // pra mostrar o aviso de "configure as contas" em vez de falhar em silêncio.
+    const pendentesSemConfiguracao = await this.gerarProvisoesPendentes(empresa);
+
+    return { competenciasNovas, pagamentosAtualizados, pendentesSemConfiguracao };
+  }
+
+  private async gerarProvisoesPendentes(empresa: Empresa): Promise<number> {
+    const regime = empresa.regimeTributario as RegimeDas;
+    const itens = await this.dasRepositorio.listarPorEmpresa(empresa.id, regime);
+    let pendentesSemConfiguracao = 0;
+    for (const item of itens) {
+      const resultado = await this.gerarProvisaoDas.executar(empresa.id, item);
+      if (!resultado.gerado && resultado.motivo === 'sem-configuracao') pendentesSemConfiguracao++;
+    }
+    return pendentesSemConfiguracao;
   }
 
   private async sincronizarMei(empresa: Empresa, planoId: string | null, filtro?: FiltroCompetenciaSincronizacao): Promise<number> {

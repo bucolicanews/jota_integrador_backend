@@ -106,6 +106,16 @@ export class EstimarSincronizacaoDasUseCase {
     }
 
     const creditosNecessarios = detalhamento.reduce((acc, item) => acc + item.subtotal, 0);
+
+    // Mesmo sentinela de DebitarCreditosUseCase -- a empresa interna_plataforma nunca tem
+    // creditos_saldo provisionado (de propósito, nunca é cliente), então o saldo real
+    // consultado aqui sempre dá 0 e a estimativa bloqueava o botão "Sincronizar" mesmo
+    // sabendo que o débito de verdade (DebitarCreditosUseCase) ia pular o gate de saldo de
+    // qualquer forma -- bug real reportado pelo super admin em 2026-11-10.
+    if (empresa.tipo === 'interna_plataforma') {
+      return { creditosNecessarios, detalhamento, saldoAtual: Number.POSITIVE_INFINITY, saldoSuficiente: true };
+    }
+
     const saldoAtual = await this.creditosRepositorio.obterSaldo(empresaId);
 
     return {

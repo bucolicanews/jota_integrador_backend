@@ -20,6 +20,7 @@ interface LinhaLancamento {
   estorno_de_id: string | null;
   criado_por: string;
   criado_em: string;
+  pendente_conciliacao: boolean;
 }
 
 interface LinhaPartida {
@@ -31,7 +32,7 @@ interface LinhaPartida {
 }
 
 const COLUNAS_LANCAMENTO =
-  'id, empresa_id, data_competencia, historico, documento_referencia, origem, estornado, estorno_de_id, criado_por, criado_em';
+  'id, empresa_id, data_competencia, historico, documento_referencia, origem, estornado, estorno_de_id, criado_por, criado_em, pendente_conciliacao';
 
 @Injectable()
 export class LancamentosRepositorioSupabase implements LancamentosRepositorioPort {
@@ -177,7 +178,15 @@ export class LancamentosRepositorioSupabase implements LancamentosRepositorioPor
       estornoDeId: linha.estorno_de_id,
       criadoPor: linha.criado_por,
       criadoEm: linha.criado_em,
+      pendenteConciliacao: linha.pendente_conciliacao,
       partidas,
     };
+  }
+
+  async marcarPendenteConciliacao(id: string): Promise<void> {
+    const { error } = await this.supabase.admin.from('lancamentos_contabeis').update({ pendente_conciliacao: true }).eq('id', id);
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao marcar lançamento pendente de conciliação: ${error.message}`);
+    }
   }
 }

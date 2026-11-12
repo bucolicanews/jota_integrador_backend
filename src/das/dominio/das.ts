@@ -29,6 +29,10 @@ export interface DasItem {
   numeroDocumento: string | null;
   pdfStorageRef: string | null;
   pagoEm: string | null;
+  /** Conta a pagar de provisão já gerada pra este DAS (idempotência -- nunca gera 2x). NULL = ainda não gerada. */
+  contaPagarProvisaoId: string | null;
+  /** Lançamento de baixa (quitação) já gerado. NULL + status=pago = pendência aguardando o contador escolher caixa/banco. */
+  lancamentoBaixaId: string | null;
 }
 
 /** `hoje` injetado (nunca `new Date()` direto dentro da função) -- deixa a regra testável sem mockar relógio. */

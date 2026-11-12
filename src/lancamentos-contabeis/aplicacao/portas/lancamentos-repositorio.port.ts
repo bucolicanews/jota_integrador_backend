@@ -18,6 +18,8 @@ export interface LancamentoContabil {
   estornoDeId: string | null;
   criadoPor: string;
   criadoEm: string;
+  /** true = lançamento de baixa (origem='das', via banco) ainda não casado com o extrato real na conciliação bancária. */
+  pendenteConciliacao: boolean;
   partidas: PartidaLancamento[];
 }
 
@@ -52,6 +54,8 @@ export interface LancamentosRepositorioPort {
   estornar(id: string, motivo: string, executadoPorId: string): Promise<string>;
   /** Saldo assinado da conta (positivo = a favor da natureza da conta), somando todas as partidas não estornadas até a data informada (ou até hoje). */
   obterSaldoConta(contaId: string, ateData?: string): Promise<number>;
+  /** Marca `pendente_conciliacao=true` -- update direto (não passa por `criar_lancamento_contabil`, é metadado, não afeta partida dobrada). */
+  marcarPendenteConciliacao(id: string): Promise<void>;
 }
 
 export const LANCAMENTOS_REPOSITORIO = Symbol('LANCAMENTOS_REPOSITORIO');

@@ -1,4 +1,4 @@
-import { Body, Controller, ForbiddenException, Get, Inject, NotFoundException, Param, ParseUUIDPipe, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Inject, NotFoundException, Param, ParseUUIDPipe, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { UsuarioAtual } from '../../auth/apresentacao/decorators/usuario-atual.decorator';
 import { PapeisGuard } from '../../auth/apresentacao/guards/papeis.guard';
 import { SupabaseAuthGuard } from '../../auth/apresentacao/guards/supabase-auth.guard';
@@ -7,13 +7,22 @@ import { Papel } from '../../auth/dominio/papel';
 import { ExigirModulo } from '../../common/modulos/exigir-modulo.decorator';
 import { ModulosGuard } from '../../common/modulos/modulos.guard';
 import { EMPRESAS_REPOSITORIO, Empresa, EmpresasRepositorioPort } from '../../empresas/aplicacao/portas/empresas-repositorio.port';
+import { DasItem } from '../dominio/das';
+import { ConfiguracaoLancamentosDas } from '../aplicacao/portas/das-repositorio.port';
 import { DasListado, ListarDasUseCase } from '../aplicacao/casos-de-uso/listar-das.usecase';
 import { GerarSegundaViaDasUseCase } from '../aplicacao/casos-de-uso/gerar-segunda-via-das.usecase';
 import { ObterUrlPdfDasUseCase } from '../aplicacao/casos-de-uso/obter-url-pdf-das.usecase';
 import { EstimarSincronizacaoDasUseCase, ResultadoEstimativa } from '../aplicacao/casos-de-uso/estimar-sincronizacao-das.usecase';
 import { SincronizarDasEmpresaUseCase } from '../aplicacao/casos-de-uso/sincronizar-das-empresa.usecase';
+import { BuscarConfiguracaoLancamentosDasUseCase } from '../aplicacao/casos-de-uso/buscar-configuracao-lancamentos-das.usecase';
+import { SalvarConfiguracaoLancamentosDasUseCase } from '../aplicacao/casos-de-uso/salvar-configuracao-lancamentos-das.usecase';
+import { ListarDasPendentesBaixaUseCase } from '../aplicacao/casos-de-uso/listar-das-pendentes-baixa.usecase';
+import { ResolverBaixaDasUseCase } from '../aplicacao/casos-de-uso/resolver-baixa-das.usecase';
+import { GerarProvisaoManualDasUseCase } from '../aplicacao/casos-de-uso/gerar-provisao-manual-das.usecase';
 import { GerarSegundaViaDasDto } from './dto/gerar-segunda-via-das.dto';
 import { SincronizarDasDto } from './dto/sincronizar-das.dto';
+import { SalvarConfiguracaoLancamentosDasDto } from './dto/salvar-configuracao-lancamentos-das.dto';
+import { ResolverBaixaDasDto } from './dto/resolver-baixa-das.dto';
 
 @Controller('empresas/:empresaId/das')
 @UseGuards(SupabaseAuthGuard, PapeisGuard, ModulosGuard)
@@ -26,6 +35,11 @@ export class DasController {
     private readonly sincronizarDasEmpresa: SincronizarDasEmpresaUseCase,
     private readonly estimarSincronizacao: EstimarSincronizacaoDasUseCase,
     private readonly gerarSegundaVia: GerarSegundaViaDasUseCase,
+    private readonly buscarConfiguracaoLancamentos: BuscarConfiguracaoLancamentosDasUseCase,
+    private readonly salvarConfiguracaoLancamentos: SalvarConfiguracaoLancamentosDasUseCase,
+    private readonly listarPendentesBaixa: ListarDasPendentesBaixaUseCase,
+    private readonly resolverBaixa: ResolverBaixaDasUseCase,
+    private readonly gerarProvisaoManual: GerarProvisaoManualDasUseCase,
   ) {}
 
   @Get()
@@ -83,6 +97,69 @@ export class DasController {
   ): Promise<{ competenciasNovas: number; pagamentosAtualizados: number }> {
     await this.exigirPosse(empresaId, usuarioAtual);
     return this.sincronizarDasEmpresa.executar(empresaId, dto);
+  }
+
+  @Get('configuracao-lancamentos')
+  async obterConfiguracaoLancamentos(
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<ConfiguracaoLancamentosDas | null> {
+    await this.exigirPosse(empresaId, usuarioAtual);
+    return this.buscarConfiguracaoLancamentos.executar(empresaId);
+  }
+
+  @Put('configuracao-lancamentos')
+  async definirConfiguracaoLancamentos(
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @Body() dto: SalvarConfiguracaoLancamentosDasDto,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<void> {
+    await this.exigirPosse(empresaId, usuarioAtual);
+    return this.salvarConfiguracaoLancamentos.executar({
+      empresaId,
+      contaDebitoId: dto.contaDebitoId,
+      contaCreditoId: dto.contaCreditoId,
+      atualizadoPor: usuarioAtual.id,
+    });
+  }
+
+  /** DAS já "pago" aguardando o contador escolher caixa/banco pra gerar a baixa contábil. */
+  @Get('pendencias-baixa')
+  async pendenciasBaixa(
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<DasItem[]> {
+    await this.exigirPosse(empresaId, usuarioAtual);
+    return this.listarPendentesBaixa.executar(empresaId);
+  }
+
+  @Post(':dasId/baixa')
+  async baixar(
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @Param('dasId', ParseUUIDPipe) dasId: string,
+    @Body() dto: ResolverBaixaDasDto,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ lancamentoId: string }> {
+    await this.exigirPosse(empresaId, usuarioAtual);
+    const lancamentoId = await this.resolverBaixa.executar({
+      empresaId,
+      dasId,
+      tipo: dto.tipo,
+      bancoId: dto.bancoId,
+      resolvidoPor: usuarioAtual.id,
+    });
+    return { lancamentoId };
+  }
+
+  /** "Gerar lançamento" manual pra um DAS que ficou sem provisão (geralmente porque a config não existia na hora do sync) -- nunca chama SERPRO, zero crédito. */
+  @Post(':dasId/provisao')
+  async gerarProvisao(
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @Param('dasId', ParseUUIDPipe) dasId: string,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ contaPagarId: string }> {
+    await this.exigirPosse(empresaId, usuarioAtual);
+    return this.gerarProvisaoManual.executar(empresaId, dasId);
   }
 
   private async exigirPosse(empresaId: string, usuarioAtual: UsuarioAutenticado): Promise<void> {
