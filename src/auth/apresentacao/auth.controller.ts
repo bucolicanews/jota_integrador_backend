@@ -52,6 +52,7 @@ import {
 } from '../aplicacao/portas/sessoes-2fa-email-repositorio.port';
 import { USUARIOS_REPOSITORIO, Usuario, UsuariosRepositorioPort } from '../aplicacao/portas/usuarios-repositorio.port';
 import { AtualizarEmailUsuarioDto } from './dto/atualizar-email-usuario.dto';
+import { AtualizarNomeUsuarioDto } from './dto/atualizar-nome-usuario.dto';
 import { AtualizarPapelUsuarioDto } from './dto/atualizar-papel-usuario.dto';
 import { AtualizarSenhaUsuarioDto } from './dto/atualizar-senha-usuario.dto';
 import { AtualizarTetoPermissoesDto } from './dto/atualizar-teto-permissoes.dto';
@@ -327,19 +328,66 @@ export class AuthController {
     throw new ForbiddenException('Sem autoridade para configurar teto de permissões');
   }
 
+  /**
+   * SUPER_ADMIN troca papel+vínculo de qualquer usuário, livre. CONTADOR_DONO/
+   * EMPRESARIO_DONO só trocam o papel de alguém da própria autoridade (exigirAutoridadeSobre)
+   * e SEM mover vínculo -- reaproveita `resolverVinculoPermitido` (mesma regra da criação)
+   * passando o vínculo ATUAL do alvo como "solicitado"; se o papel novo exigir um vínculo
+   * diferente do que o alvo já tem, essa função nega. Nunca podem promover a CONTADOR_DONO/
+   * EMPRESARIO_DONO (co-dono) nem a papel de plataforma por aqui -- bloqueio explícito,
+   * `resolverVinculoPermitido` sozinha deixaria passar (ela resolve o papel dentro do
+   * escopo do ATOR, e CONTADOR_DONO é escopo 'contador' como qualquer papel seu).
+   */
   @Patch('usuarios/:id/papel')
-  @Papeis(Papel.SUPER_ADMIN) // TODO: permitir CONTADOR_DONO gerenciar papel dos próprios OPERADOR_CONTADOR
+  @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
   async atualizarPapel(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AtualizarPapelUsuarioDto,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
   ): Promise<{ ok: true }> {
+    const alvo = await this.obterPerfil.executar(id);
+    await this.exigirAutoridadeSobre(usuarioAtual, alvo);
+
+    if (usuarioAtual.papel === Papel.SUPER_ADMIN) {
+      await this.atualizarPapelUsuario.executar({
+        usuarioId: id,
+        novoPapel: dto.papel,
+        novoContadorId: dto.contadorId ?? null,
+        novoEmpresaId: dto.empresaId ?? null,
+      });
+      return { ok: true };
+    }
+
+    if (dto.papel === Papel.CONTADOR_DONO || dto.papel === Papel.EMPRESARIO_DONO) {
+      throw new ForbiddenException('Sem autoridade para atribuir papel de dono');
+    }
+
+    const vinculo = await this.resolverVinculoPermitido(usuarioAtual, dto.papel, alvo.contadorId, alvo.empresaId);
+    if (vinculo.contadorId !== alvo.contadorId || vinculo.empresaId !== alvo.empresaId) {
+      throw new ForbiddenException('Não é possível mudar o vínculo do usuário por aqui, só o papel');
+    }
+
     await this.atualizarPapelUsuario.executar({
       usuarioId: id,
       novoPapel: dto.papel,
-      novoContadorId: dto.contadorId ?? null,
-      novoEmpresaId: dto.empresaId ?? null,
+      novoContadorId: vinculo.contadorId,
+      novoEmpresaId: vinculo.empresaId,
     });
     return { ok: true };
+  }
+
+  /** Admin-on-behalf: SUPER_ADMIN troca o nome de qualquer usuário; contador/empresa só do próprio vínculo (mesma autoridade de bloquear/desbloquear/e-mail). */
+  @Patch('usuarios/:id/nome')
+  @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
+  async atualizarNomeDeUsuario(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AtualizarNomeUsuarioDto,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<Usuario> {
+    const alvo = await this.obterPerfil.executar(id);
+    await this.exigirAutoridadeSobre(usuarioAtual, alvo);
+
+    return this.atualizarNomeProprio.executar(id, dto.nome);
   }
 
   /** Admin-on-behalf: SUPER_ADMIN troca o e-mail de login de qualquer usuário; contador/empresa só do próprio vínculo (mesma autoridade de bloquear/desbloquear). */
