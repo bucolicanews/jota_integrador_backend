@@ -107,6 +107,15 @@ export class PermissoesRepositorioSupabase implements PermissoesRepositorioPort 
     if (erroInsert) throw new InternalServerErrorException(`Falha ao gravar teto do papel: ${erroInsert.message}`);
   }
 
+  async deletarPapel(id: string): Promise<void> {
+    const { error } = await this.supabase.admin.from('papeis').delete().eq('id', id);
+    if (error) {
+      // 23503 = FK de usuarios.papel_id -- rede de segurança se a contagem na apresentação já não tiver pego.
+      if (error.code === '23503') throw new ConflictException('Papel em uso por usuário(s) -- reatribua antes de excluir.');
+      throw new InternalServerErrorException(`Falha ao excluir papel: ${error.message}`);
+    }
+  }
+
   private mapearPapel(linha: LinhaPapel): InfoPapel {
     return {
       id: linha.id,

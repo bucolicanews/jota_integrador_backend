@@ -37,6 +37,8 @@ export interface PermissoesRepositorioPort {
   criarPapel(dados: DadosNovoPapel): Promise<InfoPapel>;
   /** Nome/escopo opcionais (inclusive nos 7 de sistema, por pedido explícito 2026-11-12 -- risco documentado no controller). `permissaoIds` sempre substitui o teto (delete+insert), igual padrão de `definirTetoDono`. */
   atualizarPapel(id: string, dados: DadosAtualizarPapel): Promise<void>;
+  /** Só chamado pra papel customizado (sistema=false) sem usuário vinculado -- camada de apresentação já bloqueou os dois casos antes de chamar. `papel_permissoes` cai junto via `on delete cascade`. */
+  deletarPapel(id: string): Promise<void>;
   /** Teto global: quais permissões fazem sentido pro escopo desse papel (papel_permissoes) -- catálogo assinalável, não concessão de fato. */
   listarPermissoesDoPapel(papelId: string): Promise<Permissao[]>;
   /** Catálogo completo (todas as permissões cadastradas), pra montar o checklist de configuração do teto. */

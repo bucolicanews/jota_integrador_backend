@@ -144,6 +144,18 @@ export class UsuariosRepositorioSupabase implements UsuariosRepositorioPort {
     }
   }
 
+  async contarUsuariosComPapel(papelId: string): Promise<number> {
+    const { count, error } = await this.supabase.admin
+      .from('usuarios')
+      .select('id', { count: 'exact', head: true })
+      .eq('papel_id', papelId);
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao contar usuários do papel: ${error.message}`);
+    }
+    return count ?? 0;
+  }
+
   async atualizarEmail(id: string, email: string): Promise<void> {
     const { error } = await this.supabase.admin.from('usuarios').update({ email }).eq('id', id);
 

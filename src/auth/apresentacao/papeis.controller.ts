@@ -1,7 +1,8 @@
-import { BadRequestException, Body, Controller, ForbiddenException, Get, Inject, NotFoundException, Param, ParseUUIDPipe, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Delete, ForbiddenException, Get, Inject, NotFoundException, Param, ParseUUIDPipe, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../../empresas/aplicacao/portas/empresas-repositorio.port';
 import { EscopoPapel, InfoPapel, Papel } from '../dominio/papel';
 import { FiltroDonoPapel, PERMISSOES_REPOSITORIO, Permissao, PermissoesRepositorioPort } from '../aplicacao/portas/permissoes-repositorio.port';
+import { USUARIOS_REPOSITORIO, UsuariosRepositorioPort } from '../aplicacao/portas/usuarios-repositorio.port';
 import { AtualizarPapelDto } from './dto/atualizar-papel.dto';
 import { CriarPapelDto } from './dto/criar-papel.dto';
 import { UsuarioAtual } from './decorators/usuario-atual.decorator';
@@ -31,6 +32,7 @@ export class PapeisController {
   constructor(
     @Inject(PERMISSOES_REPOSITORIO) private readonly permissoes: PermissoesRepositorioPort,
     @Inject(EMPRESAS_REPOSITORIO) private readonly empresas: EmpresasRepositorioPort,
+    @Inject(USUARIOS_REPOSITORIO) private readonly usuarios: UsuariosRepositorioPort,
   ) {}
 
   /**
@@ -145,6 +147,39 @@ export class PapeisController {
     });
 
     return (await this.permissoes.buscarPapelPorId(id))!;
+  }
+
+  /**
+   * Exclusão restrita a papel CUSTOMIZADO (sistema=false) e sem usuário vinculado --
+   * pedido explícito 2026-11-12. Os 7 de sistema nunca são excluíveis, nem por
+   * SUPER_ADMIN: são resolvidos por nome em ~45-60 lugares do código, e a linha
+   * sumir quebra qualquer fluxo que dependa dela existir (criar novo contador/
+   * empresário, bootstrap), mesmo sem ninguém usando a linha agora. Posse (dono do
+   * papel) segue a mesma regra de `atualizar`.
+   */
+  @Delete(':id')
+  @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
+  async deletar(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ ok: true }> {
+    await this.exigirPosseOuGlobal(id, usuarioAtual);
+
+    const papel = await this.permissoes.buscarPapelPorId(id);
+    if (!papel) {
+      throw new NotFoundException('Papel não encontrado');
+    }
+    if (papel.sistema) {
+      throw new ForbiddenException('Papel de sistema não pode ser excluído');
+    }
+
+    const emUso = await this.usuarios.contarUsuariosComPapel(id);
+    if (emUso > 0) {
+      throw new ConflictException(`Papel em uso por ${emUso} usuário(s) -- reatribua o papel deles antes de excluir.`);
+    }
+
+    await this.permissoes.deletarPapel(id);
+    return { ok: true };
   }
 
   /** Lança se a empresa não pertence à carteira deste contador -- Zero Trust, `empresaId` pode ter vindo de query/body cru. */

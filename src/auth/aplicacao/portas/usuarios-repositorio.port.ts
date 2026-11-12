@@ -62,6 +62,8 @@ export interface UsuariosRepositorioPort {
   /** Resolve direto pelo `papel_id` já gravado no usuário -- sem ambiguidade de nome/dono (ver buscarPapelPorNome). Usado pra ressincronizar claims preservando papel/vínculo atuais ao mudar só a preferência de 2FA. */
   buscarInfoPapelDoUsuario(usuarioId: string): Promise<InfoPapel>;
   atualizarNome(id: string, nome: string): Promise<void>;
+  /** Quantos usuários têm esse papel hoje -- usado pra bloquear exclusão de papel em uso (FK em `usuarios.papel_id` é quem garante de fato, isso só dá a mensagem amigável antes de tentar). */
+  contarUsuariosComPapel(papelId: string): Promise<number>;
   atualizarEmail(id: string, email: string): Promise<void>;
   atualizarAvatarRef(id: string, avatarRef: string | null): Promise<void>;
   /** Preferência de 2FA escolhida pelo próprio usuário (ver dominio/papel.ts -- já não existe mais exigência fixa por escopo). */
