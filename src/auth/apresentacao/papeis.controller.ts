@@ -115,11 +115,18 @@ export class PapeisController {
   }
 
   /**
-   * SUPER_ADMIN edita descrição+teto de qualquer papel GLOBAL, inclusive os 7 de sistema
-   * -- nome/escopo continuam imutáveis (nem chegam no `AtualizarPapelDto`), são usados em
-   * ~45 pontos do código (`@Papeis(Papel.X)` etc) e trocar isso por aqui quebraria esses
-   * pontos. CONTADOR_DONO edita o próprio papel privado OU o de uma empresa-cliente da
-   * própria carteira (posse confirmada); EMPRESARIO_DONO só o próprio.
+   * SUPER_ADMIN edita nome/escopo/descrição/teto de qualquer papel GLOBAL, inclusive os 7
+   * de sistema (pedido explícito 2026-11-12, revertendo a trava original da migration
+   * 20261108000002). RISCO ACEITO E DOCUMENTADO: `Papel.SUPER_ADMIN` etc são string
+   * literals hardcoded em ~45-60 `@Papeis(Papel.X)` pelo código -- renomear a linha de um
+   * desses 7 aqui NÃO atualiza esses literais, e todo usuário com esse papel passa a
+   * carregar um `nome` que não bate com nenhuma checagem (perde acesso, sem aviso, até
+   * reverter manualmente no banco). Trocar `escopo` de um papel de sistema (sempre
+   * global: contador_id/empresa_id null) também não quebra na hora, mas qualquer
+   * atribuição futura a esse papel falha em `validarCoerenciaEscopo` (exige vínculo
+   * incompatível com o vínculo null daquela linha). CONTADOR_DONO edita o próprio papel
+   * privado OU o de uma empresa-cliente da própria carteira (posse confirmada);
+   * EMPRESARIO_DONO só o próprio.
    */
   @Put(':id')
   @Papeis(Papel.SUPER_ADMIN, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
@@ -131,6 +138,8 @@ export class PapeisController {
     await this.exigirPosseOuGlobal(id, usuarioAtual);
 
     await this.permissoes.atualizarPapel(id, {
+      nome: dto.nome,
+      escopo: dto.escopo,
       descricao: dto.descricao ?? null,
       permissaoIds: dto.permissaoIds ?? [],
     });

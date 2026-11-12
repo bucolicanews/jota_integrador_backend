@@ -23,6 +23,8 @@ export interface DadosNovoPapel {
 }
 
 export interface DadosAtualizarPapel {
+  nome?: string;
+  escopo?: EscopoPapel;
   descricao: string | null;
   permissaoIds: string[];
 }
@@ -33,7 +35,7 @@ export interface PermissoesRepositorioPort {
   buscarPapelPorId(id: string): Promise<InfoPapel | null>;
   /** Cria papel customizado (sempre `sistema=false`, `nunca_restringe=false`) + grava o teto inicial em `papel_permissoes`. Nome único só dentro do mesmo dono (ou entre os globais) -- erro de conflito já vira 409 na camada de apresentação. */
   criarPapel(dados: DadosNovoPapel): Promise<InfoPapel>;
-  /** Nome/escopo são imutáveis (papéis de sistema nem chegam aqui -- bloqueado na camada de aplicação). Substitui `permissaoIds` (delete+insert), igual padrão de `definirTetoDono`. */
+  /** Nome/escopo opcionais (inclusive nos 7 de sistema, por pedido explícito 2026-11-12 -- risco documentado no controller). `permissaoIds` sempre substitui o teto (delete+insert), igual padrão de `definirTetoDono`. */
   atualizarPapel(id: string, dados: DadosAtualizarPapel): Promise<void>;
   /** Teto global: quais permissões fazem sentido pro escopo desse papel (papel_permissoes) -- catálogo assinalável, não concessão de fato. */
   listarPermissoesDoPapel(papelId: string): Promise<Permissao[]>;

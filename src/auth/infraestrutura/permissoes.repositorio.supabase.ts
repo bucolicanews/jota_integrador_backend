@@ -88,8 +88,15 @@ export class PermissoesRepositorioSupabase implements PermissoesRepositorioPort 
   }
 
   async atualizarPapel(id: string, dados: DadosAtualizarPapel): Promise<void> {
-    const { error: erroUpdate } = await this.supabase.admin.from('papeis').update({ descricao: dados.descricao }).eq('id', id);
-    if (erroUpdate) throw new InternalServerErrorException(`Falha ao atualizar papel: ${erroUpdate.message}`);
+    const campos: Record<string, unknown> = { descricao: dados.descricao };
+    if (dados.nome !== undefined) campos.nome = dados.nome;
+    if (dados.escopo !== undefined) campos.escopo = dados.escopo;
+
+    const { error: erroUpdate } = await this.supabase.admin.from('papeis').update(campos).eq('id', id);
+    if (erroUpdate) {
+      if (erroUpdate.code === '23505') throw new ConflictException(`Já existe um papel com o nome "${dados.nome}"`);
+      throw new InternalServerErrorException(`Falha ao atualizar papel: ${erroUpdate.message}`);
+    }
 
     const { error: erroDelete } = await this.supabase.admin.from('papel_permissoes').delete().eq('papel_id', id);
     if (erroDelete) throw new InternalServerErrorException(`Falha ao limpar teto do papel: ${erroDelete.message}`);
