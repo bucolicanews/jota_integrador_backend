@@ -27,6 +27,8 @@ export interface ContaPagar {
   criadoEm: string;
   valorPago: number;
   status: StatusContaPagar;
+  /** Calculado, não persistido -- mesma regra de ContaReceber.temLancamentoAtivo. */
+  temLancamentoAtivo: boolean;
   parcelas: ParcelaContaPagar[];
 }
 

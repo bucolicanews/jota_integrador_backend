@@ -81,6 +81,7 @@ export class PlanoContasController {
       sintetica: dto.sintetica,
       contaPaiId: dto.contaPaiId ?? null,
       contaCaixaBanco: dto.contaCaixaBanco ?? false,
+      tipoCaixaBanco: dto.tipoCaixaBanco ?? null,
       contaAReceber: dto.contaAReceber ?? false,
       contaAPagar: dto.contaAPagar ?? false,
     });

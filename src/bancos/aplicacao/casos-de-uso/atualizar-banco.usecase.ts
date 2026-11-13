@@ -6,6 +6,7 @@ import { BANCOS_REPOSITORIO, BancosRepositorioPort } from '../portas/bancos-repo
 export interface DadosAtualizarBanco {
   nome?: string;
   contaContabilId?: string;
+  tipo?: 'banco' | 'caixa' | 'outra';
 }
 
 @Injectable()
@@ -22,8 +23,10 @@ export class AtualizarBancoUseCase {
       throw new NotFoundException('Banco não encontrado');
     }
 
-    if (dados.contaContabilId) {
-      const conta = await this.planoContas.buscarPorId(dados.contaContabilId);
+    if (dados.contaContabilId || dados.tipo) {
+      const contaContabilId = dados.contaContabilId ?? banco.contaContabilId;
+      const tipo = dados.tipo ?? banco.tipo;
+      const conta = await this.planoContas.buscarPorId(contaContabilId);
       if (!conta || conta.empresaId !== empresaId) {
         throw new NotFoundException('Conta contábil não encontrada');
       }
@@ -33,7 +36,13 @@ export class AtualizarBancoUseCase {
       if (!conta.contaCaixaBanco) {
         throw new BadRequestException('A conta selecionada não está marcada como "Caixa/Banco" no Plano de Contas');
       }
+      // Mesma checagem que o frontend já aplica no select (nunca confiar só na UI).
+      if (conta.tipoCaixaBanco !== tipo) {
+        throw new BadRequestException(`A conta selecionada está marcada como "${conta.tipoCaixaBanco ?? 'sem subtipo definido'}" no Plano de Contas, não "${tipo}"`);
+      }
+    }
 
+    if (dados.contaContabilId) {
       if (dados.contaContabilId !== banco.contaContabilId) {
         const bancos = await this.repositorio.listarPorEmpresa(empresaId);
         if (bancos.some((b) => b.id !== id && b.contaContabilId === dados.contaContabilId)) {

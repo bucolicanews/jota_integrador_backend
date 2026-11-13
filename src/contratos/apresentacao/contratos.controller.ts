@@ -27,6 +27,7 @@ import { ObterModeloContratoUseCase } from '../aplicacao/casos-de-uso/obter-mode
 import { ObterUrlSelfieUseCase } from '../aplicacao/casos-de-uso/obter-url-selfie.usecase';
 import { PreVisualizarContratoUseCase } from '../aplicacao/casos-de-uso/pre-visualizar-contrato.usecase';
 import { DadosRegistrarAditivo, RegistrarAditivoUseCase } from '../aplicacao/casos-de-uso/registrar-aditivo.usecase';
+import { RelancarLancamentoContratoUseCase } from '../aplicacao/casos-de-uso/relancar-lancamento-contrato.usecase';
 import { SalvarConfiguracaoContratosUseCase } from '../aplicacao/casos-de-uso/salvar-configuracao-contratos.usecase';
 import { ContratoGerado, ModeloContrato } from '../aplicacao/portas/contratos-repositorio.port';
 import { StatusContrato } from '../dominio/contrato';
@@ -60,6 +61,7 @@ export class ContratosController {
     private readonly excluirContrato: ExcluirContratoUseCase,
     private readonly bloquearContrato: BloquearContratoUseCase,
     private readonly desbloquearContrato: DesbloquearContratoUseCase,
+    private readonly relancarLancamentoContrato: RelancarLancamentoContratoUseCase,
     private readonly registrarAditivo: RegistrarAditivoUseCase,
     private readonly gerarLinkAssinatura: GerarLinkAssinaturaUseCase,
     private readonly obterUrlSelfie: ObterUrlSelfieUseCase,
@@ -264,6 +266,19 @@ export class ContratosController {
     this.exigirPosseDeContador(usuarioAtual, empresa);
     await this.desbloquearContrato.executar(id, empresaId, usuarioAtual.id);
     return { ok: true };
+  }
+
+  @Post(':id/relancar-lancamento')
+  @ExigirPermissao('contratos:editar')
+  async relancarLancamento(
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ lancamentoId: string }> {
+    const empresa = await this.buscarEmpresaOuFalhar(empresaId);
+    this.exigirPosseDeContador(usuarioAtual, empresa);
+    const lancamentoId = await this.relancarLancamentoContrato.executar(id, empresaId, usuarioAtual.id);
+    return { lancamentoId };
   }
 
   @Post(':id/aditivos')

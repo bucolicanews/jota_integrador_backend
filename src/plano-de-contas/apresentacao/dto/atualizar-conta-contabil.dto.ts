@@ -1,4 +1,4 @@
-import { IsBoolean, IsOptional, MaxLength, MinLength } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, MaxLength, MinLength } from 'class-validator';
 
 export class AtualizarContaContabilDto {
   @IsOptional()
@@ -8,7 +8,15 @@ export class AtualizarContaContabilDto {
 
   @IsOptional()
   @IsBoolean()
+  sintetica?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
   contaCaixaBanco?: boolean;
+
+  @IsOptional()
+  @IsIn(['caixa', 'banco', 'outra'])
+  tipoCaixaBanco?: 'caixa' | 'banco' | 'outra';
 
   @IsOptional()
   @IsBoolean()

@@ -8,6 +8,7 @@ import {
   PlanoConta,
   PlanoContasRepositorioPort,
   ResultadoImportacaoPlanoContas,
+  TipoCaixaBanco,
 } from '../aplicacao/portas/plano-contas-repositorio.port';
 
 interface LinhaPlanoConta {
@@ -19,13 +20,14 @@ interface LinhaPlanoConta {
   sintetica: boolean;
   conta_pai_id: string | null;
   conta_caixa_banco: boolean;
+  tipo_caixa_banco: TipoCaixaBanco | null;
   conta_a_receber: boolean;
   conta_a_pagar: boolean;
   ativa: boolean;
 }
 
 const COLUNAS_SELECT =
-  'id, empresa_id, codigo, nome, grupo, sintetica, conta_pai_id, conta_caixa_banco, conta_a_receber, conta_a_pagar, ativa';
+  'id, empresa_id, codigo, nome, grupo, sintetica, conta_pai_id, conta_caixa_banco, tipo_caixa_banco, conta_a_receber, conta_a_pagar, ativa';
 
 @Injectable()
 export class PlanoContasRepositorioSupabase implements PlanoContasRepositorioPort {
@@ -42,6 +44,7 @@ export class PlanoContasRepositorioSupabase implements PlanoContasRepositorioPor
         sintetica: dados.sintetica,
         conta_pai_id: dados.contaPaiId,
         conta_caixa_banco: dados.contaCaixaBanco,
+        tipo_caixa_banco: dados.tipoCaixaBanco ?? null,
         conta_a_receber: dados.contaAReceber,
         conta_a_pagar: dados.contaAPagar,
       })
@@ -87,7 +90,9 @@ export class PlanoContasRepositorioSupabase implements PlanoContasRepositorioPor
   async atualizar(id: string, dados: DadosAtualizacaoContaContabil): Promise<void> {
     const campos: Record<string, unknown> = {};
     if (dados.nome !== undefined) campos.nome = dados.nome;
+    if (dados.sintetica !== undefined) campos.sintetica = dados.sintetica;
     if (dados.contaCaixaBanco !== undefined) campos.conta_caixa_banco = dados.contaCaixaBanco;
+    if (dados.tipoCaixaBanco !== undefined) campos.tipo_caixa_banco = dados.tipoCaixaBanco;
     if (dados.contaAReceber !== undefined) campos.conta_a_receber = dados.contaAReceber;
     if (dados.contaAPagar !== undefined) campos.conta_a_pagar = dados.contaAPagar;
 
@@ -127,6 +132,7 @@ export class PlanoContasRepositorioSupabase implements PlanoContasRepositorioPor
       grupo: linha.grupo,
       sintetica: linha.sintetica,
       conta_caixa_banco: linha.contaCaixaBanco,
+      tipo_caixa_banco: linha.tipoCaixaBanco ?? null,
       conta_a_receber: linha.contaAReceber,
       conta_a_pagar: linha.contaAPagar,
       ativa: true,
@@ -194,6 +200,7 @@ export class PlanoContasRepositorioSupabase implements PlanoContasRepositorioPor
       sintetica: linha.sintetica,
       contaPaiId: linha.conta_pai_id,
       contaCaixaBanco: linha.conta_caixa_banco,
+      tipoCaixaBanco: linha.tipo_caixa_banco,
       contaAReceber: linha.conta_a_receber,
       contaAPagar: linha.conta_a_pagar,
       ativa: linha.ativa,

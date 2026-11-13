@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, InternalServerErrorException, NotFound
 import { SupabaseService } from '../../common/supabase/supabase.service';
 import { OrigemLancamento, TipoPartida } from '../dominio/lancamento';
 import {
+  DadosAtualizacaoLancamento,
   DadosNovoLancamento,
   FiltroLancamentos,
   LancamentoContabil,
@@ -18,6 +19,9 @@ interface LinhaLancamento {
   origem: OrigemLancamento;
   estornado: boolean;
   estorno_de_id: string | null;
+  editado: boolean;
+  atualizado_em: string | null;
+  atualizado_por: string | null;
   criado_por: string;
   criado_em: string;
   pendente_conciliacao: boolean;
@@ -32,7 +36,7 @@ interface LinhaPartida {
 }
 
 const COLUNAS_LANCAMENTO =
-  'id, empresa_id, data_competencia, historico, documento_referencia, origem, estornado, estorno_de_id, criado_por, criado_em, pendente_conciliacao';
+  'id, empresa_id, data_competencia, historico, documento_referencia, origem, estornado, estorno_de_id, editado, atualizado_em, atualizado_por, criado_por, criado_em, pendente_conciliacao';
 
 @Injectable()
 export class LancamentosRepositorioSupabase implements LancamentosRepositorioPort {
@@ -111,6 +115,27 @@ export class LancamentosRepositorioSupabase implements LancamentosRepositorioPor
     return lancamentos;
   }
 
+  async atualizar(id: string, dados: DadosAtualizacaoLancamento, editadoPorId: string): Promise<void> {
+    const { error } = await this.supabase.admin.rpc('atualizar_lancamento_contabil', {
+      p_lancamento_id: id,
+      p_data_competencia: dados.dataCompetencia,
+      p_historico: dados.historico,
+      p_partidas: dados.partidas.map((partida) => ({
+        conta_id: partida.contaId,
+        tipo: partida.tipo,
+        valor: partida.valor,
+      })),
+      p_editado_por: editadoPorId,
+    });
+
+    if (error) {
+      if (error.message.includes('não encontrado')) {
+        throw new NotFoundException(error.message);
+      }
+      throw new BadRequestException(error.message);
+    }
+  }
+
   async estornar(id: string, motivo: string, executadoPorId: string): Promise<string> {
     const { data, error } = await this.supabase.admin.rpc('estornar_lancamento_contabil', {
       p_lancamento_id: id,
@@ -137,6 +162,20 @@ export class LancamentosRepositorioSupabase implements LancamentosRepositorioPor
       throw new InternalServerErrorException(`Falha ao calcular saldo da conta: ${error.message}`);
     }
     return Number(data);
+  }
+
+  async existeLancamentoAtivoParaDocumento(documentoReferencia: string): Promise<boolean> {
+    const { count, error } = await this.supabase.admin
+      .from('lancamentos_contabeis')
+      .select('id', { count: 'exact', head: true })
+      .eq('documento_referencia', documentoReferencia)
+      .neq('origem', 'estorno')
+      .eq('estornado', false);
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao verificar lançamento do documento: ${error.message}`);
+    }
+    return (count ?? 0) > 0;
   }
 
   private async buscarPartidas(lancamentoId: string): Promise<PartidaLancamento[]> {
@@ -176,6 +215,9 @@ export class LancamentosRepositorioSupabase implements LancamentosRepositorioPor
       origem: linha.origem,
       estornado: linha.estornado,
       estornoDeId: linha.estorno_de_id,
+      editado: linha.editado,
+      atualizadoEm: linha.atualizado_em,
+      atualizadoPor: linha.atualizado_por,
       criadoPor: linha.criado_por,
       criadoEm: linha.criado_em,
       pendenteConciliacao: linha.pendente_conciliacao,

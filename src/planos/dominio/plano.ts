@@ -25,6 +25,7 @@ export const MODULOS_LICENCIAVEIS = [
   'contas_a_pagar',
   'contas_a_receber',
   'plano_contas',
+  'tarefas',
 ] as const;
 
 /** Regra de negócio pura -- mesmo que o CHECK do banco já garanta, revalidar aqui (Zero Trust, docs/SEGURANCA.md). */

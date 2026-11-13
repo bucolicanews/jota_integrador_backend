@@ -109,6 +109,14 @@ export class ContasReceberRepositorioSupabase implements ContasReceberRepositori
     if (error) throw new InternalServerErrorException(`Falha ao cancelar conta a receber: ${error.message}`);
   }
 
+  async atualizarContasContabeis(id: string, contaPatrimonialId: string, contaResultadoId: string): Promise<void> {
+    const { error } = await this.supabase.admin
+      .from('contas_receber')
+      .update({ conta_patrimonial_id: contaPatrimonialId, conta_resultado_id: contaResultadoId })
+      .eq('id', id);
+    if (error) throw new InternalServerErrorException(`Falha ao atualizar contas contábeis da conta a receber: ${error.message}`);
+  }
+
   async obterParcela(id: string): Promise<ParcelaContaReceber | null> {
     const { data, error } = await this.supabase.admin.from('parcelas_contas_receber').select(COLUNAS_PARCELA).eq('id', id).maybeSingle();
     if (error) throw new InternalServerErrorException(`Falha ao buscar parcela: ${error.message}`);
@@ -172,6 +180,7 @@ export class ContasReceberRepositorioSupabase implements ContasReceberRepositori
 
     const parcelas = linhasParcela as LinhaParcela[];
     const recebimentosPorParcela = await this.buscarRecebimentosDeVarias(parcelas.map((p) => p.id));
+    const contasComLancamentoAtivo = await this.buscarContasComLancamentoAtivo(contaIds);
 
     const parcelasPorConta = new Map<string, ParcelaContaReceber[]>();
     for (const linhaParcela of parcelas) {
@@ -199,9 +208,29 @@ export class ContasReceberRepositorioSupabase implements ContasReceberRepositori
         criadoEm: linha.criado_em,
         valorRecebido,
         status: calcularStatus(Number(linha.valor_total), valorRecebido, linha.cancelada),
+        temLancamentoAtivo: contasComLancamentoAtivo.has(linha.id),
         parcelas: parcelasDaConta,
       };
     });
+  }
+
+  /** Documento "ativo" = existe lançamento com esse documento_referencia, origem != 'estorno' e não estornado. Se o original foi estornado e nada o substituiu, não entra no Set -- mesma regra de `existeLancamentoAtivoParaDocumento` em lancamentos-contabeis, duplicada aqui pra não criar dependência de módulo só por uma leitura. */
+  private async buscarContasComLancamentoAtivo(contaIds: string[]): Promise<Set<string>> {
+    const conjunto = new Set<string>();
+    if (contaIds.length === 0) return conjunto;
+
+    const { data, error } = await this.supabase.admin
+      .from('lancamentos_contabeis')
+      .select('documento_referencia')
+      .in('documento_referencia', contaIds)
+      .neq('origem', 'estorno')
+      .eq('estornado', false);
+    if (error) throw new InternalServerErrorException(`Falha ao verificar lançamentos ativos: ${error.message}`);
+
+    for (const linha of data as { documento_referencia: string }[]) {
+      conjunto.add(linha.documento_referencia);
+    }
+    return conjunto;
   }
 
   private async buscarRecebimentosDeVarias(parcelaIds: string[]): Promise<Map<string, LinhaRecebimento[]>> {

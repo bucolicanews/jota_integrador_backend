@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ClientesModule } from '../clientes/clientes.module';
 import { ContasAReceberModule } from '../contas-a-receber/contas-a-receber.module';
 import { EmpresasModule } from '../empresas/empresas.module';
+import { LancamentosContabeisModule } from '../lancamentos-contabeis/lancamentos-contabeis.module';
 import { PlanoDeContasModule } from '../plano-de-contas/plano-de-contas.module';
 import { AssinarContratoPublicoUseCase } from './aplicacao/casos-de-uso/assinar-contrato-publico.usecase';
 import { AtualizarContratoUseCase } from './aplicacao/casos-de-uso/atualizar-contrato.usecase';
@@ -23,6 +24,7 @@ import { ObterModeloContratoUseCase } from './aplicacao/casos-de-uso/obter-model
 import { ObterUrlSelfieUseCase } from './aplicacao/casos-de-uso/obter-url-selfie.usecase';
 import { PreVisualizarContratoUseCase } from './aplicacao/casos-de-uso/pre-visualizar-contrato.usecase';
 import { RegistrarAditivoUseCase } from './aplicacao/casos-de-uso/registrar-aditivo.usecase';
+import { RelancarLancamentoContratoUseCase } from './aplicacao/casos-de-uso/relancar-lancamento-contrato.usecase';
 import { SalvarConfiguracaoContratosUseCase } from './aplicacao/casos-de-uso/salvar-configuracao-contratos.usecase';
 import { CONTRATOS_REPOSITORIO } from './aplicacao/portas/contratos-repositorio.port';
 import { AssinaturaPublicaController } from './apresentacao/assinatura-publica.controller';
@@ -31,7 +33,7 @@ import { ContratosRepositorioSupabase } from './infraestrutura/contratos.reposit
 import { StorageContratosService } from './infraestrutura/storage-contratos.service';
 
 @Module({
-  imports: [EmpresasModule, ClientesModule, ContasAReceberModule, PlanoDeContasModule],
+  imports: [EmpresasModule, ClientesModule, ContasAReceberModule, PlanoDeContasModule, LancamentosContabeisModule],
   controllers: [ContratosController, AssinaturaPublicaController],
   providers: [
     { provide: CONTRATOS_REPOSITORIO, useClass: ContratosRepositorioSupabase },
@@ -57,6 +59,7 @@ import { StorageContratosService } from './infraestrutura/storage-contratos.serv
     ObterContratoPublicoUseCase,
     AssinarContratoPublicoUseCase,
     ObterUrlSelfieUseCase,
+    RelancarLancamentoContratoUseCase,
   ],
   // CONTRATOS_REPOSITORIO exportado pra CriarContadorUseCase (ContadoresModule) seedar a
   // configuracao_contratos da empresa interna de todo contador novo. CriarContratoUseCase

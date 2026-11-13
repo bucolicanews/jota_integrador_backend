@@ -1,5 +1,7 @@
 import { GrupoContaContabil } from '../../dominio/plano-conta';
 
+export type TipoCaixaBanco = 'caixa' | 'banco' | 'outra';
+
 export interface PlanoConta {
   id: string;
   empresaId: string;
@@ -9,6 +11,8 @@ export interface PlanoConta {
   sintetica: boolean;
   contaPaiId: string | null;
   contaCaixaBanco: boolean;
+  /** Só preenchido quando contaCaixaBanco=true -- null em qualquer outra conta. */
+  tipoCaixaBanco: TipoCaixaBanco | null;
   contaAReceber: boolean;
   contaAPagar: boolean;
   ativa: boolean;
@@ -22,13 +26,16 @@ export interface DadosNovaContaContabil {
   sintetica: boolean;
   contaPaiId: string | null;
   contaCaixaBanco: boolean;
+  tipoCaixaBanco?: TipoCaixaBanco | null;
   contaAReceber: boolean;
   contaAPagar: boolean;
 }
 
 export interface DadosAtualizacaoContaContabil {
   nome?: string;
+  sintetica?: boolean;
   contaCaixaBanco?: boolean;
+  tipoCaixaBanco?: TipoCaixaBanco | null;
   contaAReceber?: boolean;
   contaAPagar?: boolean;
 }
@@ -40,6 +47,7 @@ export interface LinhaImportacaoPlanoConta {
   sintetica: boolean;
   codigoPai: string | null;
   contaCaixaBanco: boolean;
+  tipoCaixaBanco: TipoCaixaBanco | null;
   contaAReceber: boolean;
   contaAPagar: boolean;
 }

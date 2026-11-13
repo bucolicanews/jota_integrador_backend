@@ -7,6 +7,7 @@ import {
   NotFoundException,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -21,12 +22,14 @@ import {
   Empresa,
   EmpresasRepositorioPort,
 } from '../../empresas/aplicacao/portas/empresas-repositorio.port';
+import { AtualizarLancamentoUseCase } from '../aplicacao/casos-de-uso/atualizar-lancamento.usecase';
 import { CriarLancamentoUseCase } from '../aplicacao/casos-de-uso/criar-lancamento.usecase';
 import { EstornarLancamentoUseCase } from '../aplicacao/casos-de-uso/estornar-lancamento.usecase';
 import { ListarLancamentosUseCase } from '../aplicacao/casos-de-uso/listar-lancamentos.usecase';
 import { ObterLancamentoUseCase } from '../aplicacao/casos-de-uso/obter-lancamento.usecase';
 import { ObterSaldoContaUseCase } from '../aplicacao/casos-de-uso/obter-saldo-conta.usecase';
 import { LancamentoContabil } from '../aplicacao/portas/lancamentos-repositorio.port';
+import { AtualizarLancamentoDto } from './dto/atualizar-lancamento.dto';
 import { CriarLancamentoDto } from './dto/criar-lancamento.dto';
 import { EstornarLancamentoDto } from './dto/estornar-lancamento.dto';
 
@@ -39,6 +42,7 @@ export class LancamentosController {
     private readonly listarLancamentos: ListarLancamentosUseCase,
     private readonly obterLancamento: ObterLancamentoUseCase,
     private readonly estornarLancamento: EstornarLancamentoUseCase,
+    private readonly atualizarLancamento: AtualizarLancamentoUseCase,
     private readonly obterSaldoConta: ObterSaldoContaUseCase,
   ) {}
 
@@ -115,6 +119,20 @@ export class LancamentosController {
 
     const novoId = await this.estornarLancamento.executar(id, dto.motivo, usuarioAtual.id, empresaId);
     return { id: novoId };
+  }
+
+  @Patch(':id')
+  async atualizar(
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AtualizarLancamentoDto,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ ok: true }> {
+    const empresa = await this.buscarEmpresaOuFalhar(empresaId);
+    this.exigirPosseDeContador(usuarioAtual, empresa);
+
+    await this.atualizarLancamento.executar(id, empresaId, dto, usuarioAtual.id);
+    return { ok: true };
   }
 
   private async buscarEmpresaOuFalhar(empresaId: string): Promise<Empresa> {

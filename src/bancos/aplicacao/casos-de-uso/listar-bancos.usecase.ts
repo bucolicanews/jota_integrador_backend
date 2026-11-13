@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { LANCAMENTOS_REPOSITORIO, LancamentosRepositorioPort } from '../../../lancamentos-contabeis/aplicacao/portas/lancamentos-repositorio.port';
-import { BANCOS_REPOSITORIO, Banco, BancosRepositorioPort } from '../portas/bancos-repositorio.port';
+import { BANCOS_REPOSITORIO, Banco, BancosRepositorioPort, TipoBanco } from '../portas/bancos-repositorio.port';
 
 export interface BancoComSaldo extends Banco {
   saldoAtual: number;
@@ -14,8 +14,8 @@ export class ListarBancosUseCase {
     @Inject(LANCAMENTOS_REPOSITORIO) private readonly lancamentos: LancamentosRepositorioPort,
   ) {}
 
-  async executar(empresaId: string, apenasAtivos?: boolean): Promise<BancoComSaldo[]> {
-    const bancos = await this.repositorio.listarPorEmpresa(empresaId, apenasAtivos);
+  async executar(empresaId: string, apenasAtivos?: boolean, tipo?: TipoBanco): Promise<BancoComSaldo[]> {
+    const bancos = await this.repositorio.listarPorEmpresa(empresaId, apenasAtivos, tipo);
     return Promise.all(
       bancos.map(async (banco) => ({
         ...banco,

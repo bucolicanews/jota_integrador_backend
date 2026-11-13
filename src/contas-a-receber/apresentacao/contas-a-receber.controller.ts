@@ -14,6 +14,7 @@ import { ListarContasReceberUseCase } from '../aplicacao/casos-de-uso/listar-con
 import { ListarRecebimentosParcelaUseCase } from '../aplicacao/casos-de-uso/listar-recebimentos-parcela.usecase';
 import { ObterContaReceberUseCase } from '../aplicacao/casos-de-uso/obter-conta-receber.usecase';
 import { RegistrarRecebimentoUseCase } from '../aplicacao/casos-de-uso/registrar-recebimento.usecase';
+import { RelancarLancamentoContaReceberUseCase } from '../aplicacao/casos-de-uso/relancar-lancamento-conta-receber.usecase';
 import { ContaReceber, RecebimentoContaReceber } from '../aplicacao/portas/contas-receber-repositorio.port';
 import { CriarContaReceberDto } from './dto/criar-conta-receber.dto';
 import { EstornarRecebimentoDto } from './dto/estornar-recebimento.dto';
@@ -31,6 +32,7 @@ export class ContasAReceberController {
     private readonly registrarRecebimento: RegistrarRecebimentoUseCase,
     private readonly estornarRecebimento: EstornarRecebimentoUseCase,
     private readonly listarRecebimentosParcela: ListarRecebimentosParcelaUseCase,
+    private readonly relancarLancamento: RelancarLancamentoContaReceberUseCase,
   ) {}
 
   @Get()
@@ -96,6 +98,19 @@ export class ContasAReceberController {
     this.exigirPosseDeContador(usuarioAtual, empresa);
     await this.cancelarContaReceber.executar(id, empresaId, usuarioAtual.id);
     return { ok: true };
+  }
+
+  @Post(':id/relancar')
+  @ExigirPermissao('contas_a_receber:editar')
+  async relancar(
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ lancamentoId: string }> {
+    const empresa = await this.buscarEmpresaOuFalhar(empresaId);
+    this.exigirPosseDeContador(usuarioAtual, empresa);
+    const lancamentoId = await this.relancarLancamento.executar(id, empresaId, usuarioAtual.id);
+    return { lancamentoId };
   }
 
   @Post('parcelas/:parcelaId/recebimentos')

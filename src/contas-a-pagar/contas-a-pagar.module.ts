@@ -10,6 +10,7 @@ import { ListarContasPagarUseCase } from './aplicacao/casos-de-uso/listar-contas
 import { ListarPagamentosParcelaUseCase } from './aplicacao/casos-de-uso/listar-pagamentos-parcela.usecase';
 import { ObterContaPagarUseCase } from './aplicacao/casos-de-uso/obter-conta-pagar.usecase';
 import { RegistrarPagamentoUseCase } from './aplicacao/casos-de-uso/registrar-pagamento.usecase';
+import { RelancarLancamentoContaPagarUseCase } from './aplicacao/casos-de-uso/relancar-lancamento-conta-pagar.usecase';
 import { CONTAS_PAGAR_REPOSITORIO } from './aplicacao/portas/contas-pagar-repositorio.port';
 import { ContasAPagarController } from './apresentacao/contas-a-pagar.controller';
 import { ContasPagarRepositorioSupabase } from './infraestrutura/contas-pagar.repositorio.supabase';
@@ -26,6 +27,7 @@ import { ContasPagarRepositorioSupabase } from './infraestrutura/contas-pagar.re
     RegistrarPagamentoUseCase,
     EstornarPagamentoUseCase,
     ListarPagamentosParcelaUseCase,
+    RelancarLancamentoContaPagarUseCase,
   ],
   exports: [CONTAS_PAGAR_REPOSITORIO, RegistrarPagamentoUseCase, CriarContaPagarUseCase],
 })

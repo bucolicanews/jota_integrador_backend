@@ -1,4 +1,4 @@
-import { IsOptional, IsUUID, MaxLength, MinLength } from 'class-validator';
+import { IsIn, IsOptional, IsUUID, MaxLength, MinLength } from 'class-validator';
 
 export class AtualizarBancoDto {
   @IsOptional()
@@ -9,4 +9,8 @@ export class AtualizarBancoDto {
   @IsOptional()
   @IsUUID()
   contaContabilId?: string;
+
+  @IsOptional()
+  @IsIn(['banco', 'caixa', 'outra'])
+  tipo?: 'banco' | 'caixa' | 'outra';
 }

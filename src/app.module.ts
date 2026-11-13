@@ -33,6 +33,7 @@ import { FornecedoresModule } from './fornecedores/fornecedores.module';
 import { HistoricosModule } from './historicos/historicos.module';
 import { RelatoriosModule } from './relatorios/relatorios.module';
 import { ProtocolosModule } from './protocolos/protocolos.module';
+import { TarefasModule } from './tarefas/tarefas.module';
 import { BancosModule } from './bancos/bancos.module';
 import { DescricoesExtratoModule } from './descricoes-extrato/descricoes-extrato.module';
 import { IdentificadoresExtratoModule } from './identificadores-extrato/identificadores-extrato.module';
@@ -92,6 +93,7 @@ import { SupabaseHooksModule } from './supabase-hooks/supabase-hooks.module';
     HistoricosModule,
     RelatoriosModule,
     ProtocolosModule,
+    TarefasModule,
     BancosModule,
     DescricoesExtratoModule,
     IdentificadoresExtratoModule,

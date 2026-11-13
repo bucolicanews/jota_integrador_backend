@@ -1,5 +1,6 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { EmpresasModule } from '../empresas/empresas.module';
+import { LancamentosContabeisModule } from '../lancamentos-contabeis/lancamentos-contabeis.module';
 import { AlterarAtivaContaContabilUseCase } from './aplicacao/casos-de-uso/alterar-ativa-conta-contabil.usecase';
 import { AtualizarContaContabilUseCase } from './aplicacao/casos-de-uso/atualizar-conta-contabil.usecase';
 import { CriarContaContabilUseCase } from './aplicacao/casos-de-uso/criar-conta-contabil.usecase';
@@ -13,7 +14,7 @@ import { PlanoContasController } from './apresentacao/plano-contas.controller';
 import { PlanoContasRepositorioSupabase } from './infraestrutura/plano-contas.repositorio.supabase';
 
 @Module({
-  imports: [forwardRef(() => EmpresasModule)],
+  imports: [forwardRef(() => EmpresasModule), forwardRef(() => LancamentosContabeisModule)],
   controllers: [PlanoContasController, PlanoContasModelosController],
   providers: [
     { provide: PLANO_CONTAS_REPOSITORIO, useClass: PlanoContasRepositorioSupabase },

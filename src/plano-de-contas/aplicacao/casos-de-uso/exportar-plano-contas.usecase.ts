@@ -20,6 +20,7 @@ export class ExportarPlanoContasUseCase {
         sintetica: conta.sintetica,
         codigoPai: conta.contaPaiId ? porId.get(conta.contaPaiId)?.codigo ?? null : null,
         contaCaixaBanco: conta.contaCaixaBanco,
+        tipoCaixaBanco: conta.tipoCaixaBanco,
         contaAReceber: conta.contaAReceber,
         contaAPagar: conta.contaAPagar,
       })),

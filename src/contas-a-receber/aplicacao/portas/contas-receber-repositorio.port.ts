@@ -27,6 +27,8 @@ export interface ContaReceber {
   criadoEm: string;
   valorRecebido: number;
   status: StatusContaReceber;
+  /** Calculado, não persistido -- ver `existeLancamentoAtivoParaDocumento`. false quando o lançamento de competência original foi estornado e nenhum outro o substituiu. */
+  temLancamentoAtivo: boolean;
   parcelas: ParcelaContaReceber[];
 }
 
@@ -78,6 +80,8 @@ export interface ContasReceberRepositorioPort {
   listarPorEmpresa(empresaId: string, filtro?: FiltroContasReceber): Promise<ContaReceber[]>;
   obterPorId(id: string): Promise<ContaReceber | null>;
   cancelar(id: string): Promise<void>;
+  /** Corrige as contas de D/C de uma conta a receber já criada -- usado quando a Configuração de Contratos é corrigida depois que a conta nasceu, pra "Realizar lançamento novamente" lançar na conta certa (sem isso, ficaria preso na conta antiga congelada na criação). */
+  atualizarContasContabeis(id: string, contaPatrimonialId: string, contaResultadoId: string): Promise<void>;
 
   obterParcela(id: string): Promise<ParcelaContaReceber | null>;
 

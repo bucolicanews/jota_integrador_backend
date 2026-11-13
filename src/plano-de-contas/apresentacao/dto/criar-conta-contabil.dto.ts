@@ -25,6 +25,10 @@ export class CriarContaContabilDto {
   contaCaixaBanco?: boolean;
 
   @IsOptional()
+  @IsIn(['caixa', 'banco', 'outra'])
+  tipoCaixaBanco?: 'caixa' | 'banco' | 'outra';
+
+  @IsOptional()
   @IsBoolean()
   contaAReceber?: boolean;
 

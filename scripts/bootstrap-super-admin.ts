@@ -28,7 +28,7 @@ async function bootstrap(): Promise<void> {
 
     const { data: papelSuperAdmin, error: erroPapel } = await supabase.admin
       .from('papeis')
-      .select('id')
+      .select('id, nome, escopo, descricao, sistema, nunca_restringe, contador_id, empresa_id')
       .eq('nome', Papel.SUPER_ADMIN)
       .single();
     if (erroPapel || !papelSuperAdmin) {
@@ -46,7 +46,22 @@ async function bootstrap(): Promise<void> {
     }
 
     const criarUsuario = app.get(CriarUsuarioUseCase);
-    const resultado = await criarUsuario.executar({ nome, email, papel: Papel.SUPER_ADMIN, contadorId: null, empresaId: null });
+    const resultado = await criarUsuario.executar({
+      nome,
+      email,
+      infoPapel: {
+        id: papelSuperAdmin.id,
+        nome: papelSuperAdmin.nome,
+        escopo: papelSuperAdmin.escopo,
+        descricao: papelSuperAdmin.descricao,
+        sistema: papelSuperAdmin.sistema,
+        nuncaRestringe: papelSuperAdmin.nunca_restringe,
+        contadorId: papelSuperAdmin.contador_id,
+        empresaId: papelSuperAdmin.empresa_id,
+      },
+      contadorId: null,
+      empresaId: null,
+    });
 
     console.log(`SUPER_ADMIN criado: ${resultado.email} (id ${resultado.id})`);
     console.log(`Link de acesso: ${resultado.linkAcesso}`);

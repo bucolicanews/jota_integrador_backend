@@ -5,6 +5,8 @@ export interface LinhaPlanoContaBruta {
   [coluna: string]: unknown;
 }
 
+export type TipoCaixaBancoImportado = 'caixa' | 'banco' | 'outra' | null;
+
 export interface LinhaPlanoContaImportada {
   codigo: string;
   nome: string;
@@ -12,6 +14,7 @@ export interface LinhaPlanoContaImportada {
   sintetica: boolean;
   codigoPai: string | null;
   contaCaixaBanco: boolean;
+  tipoCaixaBanco: TipoCaixaBancoImportado;
   contaAReceber: boolean;
   contaAPagar: boolean;
 }
@@ -40,6 +43,19 @@ function normalizarBooleano(valor: unknown): boolean {
 function normalizarGrupo(valor: unknown): GrupoContaContabil | null {
   const texto = String(valor ?? '').trim().toLowerCase();
   return RÓTULOS_GRUPO[texto] ?? null;
+}
+
+const RÓTULOS_TIPO_CAIXA_BANCO: Record<string, 'caixa' | 'banco' | 'outra'> = {
+  caixa: 'caixa',
+  banco: 'banco',
+  outra: 'outra',
+};
+
+/** `undefined` = coluna ausente/vazia (ok quando contaCaixaBanco=false); string não reconhecida = inválida (erro só levantado se contaCaixaBanco=true, ver chamada abaixo). */
+function normalizarTipoCaixaBanco(valor: unknown): 'caixa' | 'banco' | 'outra' | undefined {
+  const texto = String(valor ?? '').trim().toLowerCase();
+  if (!texto) return undefined;
+  return RÓTULOS_TIPO_CAIXA_BANCO[texto];
 }
 
 /**
@@ -80,6 +96,16 @@ export function parsearPlanoContasCsv(linhas: LinhaPlanoContaBruta[]): Resultado
       return;
     }
 
+    const contaCaixaBanco = normalizarBooleano(linha.ContaCaixaBanco ?? linha.contaCaixaBanco);
+    const tipoCaixaBancoBruto = linha.TipoCaixaBanco ?? linha.tipoCaixaBanco;
+    const tipoCaixaBanco = normalizarTipoCaixaBanco(tipoCaixaBancoBruto);
+    if (contaCaixaBanco && !tipoCaixaBanco) {
+      erros.push(
+        `Linha ${numeroLinha} (${codigo}): "ContaCaixaBanco" é Sim mas "TipoCaixaBanco" está ausente/inválido ("${tipoCaixaBancoBruto}"). Use: Caixa, Banco ou Outra.`,
+      );
+      return;
+    }
+
     codigosVistos.add(codigo);
     resultado.push({
       codigo,
@@ -87,7 +113,8 @@ export function parsearPlanoContasCsv(linhas: LinhaPlanoContaBruta[]): Resultado
       grupo,
       sintetica: normalizarBooleano(sinteticaBruta),
       codigoPai,
-      contaCaixaBanco: normalizarBooleano(linha.ContaCaixaBanco ?? linha.contaCaixaBanco),
+      contaCaixaBanco,
+      tipoCaixaBanco: contaCaixaBanco ? (tipoCaixaBanco as 'caixa' | 'banco' | 'outra') : null,
       contaAReceber: normalizarBooleano(linha.ContaAReceber ?? linha.contaAReceber),
       contaAPagar: normalizarBooleano(linha.ContaAPagar ?? linha.contaAPagar),
     });
@@ -108,7 +135,13 @@ export function parsearPlanoContasCsv(linhas: LinhaPlanoContaBruta[]): Resultado
   return { linhas: resultado, erros };
 }
 
-const CABECALHO_CSV = ['Codigo', 'Nome', 'Grupo', 'Sintetica', 'CodigoPai', 'ContaCaixaBanco', 'ContaAReceber', 'ContaAPagar'];
+const CABECALHO_CSV = ['Codigo', 'Nome', 'Grupo', 'Sintetica', 'CodigoPai', 'ContaCaixaBanco', 'TipoCaixaBanco', 'ContaAReceber', 'ContaAPagar'];
+
+const RÓTULO_TIPO_CAIXA_BANCO_EXPORT: Record<'caixa' | 'banco' | 'outra', string> = {
+  caixa: 'Caixa',
+  banco: 'Banco',
+  outra: 'Outra',
+};
 
 /** Mesmo formato pros dois consumidores: exportar o plano real de uma empresa e baixar um modelo padrão. */
 export function construirCsvPlanoContas(linhas: LinhaPlanoContaImportada[]): string {
@@ -119,6 +152,7 @@ export function construirCsvPlanoContas(linhas: LinhaPlanoContaImportada[]): str
     Sintetica: l.sintetica ? 'Sim' : 'Não',
     CodigoPai: l.codigoPai ?? '',
     ContaCaixaBanco: l.contaCaixaBanco ? 'Sim' : 'Não',
+    TipoCaixaBanco: l.tipoCaixaBanco ? RÓTULO_TIPO_CAIXA_BANCO_EXPORT[l.tipoCaixaBanco] : '',
     ContaAReceber: l.contaAReceber ? 'Sim' : 'Não',
     ContaAPagar: l.contaAPagar ? 'Sim' : 'Não',
   }));

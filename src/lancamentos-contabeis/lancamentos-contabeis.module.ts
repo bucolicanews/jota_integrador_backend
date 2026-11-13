@@ -1,5 +1,6 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { EmpresasModule } from '../empresas/empresas.module';
+import { AtualizarLancamentoUseCase } from './aplicacao/casos-de-uso/atualizar-lancamento.usecase';
 import { CriarLancamentoUseCase } from './aplicacao/casos-de-uso/criar-lancamento.usecase';
 import { EstornarLancamentoUseCase } from './aplicacao/casos-de-uso/estornar-lancamento.usecase';
 import { ListarLancamentosUseCase } from './aplicacao/casos-de-uso/listar-lancamentos.usecase';
@@ -10,7 +11,7 @@ import { LancamentosController } from './apresentacao/lancamentos.controller';
 import { LancamentosRepositorioSupabase } from './infraestrutura/lancamentos.repositorio.supabase';
 
 @Module({
-  imports: [EmpresasModule],
+  imports: [forwardRef(() => EmpresasModule)],
   controllers: [LancamentosController],
   providers: [
     { provide: LANCAMENTOS_REPOSITORIO, useClass: LancamentosRepositorioSupabase },
@@ -18,6 +19,7 @@ import { LancamentosRepositorioSupabase } from './infraestrutura/lancamentos.rep
     ListarLancamentosUseCase,
     ObterLancamentoUseCase,
     EstornarLancamentoUseCase,
+    AtualizarLancamentoUseCase,
     ObterSaldoContaUseCase,
   ],
   exports: [LANCAMENTOS_REPOSITORIO],

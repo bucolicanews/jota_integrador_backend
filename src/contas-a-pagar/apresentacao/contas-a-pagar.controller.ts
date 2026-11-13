@@ -14,6 +14,7 @@ import { ListarContasPagarUseCase } from '../aplicacao/casos-de-uso/listar-conta
 import { ListarPagamentosParcelaUseCase } from '../aplicacao/casos-de-uso/listar-pagamentos-parcela.usecase';
 import { ObterContaPagarUseCase } from '../aplicacao/casos-de-uso/obter-conta-pagar.usecase';
 import { RegistrarPagamentoUseCase } from '../aplicacao/casos-de-uso/registrar-pagamento.usecase';
+import { RelancarLancamentoContaPagarUseCase } from '../aplicacao/casos-de-uso/relancar-lancamento-conta-pagar.usecase';
 import { ContaPagar, PagamentoContaPagar } from '../aplicacao/portas/contas-pagar-repositorio.port';
 import { CriarContaPagarDto } from './dto/criar-conta-pagar.dto';
 import { EstornarPagamentoDto } from './dto/estornar-pagamento.dto';
@@ -31,6 +32,7 @@ export class ContasAPagarController {
     private readonly registrarPagamento: RegistrarPagamentoUseCase,
     private readonly estornarPagamento: EstornarPagamentoUseCase,
     private readonly listarPagamentosParcela: ListarPagamentosParcelaUseCase,
+    private readonly relancarLancamento: RelancarLancamentoContaPagarUseCase,
   ) {}
 
   @Get()
@@ -96,6 +98,19 @@ export class ContasAPagarController {
     this.exigirPosseDeContador(usuarioAtual, empresa);
     await this.cancelarContaPagar.executar(id, empresaId, usuarioAtual.id);
     return { ok: true };
+  }
+
+  @Post(':id/relancar')
+  @ExigirPermissao('contas_a_pagar:editar')
+  async relancar(
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ lancamentoId: string }> {
+    const empresa = await this.buscarEmpresaOuFalhar(empresaId);
+    this.exigirPosseDeContador(usuarioAtual, empresa);
+    const lancamentoId = await this.relancarLancamento.executar(id, empresaId, usuarioAtual.id);
+    return { lancamentoId };
   }
 
   @Post('parcelas/:parcelaId/pagamentos')

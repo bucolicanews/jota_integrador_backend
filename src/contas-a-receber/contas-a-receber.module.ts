@@ -10,6 +10,7 @@ import { ListarContasReceberUseCase } from './aplicacao/casos-de-uso/listar-cont
 import { ListarRecebimentosParcelaUseCase } from './aplicacao/casos-de-uso/listar-recebimentos-parcela.usecase';
 import { ObterContaReceberUseCase } from './aplicacao/casos-de-uso/obter-conta-receber.usecase';
 import { RegistrarRecebimentoUseCase } from './aplicacao/casos-de-uso/registrar-recebimento.usecase';
+import { RelancarLancamentoContaReceberUseCase } from './aplicacao/casos-de-uso/relancar-lancamento-conta-receber.usecase';
 import { CONTAS_RECEBER_REPOSITORIO } from './aplicacao/portas/contas-receber-repositorio.port';
 import { ContasAReceberController } from './apresentacao/contas-a-receber.controller';
 import { ContasReceberRepositorioSupabase } from './infraestrutura/contas-receber.repositorio.supabase';
@@ -26,11 +27,12 @@ import { ContasReceberRepositorioSupabase } from './infraestrutura/contas-recebe
     RegistrarRecebimentoUseCase,
     EstornarRecebimentoUseCase,
     ListarRecebimentosParcelaUseCase,
+    RelancarLancamentoContaReceberUseCase,
   ],
   // CriarContaReceberUseCase/CancelarContaReceberUseCase exportados pro módulo de
   // Contratos (Fase 6) reaproveitar 100% a lógica de partida dobrada + parcelamento em
   // vez de duplicar -- contrato com valor financeiro cria uma conta a receber real;
   // aditivo que muda valor/parcelamento cancela a antiga e cria uma nova.
-  exports: [CONTAS_RECEBER_REPOSITORIO, RegistrarRecebimentoUseCase, CriarContaReceberUseCase, CancelarContaReceberUseCase],
+  exports: [CONTAS_RECEBER_REPOSITORIO, RegistrarRecebimentoUseCase, CriarContaReceberUseCase, CancelarContaReceberUseCase, RelancarLancamentoContaReceberUseCase],
 })
 export class ContasAReceberModule {}

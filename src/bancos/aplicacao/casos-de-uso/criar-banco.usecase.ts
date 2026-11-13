@@ -16,7 +16,7 @@ export class CriarBancoUseCase {
   ) {}
 
   async executar(dados: DadosCriarBanco): Promise<Banco> {
-    await this.validarConta(dados.empresaId, dados.contaContabilId);
+    await this.validarConta(dados.empresaId, dados.contaContabilId, dados.tipo);
     await this.validarUnicidade(dados.empresaId, dados.contaContabilId);
 
     const banco = await this.repositorio.criar(dados);
@@ -32,7 +32,7 @@ export class CriarBancoUseCase {
     return banco;
   }
 
-  private async validarConta(empresaId: string, contaContabilId: string): Promise<void> {
+  private async validarConta(empresaId: string, contaContabilId: string, tipo: string): Promise<void> {
     const conta = await this.planoContas.buscarPorId(contaContabilId);
     if (!conta || conta.empresaId !== empresaId) {
       throw new NotFoundException('Conta contábil não encontrada');
@@ -42,6 +42,11 @@ export class CriarBancoUseCase {
     }
     if (!conta.contaCaixaBanco) {
       throw new BadRequestException('A conta selecionada não está marcada como "Caixa/Banco" no Plano de Contas');
+    }
+    // Mesma checagem que o frontend já aplica no select (nunca confiar só na UI) --
+    // conta_caixa_banco=true sozinho não garante que é do subtipo certo.
+    if (conta.tipoCaixaBanco !== tipo) {
+      throw new BadRequestException(`A conta selecionada está marcada como "${conta.tipoCaixaBanco ?? 'sem subtipo definido'}" no Plano de Contas, não "${tipo}"`);
     }
   }
 

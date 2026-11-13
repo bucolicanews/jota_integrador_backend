@@ -1,8 +1,11 @@
+export type TipoBanco = 'banco' | 'caixa' | 'outra';
+
 export interface Banco {
   id: string;
   empresaId: string;
   nome: string;
   contaContabilId: string;
+  tipo: TipoBanco;
   ativo: boolean;
 }
 
@@ -10,13 +13,14 @@ export interface DadosBanco {
   empresaId: string;
   nome: string;
   contaContabilId: string;
+  tipo: TipoBanco;
 }
 
 export interface BancosRepositorioPort {
   criar(dados: DadosBanco): Promise<Banco>;
-  listarPorEmpresa(empresaId: string, apenasAtivos?: boolean): Promise<Banco[]>;
+  listarPorEmpresa(empresaId: string, apenasAtivos?: boolean, tipo?: TipoBanco): Promise<Banco[]>;
   obterPorId(id: string): Promise<Banco | null>;
-  atualizar(id: string, dados: Partial<Pick<DadosBanco, 'nome' | 'contaContabilId'>>): Promise<void>;
+  atualizar(id: string, dados: Partial<Pick<DadosBanco, 'nome' | 'contaContabilId' | 'tipo'>>): Promise<void>;
   marcarAtivo(id: string, ativo: boolean): Promise<void>;
 }
 

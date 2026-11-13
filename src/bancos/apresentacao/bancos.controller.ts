@@ -13,7 +13,7 @@ import { AlternarAtivoBancoUseCase } from '../aplicacao/casos-de-uso/alternar-at
 import { AtualizarBancoUseCase } from '../aplicacao/casos-de-uso/atualizar-banco.usecase';
 import { CriarBancoUseCase } from '../aplicacao/casos-de-uso/criar-banco.usecase';
 import { BancoComSaldo, ListarBancosUseCase } from '../aplicacao/casos-de-uso/listar-bancos.usecase';
-import { Banco } from '../aplicacao/portas/bancos-repositorio.port';
+import { Banco, TipoBanco } from '../aplicacao/portas/bancos-repositorio.port';
 import { AtualizarBancoDto } from './dto/atualizar-banco.dto';
 import { CriarBancoDto } from './dto/criar-banco.dto';
 
@@ -34,11 +34,12 @@ export class BancosController {
   async listar(
     @Param('empresaId', ParseUUIDPipe) empresaId: string,
     @Query('apenasAtivos') apenasAtivos: string | undefined,
+    @Query('tipo') tipo: TipoBanco | undefined,
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
   ): Promise<BancoComSaldo[]> {
     const empresa = await this.buscarEmpresaOuFalhar(empresaId);
     this.exigirPosse(usuarioAtual, empresa);
-    return this.listarBancos.executar(empresaId, apenasAtivos === 'true');
+    return this.listarBancos.executar(empresaId, apenasAtivos === 'true', tipo);
   }
 
   @Post()
@@ -50,7 +51,7 @@ export class BancosController {
   ): Promise<Banco> {
     const empresa = await this.buscarEmpresaOuFalhar(empresaId);
     this.exigirPosse(usuarioAtual, empresa);
-    return this.criarBanco.executar({ empresaId, nome: dto.nome, contaContabilId: dto.contaContabilId, usuarioId: usuarioAtual.id });
+    return this.criarBanco.executar({ empresaId, nome: dto.nome, contaContabilId: dto.contaContabilId, tipo: dto.tipo, usuarioId: usuarioAtual.id });
   }
 
   @Patch(':id')
