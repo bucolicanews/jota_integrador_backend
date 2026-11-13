@@ -3,15 +3,19 @@ import { AssinaturasModule } from '../assinaturas/assinaturas.module';
 import { CreditosModule } from '../creditos/creditos.module';
 import { EmpresasModule } from '../empresas/empresas.module';
 import { ConsultarCcmeiUseCase } from './aplicacao/casos-de-uso/consultar-ccmei.usecase';
+import { ObterUrlCcmeiUseCase } from './aplicacao/casos-de-uso/obter-url-ccmei.usecase';
 import { TestarConexaoSerproUseCase } from './aplicacao/casos-de-uso/testar-conexao-serpro.usecase';
+import { CCMEI_REPOSITORIO } from './aplicacao/portas/ccmei-repositorio.port';
 import { CONSULTAS_SERPRO_REPOSITORIO } from './aplicacao/portas/consultas-serpro-repositorio.port';
 import { SERPRO_GATEWAY } from './aplicacao/portas/serpro-gateway.port';
 import { VERIFICAR_ACESSO_SERPRO } from './aplicacao/portas/verificar-acesso-serpro.port';
 import { SerproController } from './apresentacao/serpro.controller';
 import { TestarConexaoSerproController } from './apresentacao/testar-conexao-serpro.controller';
+import { CcmeiRepositorioSupabase } from './infraestrutura/ccmei.repositorio.supabase';
 import { ConsultasSerproRepositorioSupabase } from './infraestrutura/consultas-serpro.repositorio.supabase';
 import { SerproAuthService } from './infraestrutura/serpro-auth.service';
 import { SerproGatewayHttp } from './infraestrutura/serpro-gateway.http';
+import { StorageCcmeiService } from './infraestrutura/storage-ccmei.service';
 import { VerificarAcessoSerproSupabase } from './infraestrutura/verificar-acesso-serpro.supabase';
 
 @Module({
@@ -26,7 +30,10 @@ import { VerificarAcessoSerproSupabase } from './infraestrutura/verificar-acesso
     { provide: SERPRO_GATEWAY, useClass: SerproGatewayHttp },
     { provide: VERIFICAR_ACESSO_SERPRO, useClass: VerificarAcessoSerproSupabase },
     { provide: CONSULTAS_SERPRO_REPOSITORIO, useClass: ConsultasSerproRepositorioSupabase },
+    { provide: CCMEI_REPOSITORIO, useClass: CcmeiRepositorioSupabase },
+    StorageCcmeiService,
     ConsultarCcmeiUseCase,
+    ObterUrlCcmeiUseCase,
     TestarConexaoSerproUseCase,
   ],
   // Exportados pra caixa_postal/ reusar a mesma checagem de acesso + gateway + log de

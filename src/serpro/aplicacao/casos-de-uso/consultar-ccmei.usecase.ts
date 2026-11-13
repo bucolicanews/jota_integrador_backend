@@ -1,4 +1,10 @@
-import { ForbiddenException, Inject, Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { custoDaOperacao } from '../../../creditos/dominio/credito';
 import { DebitarCreditosUseCase } from '../../../creditos/aplicacao/casos-de-uso/debitar-creditos.usecase';
 import { EstornarCreditosUseCase } from '../../../creditos/aplicacao/casos-de-uso/estornar-creditos.usecase';
@@ -36,6 +42,12 @@ export class ConsultarCcmeiUseCase {
     const empresa = await this.empresasRepositorio.buscarPorId(empresaId);
     if (!empresa) {
       throw new ForbiddenException('Empresa não encontrada');
+    }
+
+    // CCMEI é certificado exclusivo de MEI -- diferente do DAS/PGMEI, que também
+    // vale pra Simples Nacional ME/EPP.
+    if (empresa.regimeTributario !== 'mei') {
+      throw new BadRequestException('CCMEI só se aplica a empresas MEI');
     }
 
     // Nunca chamar o SERPRO sem checar procuração/certificado antes -- defesa em

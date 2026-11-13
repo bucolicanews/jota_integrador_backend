@@ -6,6 +6,7 @@ import {
   NotFoundException,
   Param,
   ParseUUIDPipe,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { PapeisGuard } from '../../auth/apresentacao/guards/papeis.guard';
@@ -21,6 +22,7 @@ import {
   EmpresasRepositorioPort,
 } from '../../empresas/aplicacao/portas/empresas-repositorio.port';
 import { ConsultarCcmeiUseCase } from '../aplicacao/casos-de-uso/consultar-ccmei.usecase';
+import { ObterUrlCcmeiUseCase } from '../aplicacao/casos-de-uso/obter-url-ccmei.usecase';
 
 @Controller('empresas/:empresaId/serpro')
 @UseGuards(SupabaseAuthGuard, PapeisGuard, ModulosGuard)
@@ -33,6 +35,7 @@ export class SerproController {
     // módulos, só interfaces/tokens).
     @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,
     private readonly consultarCcmei: ConsultarCcmeiUseCase,
+    private readonly obterUrlCcmei: ObterUrlCcmeiUseCase,
   ) {}
 
   @Get('ccmei')
@@ -47,6 +50,25 @@ export class SerproController {
     this.exigirPosse(usuarioAtual, empresa);
 
     return this.consultarCcmei.executar(empresaId);
+  }
+
+  /**
+   * Baixar o PDF do CCMEI -- cacheado desde a 1ª consulta, nunca gasta crédito de novo
+   * a menos que `?atualizar=true` (botão "Atualizar" explícito no fiscal).
+   */
+  @Get('ccmei/url')
+  async urlCcmei(
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @Query('atualizar') atualizar: string | undefined,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ url: string; expiraEmSegundos: number }> {
+    const empresa = await this.empresasRepositorio.buscarPorId(empresaId);
+    if (!empresa) {
+      throw new NotFoundException('Empresa não encontrada');
+    }
+    this.exigirPosse(usuarioAtual, empresa);
+
+    return this.obterUrlCcmei.executar(empresaId, atualizar === 'true');
   }
 
   /** Mesmo padrão de posse de EmpresasController -- contador dono ou usuário da própria empresa. */
