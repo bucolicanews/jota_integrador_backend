@@ -12,9 +12,11 @@ interface Linha {
   id_sistema: string;
   quantidade_por_periodo: number;
   periodo: PeriodoConsultaIncluida;
+  dia_do_mes: number | null;
+  mes_do_periodo: number | null;
 }
 
-const COLUNAS = 'id, plano_id, id_sistema, quantidade_por_periodo, periodo';
+const COLUNAS = 'id, plano_id, id_sistema, quantidade_por_periodo, periodo, dia_do_mes, mes_do_periodo';
 
 @Injectable()
 export class PlanoConsultasIncluidasRepositorioSupabase implements PlanoConsultasIncluidasRepositorioPort {
@@ -46,11 +48,20 @@ export class PlanoConsultasIncluidasRepositorioSupabase implements PlanoConsulta
     idSistema: string,
     quantidadePorPeriodo: number,
     periodo: PeriodoConsultaIncluida,
+    diaDoMes: number | null,
+    mesDoPeriodo: number | null,
   ): Promise<ConsultaIncluidaPlano> {
     const { data, error } = await this.supabase.admin
       .from('plano_consultas_incluidas')
       .upsert(
-        { plano_id: planoId, id_sistema: idSistema, quantidade_por_periodo: quantidadePorPeriodo, periodo },
+        {
+          plano_id: planoId,
+          id_sistema: idSistema,
+          quantidade_por_periodo: quantidadePorPeriodo,
+          periodo,
+          dia_do_mes: diaDoMes,
+          mes_do_periodo: mesDoPeriodo,
+        },
         { onConflict: 'plano_id,id_sistema' },
       )
       .select(COLUNAS)
@@ -75,6 +86,8 @@ export class PlanoConsultasIncluidasRepositorioSupabase implements PlanoConsulta
       idSistema: linha.id_sistema,
       quantidadePorPeriodo: linha.quantidade_por_periodo,
       periodo: linha.periodo,
+      diaDoMes: linha.dia_do_mes,
+      mesDoPeriodo: linha.mes_do_periodo,
     };
   }
 }

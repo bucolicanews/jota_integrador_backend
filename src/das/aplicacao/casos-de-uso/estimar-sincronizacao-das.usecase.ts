@@ -14,7 +14,7 @@ import {
 import { competenciasNoIntervalo, janelaPadraoCompetencias } from '../../dominio/das';
 import { DAS_REPOSITORIO, DasRepositorioPort } from '../portas/das-repositorio.port';
 import { FiltroCompetenciaSincronizacao, MESES_JANELA_SINCRONIZACAO } from './sincronizar-das-empresa.usecase';
-import { inicioDoPeriodo } from './verificar-cota-incluida.usecase';
+import { hojeEhDiaDaCota, inicioDoPeriodo } from './verificar-cota-incluida.usecase';
 
 const ID_SISTEMA_PGMEI = 'PGMEI';
 const ID_SISTEMA_PGDASD = 'PGDASD';
@@ -137,7 +137,7 @@ export class EstimarSincronizacaoDasUseCase {
   ): Promise<ItemEstimativa> {
     const cota = planoId ? await this.consultasIncluidasRepositorio.buscar(planoId, idSistema) : null;
     let cotaRestante = 0;
-    if (cota) {
+    if (cota && hojeEhDiaDaCota(cota)) {
       const usoNoPeriodo = await this.consultasSerproRepositorio.contarSucessoNoPeriodo(empresaId, idSistema, inicioDoPeriodo(cota.periodo));
       cotaRestante = Math.max(0, cota.quantidadePorPeriodo - usoNoPeriodo);
     }
