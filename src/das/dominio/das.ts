@@ -33,6 +33,12 @@ export interface DasItem {
   contaPagarProvisaoId: string | null;
   /** Lançamento de baixa (quitação) já gerado. NULL + status=pago = pendência aguardando o contador escolher caixa/banco. */
   lancamentoBaixaId: string | null;
+  /** Só Simples Nacional (indiceDeclaracao.numeroDeclaracao, CONSDECLARACAO13) -- sempre null em MEI. */
+  numeroDeclaracao: string | null;
+  /** Recibo de entrega da declaração (CONSDECREC15), cacheado no sync -- só Simples Nacional, sempre null em MEI. */
+  reciboStorageRef: string | null;
+  /** PDF da Declaração (Programa Gerador do DAS -- Declaratório), mesma chamada CONSDECREC15 do recibo -- só Simples Nacional, sempre null em MEI. */
+  declaracaoStorageRef: string | null;
 }
 
 /** `hoje` injetado (nunca `new Date()` direto dentro da função) -- deixa a regra testável sem mockar relógio. */

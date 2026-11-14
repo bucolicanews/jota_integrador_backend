@@ -36,6 +36,12 @@ export interface DadosUpsertDasSimplesNacional {
   pdfStorageRef: string | null;
   /** CONSDECLARACAO13 já informa isso direto (indiceDas.dasPago) -- sem precisar de PAGTOWEB pra Simples Nacional. */
   dasPago: boolean;
+  /** indiceDeclaracao.numeroDeclaracao -- null quando CONSDECLARACAO13 não devolveu (ver extrairDeclaracoes). Sem ele não dá pra buscar o recibo depois. */
+  numeroDeclaracao: string | null;
+  /** PDF do recibo de entrega (CONSDECREC15), já buscado no mesmo sync do Extrato -- null se a chamada falhou ou numeroDeclaracao não veio. */
+  reciboStorageRef: string | null;
+  /** PDF da Declaração (mesma chamada CONSDECREC15 do recibo) -- null nas mesmas condições. */
+  declaracaoStorageRef: string | null;
 }
 
 /**

@@ -35,6 +35,9 @@ interface LinhaDeclaracaoPgdas {
   pago_em: string | null;
   conta_pagar_provisao_id: string | null;
   lancamento_baixa_id: string | null;
+  numero_declaracao: string | null;
+  recibo_storage_ref: string | null;
+  declaracao_storage_ref: string | null;
 }
 
 interface LinhaConfiguracaoLancamentos {
@@ -46,7 +49,7 @@ interface LinhaConfiguracaoLancamentos {
 const COLUNAS_DAS_MEI =
   'id, empresa_id, competencia, numero_documento, valor, vencimento, status, pdf_storage_ref, pago_em, conta_pagar_provisao_id, lancamento_baixa_id';
 const COLUNAS_DECLARACOES_PGDAS =
-  'id, empresa_id, competencia, numero_das, valor_das, vencimento, status, pdf_storage_ref, pago_em, conta_pagar_provisao_id, lancamento_baixa_id';
+  'id, empresa_id, competencia, numero_das, valor_das, vencimento, status, pdf_storage_ref, pago_em, conta_pagar_provisao_id, lancamento_baixa_id, numero_declaracao, recibo_storage_ref, declaracao_storage_ref';
 
 /**
  * Implementa o port abstraindo as duas tabelas físicas (`das_mei`/`declaracoes_pgdas`)
@@ -136,6 +139,9 @@ export class DasRepositorioSupabase implements DasRepositorioPort {
       vencimento: dados.vencimento,
       numero_das: dados.numeroDas,
       pdf_storage_ref: dados.pdfStorageRef,
+      numero_declaracao: dados.numeroDeclaracao,
+      recibo_storage_ref: dados.reciboStorageRef,
+      declaracao_storage_ref: dados.declaracaoStorageRef,
     });
 
     if (erroInsert && erroInsert.code !== '23505') {
@@ -195,6 +201,9 @@ export class DasRepositorioSupabase implements DasRepositorioPort {
       pagoEm: linha.pago_em,
       contaPagarProvisaoId: linha.conta_pagar_provisao_id,
       lancamentoBaixaId: linha.lancamento_baixa_id,
+      numeroDeclaracao: null,
+      reciboStorageRef: null,
+      declaracaoStorageRef: null,
     };
   }
 
@@ -212,6 +221,9 @@ export class DasRepositorioSupabase implements DasRepositorioPort {
       pagoEm: linha.pago_em,
       contaPagarProvisaoId: linha.conta_pagar_provisao_id,
       lancamentoBaixaId: linha.lancamento_baixa_id,
+      numeroDeclaracao: linha.numero_declaracao,
+      reciboStorageRef: linha.recibo_storage_ref,
+      declaracaoStorageRef: linha.declaracao_storage_ref,
     };
   }
 

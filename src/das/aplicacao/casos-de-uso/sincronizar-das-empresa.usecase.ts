@@ -36,6 +36,7 @@ const ID_SERVICO_GERAR_DAS_PDF_MEI = 'GERARDASPDF21';
 const ID_SISTEMA_PGDASD = 'PGDASD';
 const ID_SERVICO_CONSULTAR_DECLARACOES = 'CONSDECLARACAO13';
 const ID_SERVICO_CONSULTAR_EXTRATO = 'CONSEXTRATO16';
+const ID_SERVICO_CONSULTAR_RECIBO = 'CONSDECREC15';
 
 const ID_SISTEMA_PAGTOWEB = 'PAGTOWEB';
 const ID_SERVICO_CONSULTAR_PAGAMENTOS = 'PAGAMENTOS71';
@@ -84,6 +85,14 @@ export interface FiltroCompetenciaSincronizacao {
  *   parser é a melhor inferência a partir da doc, mas o shape de sucesso nunca foi
  *   observado de verdade. Antes de confiar em produção, repetir o teste real (ver
  *   docs/SEGURANCA.md §3) e ajustar.
+ * - `CONSDECREC15`/`extrairDeclaracaoERecibo` (Declaração + Recibo de entrega da
+ *   apuração PGDAS-D): CONFIRMADO contra produção real em 2026-11-13 -- resposta é
+ *   `{numeroDeclaracao, recibo:{nomeArquivo,pdf}, declaracao:{nomeArquivo,pdf}, maed?}`,
+ *   exatamente a inferência original. Só é chamado quando
+ *   `indiceDeclaracao.numeroDeclaracao` veio em CONSDECLARACAO13 -- competências
+ *   sincronizadas ANTES dessa confirmação (sem numeroDeclaracao capturado) nunca
+ *   recebem Declaração/Recibo retroativamente (upsert nunca reprocessa competência já
+ *   existente).
  */
 @Injectable()
 export class SincronizarDasEmpresaUseCase {
@@ -254,6 +263,31 @@ export class SincronizarDasEmpresaUseCase {
         ? await this.storage.armazenar(empresa.id, declaracao.competencia, extrato.pdfBase64)
         : null;
 
+      // Declaração (Programa Gerador do DAS -- Declaratório) e Recibo (Recibo de
+      // Entrega da Apuração no PGDAS-D) vêm da MESMA chamada CONSDECREC15 -- só dá pra
+      // buscar com numeroDeclaracao (nunca visto preenchido no trial -- ver comentário
+      // de classe). Melhor esforço, nunca derruba o sync da competência por causa dele.
+      let declaracaoStorageRef: string | null = null;
+      let reciboStorageRef: string | null = null;
+      if (declaracao.numeroDeclaracao) {
+        const respostaDeclaracaoRecibo = await this.chamarServico(empresa, planoId, {
+          idSistema: ID_SISTEMA_PGDASD,
+          idServico: ID_SERVICO_CONSULTAR_RECIBO,
+          dados: JSON.stringify({ numeroDeclaracao: declaracao.numeroDeclaracao }),
+          custoOperacao: CUSTO_SIMPLES_NACIONAL,
+          motivo: `Sincronizar DAS Simples Nacional -- declaração/recibo ${declaracao.numeroDeclaracao}`,
+        });
+        if (respostaDeclaracaoRecibo.sucesso) {
+          const { declaracaoPdfBase64, reciboPdfBase64 } = this.extrairDeclaracaoERecibo(respostaDeclaracaoRecibo.corpo);
+          declaracaoStorageRef = declaracaoPdfBase64
+            ? await this.storage.armazenar(empresa.id, declaracao.competencia, declaracaoPdfBase64)
+            : null;
+          reciboStorageRef = reciboPdfBase64
+            ? await this.storage.armazenar(empresa.id, declaracao.competencia, reciboPdfBase64)
+            : null;
+        }
+      }
+
       await this.dasRepositorio.upsertSimplesNacional({
         empresaId: empresa.id,
         competencia: declaracao.competencia,
@@ -263,6 +297,9 @@ export class SincronizarDasEmpresaUseCase {
         valorDas: extrato.valorDas,
         vencimento: extrato.vencimento ?? vencimentoPadrao(declaracao.competencia),
         pdfStorageRef,
+        numeroDeclaracao: declaracao.numeroDeclaracao,
+        declaracaoStorageRef,
+        reciboStorageRef,
         // CONSDECLARACAO13 já informa isso direto (indiceDas.dasPago) -- confirmado
         // contra o trial, sem precisar de PAGTOWEB pra Simples Nacional.
         dasPago: declaracao.dasPago,
@@ -427,25 +464,36 @@ export class SincronizarDasEmpresaUseCase {
    * lugar nenhum. Cada período pode ter mais de uma operação "Geração de DAS"
    * (retificação gera um DAS novo) -- pega a última da lista (mais recente).
    */
-  private extrairDeclaracoes(corpo: unknown): Array<{ competencia: string; numeroDas: string; dasPago: boolean }> {
+  private extrairDeclaracoes(
+    corpo: unknown,
+  ): Array<{ competencia: string; numeroDas: string; dasPago: boolean; numeroDeclaracao: string | null }> {
     try {
       const corpoObj = corpo as { dados?: string };
       if (!corpoObj?.dados) return [];
       const parsed = JSON.parse(corpoObj.dados) as {
         periodos?: Array<{
           periodoApuracao: number;
-          operacoes: Array<{ tipoOperacao: string; indiceDas: { numeroDas: string; dasPago: boolean } | null }>;
+          operacoes: Array<{
+            tipoOperacao: string;
+            indiceDeclaracao: { numeroDeclaracao: string } | null;
+            indiceDas: { numeroDas: string; dasPago: boolean } | null;
+          }>;
         }>;
       };
-      const resultado: Array<{ competencia: string; numeroDas: string; dasPago: boolean }> = [];
+      const resultado: Array<{ competencia: string; numeroDas: string; dasPago: boolean; numeroDeclaracao: string | null }> = [];
       for (const periodo of parsed.periodos ?? []) {
         const geracoesDas = periodo.operacoes.filter((op) => op.indiceDas !== null);
         const maisRecente = geracoesDas[geracoesDas.length - 1];
         if (!maisRecente?.indiceDas) continue;
+
+        const transmissoes = periodo.operacoes.filter((op) => op.indiceDeclaracao !== null);
+        const transmissaoMaisRecente = transmissoes[transmissoes.length - 1];
+
         resultado.push({
           competencia: this.aaaammParaCompetencia(String(periodo.periodoApuracao)),
           numeroDas: maisRecente.indiceDas.numeroDas,
           dasPago: maisRecente.indiceDas.dasPago,
+          numeroDeclaracao: transmissaoMaisRecente?.indiceDeclaracao?.numeroDeclaracao ?? null,
         });
       }
       return resultado;
@@ -472,6 +520,29 @@ export class SincronizarDasEmpresaUseCase {
       return { pdfBase64, vencimento, valorDas };
     } catch {
       return null;
+    }
+  }
+
+  /**
+   * CONFIRMADO contra produção real em 2026-11-13 (log temporário de chaves, nunca de
+   * conteúdo -- ver docs/SEGURANCA.md §3): resposta é `{numeroDeclaracao,
+   * recibo:{nomeArquivo,pdf}, declaracao:{nomeArquivo,pdf}, maed?}`. Mesmo assim mantém
+   * `?? null` em cada campo -- melhor esforço, nunca derruba o sync se um dos dois vier
+   * ausente numa chamada específica (caso real já visto: recibo veio, declaração não,
+   * pra uma mesma competência -- causa ainda não identificada, pode ser particularidade
+   * daquela declaração específica no SERPRO).
+   */
+  private extrairDeclaracaoERecibo(corpo: unknown): { declaracaoPdfBase64: string | null; reciboPdfBase64: string | null } {
+    try {
+      const corpoObj = corpo as { dados?: string };
+      if (!corpoObj?.dados) return { declaracaoPdfBase64: null, reciboPdfBase64: null };
+      const parsed = JSON.parse(corpoObj.dados) as { declaracao?: { pdf?: string }; recibo?: { pdf?: string } };
+      return {
+        declaracaoPdfBase64: parsed.declaracao?.pdf ?? null,
+        reciboPdfBase64: parsed.recibo?.pdf ?? null,
+      };
+    } catch {
+      return { declaracaoPdfBase64: null, reciboPdfBase64: null };
     }
   }
 

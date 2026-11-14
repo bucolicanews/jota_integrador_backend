@@ -10,6 +10,8 @@ import { SerproModule } from '../serpro/serpro.module';
 import { GerarSegundaViaDasUseCase } from './aplicacao/casos-de-uso/gerar-segunda-via-das.usecase';
 import { ListarDasUseCase } from './aplicacao/casos-de-uso/listar-das.usecase';
 import { ObterUrlPdfDasUseCase } from './aplicacao/casos-de-uso/obter-url-pdf-das.usecase';
+import { ObterUrlReciboDasUseCase } from './aplicacao/casos-de-uso/obter-url-recibo-das.usecase';
+import { ObterUrlDeclaracaoDasUseCase } from './aplicacao/casos-de-uso/obter-url-declaracao-das.usecase';
 import { EstimarSincronizacaoDasUseCase } from './aplicacao/casos-de-uso/estimar-sincronizacao-das.usecase';
 import { SincronizarDasEmpresaUseCase } from './aplicacao/casos-de-uso/sincronizar-das-empresa.usecase';
 import { SincronizarDasTodasEmpresasUseCase } from './aplicacao/casos-de-uso/sincronizar-das-todas-empresas.usecase';
@@ -55,6 +57,8 @@ import { StorageDasService } from './infraestrutura/storage-das.service';
     VerificarCotaIncluidaUseCase,
     ListarDasUseCase,
     ObterUrlPdfDasUseCase,
+    ObterUrlReciboDasUseCase,
+    ObterUrlDeclaracaoDasUseCase,
     GerarSegundaViaDasUseCase,
     BuscarConfiguracaoLancamentosDasUseCase,
     SalvarConfiguracaoLancamentosDasUseCase,

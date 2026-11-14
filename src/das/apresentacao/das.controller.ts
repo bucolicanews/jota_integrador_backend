@@ -12,6 +12,8 @@ import { ConfiguracaoLancamentosDas } from '../aplicacao/portas/das-repositorio.
 import { DasListado, ListarDasUseCase } from '../aplicacao/casos-de-uso/listar-das.usecase';
 import { GerarSegundaViaDasUseCase } from '../aplicacao/casos-de-uso/gerar-segunda-via-das.usecase';
 import { ObterUrlPdfDasUseCase } from '../aplicacao/casos-de-uso/obter-url-pdf-das.usecase';
+import { ObterUrlReciboDasUseCase } from '../aplicacao/casos-de-uso/obter-url-recibo-das.usecase';
+import { ObterUrlDeclaracaoDasUseCase } from '../aplicacao/casos-de-uso/obter-url-declaracao-das.usecase';
 import { EstimarSincronizacaoDasUseCase, ResultadoEstimativa } from '../aplicacao/casos-de-uso/estimar-sincronizacao-das.usecase';
 import { SincronizarDasEmpresaUseCase } from '../aplicacao/casos-de-uso/sincronizar-das-empresa.usecase';
 import { BuscarConfiguracaoLancamentosDasUseCase } from '../aplicacao/casos-de-uso/buscar-configuracao-lancamentos-das.usecase';
@@ -32,6 +34,8 @@ export class DasController {
     @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,
     private readonly listarDas: ListarDasUseCase,
     private readonly obterUrlPdf: ObterUrlPdfDasUseCase,
+    private readonly obterUrlRecibo: ObterUrlReciboDasUseCase,
+    private readonly obterUrlDeclaracao: ObterUrlDeclaracaoDasUseCase,
     private readonly sincronizarDasEmpresa: SincronizarDasEmpresaUseCase,
     private readonly estimarSincronizacao: EstimarSincronizacaoDasUseCase,
     private readonly gerarSegundaVia: GerarSegundaViaDasUseCase,
@@ -59,6 +63,28 @@ export class DasController {
   ): Promise<{ url: string; expiraEmSegundos: number }> {
     await this.exigirPosse(empresaId, usuarioAtual);
     return this.obterUrlPdf.executar(empresaId, dasId);
+  }
+
+  /** Recibo de entrega da declaração (CONSDECREC15), cacheado no sync -- só Simples Nacional. */
+  @Get(':dasId/recibo-url')
+  async urlRecibo(
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @Param('dasId', ParseUUIDPipe) dasId: string,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ url: string; expiraEmSegundos: number }> {
+    await this.exigirPosse(empresaId, usuarioAtual);
+    return this.obterUrlRecibo.executar(empresaId, dasId);
+  }
+
+  /** Declaração (Programa Gerador do DAS -- Declaratório), mesma chamada CONSDECREC15 do recibo -- só Simples Nacional. */
+  @Get(':dasId/declaracao-url')
+  async urlDeclaracao(
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @Param('dasId', ParseUUIDPipe) dasId: string,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<{ url: string; expiraEmSegundos: number }> {
+    await this.exigirPosse(empresaId, usuarioAtual);
+    return this.obterUrlDeclaracao.executar(empresaId, dasId);
   }
 
   /**
