@@ -1,6 +1,6 @@
 export type StatusContaReceber = 'aberta' | 'parcial' | 'recebida' | 'cancelada';
-export type ModoParcelamento = 'unico' | 'parcelar' | 'repetir';
-export const MODOS_PARCELAMENTO: ModoParcelamento[] = ['unico', 'parcelar', 'repetir'];
+export type ModoParcelamento = 'unico' | 'parcelar' | 'repetir' | 'explicito';
+export const MODOS_PARCELAMENTO: ModoParcelamento[] = ['unico', 'parcelar', 'repetir', 'explicito'];
 
 /** status/valor recebido nunca são armazenados -- sempre derivados da soma de recebimentos não estornados (mesmo princípio de saldo_conta_contabil). */
 export function calcularStatus(valorTotal: number, valorRecebido: number, cancelada: boolean): StatusContaReceber {
@@ -10,20 +10,31 @@ export function calcularStatus(valorTotal: number, valorRecebido: number, cancel
   return 'parcial';
 }
 
-interface ParcelaGerada {
+export interface ParcelaGerada {
   numeroParcela: number;
   valorParcela: number;
   dataVencimento: string;
 }
 
-/** Mesma lógica de geração de parcelas de contas-a-pagar/dominio/conta-pagar.ts (duplicada de propósito -- regra de domínio pura sem estado, duplicar é melhor que acoplar os dois módulos por causa de uma função). */
+/**
+ * Mesma lógica de geração de parcelas de contas-a-pagar/dominio/conta-pagar.ts (duplicada
+ * de propósito -- regra de domínio pura sem estado, duplicar é melhor que acoplar os dois
+ * módulos por causa de uma função). Modo 'explicito' idem: devolve `parcelasExplicitas`
+ * direto, pra duplicatas reais de nota fiscal com datas/valores irregulares.
+ */
 export function gerarParcelas(
   modo: ModoParcelamento,
   valor: number,
   quantidadeParcelas: number,
   primeiroVencimento: string,
   intervaloDias: number,
+  parcelasExplicitas?: ParcelaGerada[],
 ): ParcelaGerada[] {
+  if (modo === 'explicito') {
+    if (!parcelasExplicitas?.length) throw new Error('Modo "explicito" precisa de ao menos 1 parcela em parcelasExplicitas');
+    return parcelasExplicitas;
+  }
+
   const quantidade = modo === 'unico' ? 1 : quantidadeParcelas;
   if (quantidade < 1) throw new Error('Quantidade de parcelas precisa ser ao menos 1');
 

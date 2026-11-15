@@ -22,8 +22,10 @@ export class CriarContaPagarUseCase {
   ) {}
 
   async executar(dados: DadosNovaContaPagar): Promise<string> {
-    await this.validarConta(dados.empresaId, dados.contaPatrimonialId, 'passivo');
-    await this.validarConta(dados.empresaId, dados.contaResultadoId, 'despesa');
+    await this.validarConta(dados.empresaId, dados.contaPatrimonialId, ['passivo']);
+    // Débito aceita despesa OU custo -- compra de mercadoria/matéria-prima gera CMV (custo),
+    // não despesa administrativa; mantém despesa pra não quebrar os usos já existentes (DAS etc).
+    await this.validarConta(dados.empresaId, dados.contaResultadoId, ['despesa', 'custo']);
 
     if (dados.fornecedorId) {
       const fornecedor = await this.fornecedores.obterPorId(dados.fornecedorId);
@@ -63,7 +65,7 @@ export class CriarContaPagarUseCase {
     return id;
   }
 
-  private async validarConta(empresaId: string, contaId: string, grupoEsperado: 'passivo' | 'despesa'): Promise<void> {
+  private async validarConta(empresaId: string, contaId: string, gruposEsperados: ('passivo' | 'despesa' | 'custo')[]): Promise<void> {
     const conta = await this.planoContas.buscarPorId(contaId);
     if (!conta || conta.empresaId !== empresaId) {
       throw new NotFoundException('Conta contábil não encontrada');
@@ -71,8 +73,8 @@ export class CriarContaPagarUseCase {
     if (conta.sintetica) {
       throw new BadRequestException('Conta sintética não recebe lançamento direto');
     }
-    if (conta.grupo !== grupoEsperado) {
-      throw new BadRequestException(`Esperava uma conta do grupo "${grupoEsperado}", recebeu "${conta.grupo}"`);
+    if (!gruposEsperados.includes(conta.grupo as 'passivo' | 'despesa' | 'custo')) {
+      throw new BadRequestException(`Esperava uma conta do grupo "${gruposEsperados.join('" ou "')}", recebeu "${conta.grupo}"`);
     }
   }
 }

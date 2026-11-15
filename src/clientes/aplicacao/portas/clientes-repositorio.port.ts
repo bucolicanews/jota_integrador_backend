@@ -36,6 +36,8 @@ export interface ClientesRepositorioPort {
   criar(dados: DadosCliente): Promise<Cliente>;
   listarPorEmpresa(empresaId: string, apenasAtivos?: boolean): Promise<Cliente[]>;
   obterPorId(id: string): Promise<Cliente | null>;
+  /** Dedupe por CPF/CNPJ dentro da empresa -- usado na ingestão automática de nota fiscal, pra não duplicar cliente já cadastrado. */
+  buscarPorDocumento(empresaId: string, documento: string): Promise<Cliente | null>;
   atualizar(id: string, dados: Partial<DadosCliente>): Promise<void>;
   marcarAtivo(id: string, ativo: boolean): Promise<void>;
 }

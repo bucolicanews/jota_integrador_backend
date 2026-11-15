@@ -1,4 +1,4 @@
-import { ModoParcelamento, StatusContaReceber } from '../../dominio/conta-receber';
+import { ModoParcelamento, ParcelaGerada, StatusContaReceber } from '../../dominio/conta-receber';
 
 export interface ParcelaContaReceber {
   id: string;
@@ -46,6 +46,8 @@ export interface DadosNovaContaReceber {
   quantidadeParcelas: number;
   primeiroVencimento: string;
   intervaloDias: number;
+  /** Só pra modo='explicito' -- parcelas literais (ex: cobr/dup de uma nota fiscal), nunca recalculadas. */
+  parcelasExplicitas?: ParcelaGerada[];
 }
 
 export interface RecebimentoContaReceber {

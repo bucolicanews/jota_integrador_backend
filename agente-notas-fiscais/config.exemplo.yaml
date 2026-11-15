@@ -1,0 +1,19 @@
+# Copie este arquivo para config.yaml e preencha -- config.yaml nunca vai pro git
+# (tem o token da empresa).
+
+# Token gerado em "Notas Fiscais > Configurar > Agente local" no painel do JOTA FISCAL.
+# Colar aqui em texto puro -- esta máquina já é de confiança (é onde o XML mora).
+token: ""
+
+# URL do backend. Produção por padrão -- só mude se for testar contra ambiente local.
+url_backend: "https://api.jotafiscal.com.br"
+
+# Pastas onde o sistema emissor de nota salva os XML -- entrada (compras, a empresa é
+# destinatária) e saída (vendas, a empresa é emitente). Aceita a mesma pasta nos dois
+# campos se o sistema emissor não separar por pasta -- a direção real é decidida pelo
+# backend comparando o CNPJ da nota, a pasta aqui é só "onde procurar", não decide nada.
+pasta_entrada: "C:\\NFe\\Entrada"
+pasta_saida: "C:\\NFe\\Saida"
+
+# A cada quantos segundos o agente varre as pastas de novo.
+intervalo_segundos: 30

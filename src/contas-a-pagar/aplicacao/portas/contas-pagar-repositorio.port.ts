@@ -1,4 +1,4 @@
-import { ModoParcelamento, StatusContaPagar } from '../../dominio/conta-pagar';
+import { ModoParcelamento, ParcelaGerada, StatusContaPagar } from '../../dominio/conta-pagar';
 
 export interface ParcelaContaPagar {
   id: string;
@@ -46,6 +46,8 @@ export interface DadosNovaContaPagar {
   quantidadeParcelas: number;
   primeiroVencimento: string;
   intervaloDias: number;
+  /** Só pra modo='explicito' -- parcelas literais (ex: cobr/dup de uma nota fiscal), nunca recalculadas. */
+  parcelasExplicitas?: ParcelaGerada[];
 }
 
 export interface PagamentoContaPagar {

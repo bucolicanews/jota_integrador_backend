@@ -64,6 +64,17 @@ export class ClientesRepositorioSupabase implements ClientesRepositorioPort {
     return data ? this.mapear(data as Linha) : null;
   }
 
+  async buscarPorDocumento(empresaId: string, documento: string): Promise<Cliente | null> {
+    const { data, error } = await this.supabase.admin
+      .from('clientes')
+      .select(COLUNAS)
+      .eq('empresa_id', empresaId)
+      .eq('documento', documento)
+      .maybeSingle();
+    if (error) throw new InternalServerErrorException(`Falha ao buscar cliente por documento: ${error.message}`);
+    return data ? this.mapear(data as Linha) : null;
+  }
+
   async atualizar(id: string, dados: Partial<DadosCliente>): Promise<void> {
     const campos: Record<string, unknown> = {};
     if (dados.nome !== undefined) campos.nome = dados.nome;

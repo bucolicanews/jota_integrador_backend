@@ -36,6 +36,8 @@ export interface FornecedoresRepositorioPort {
   criar(dados: DadosFornecedor): Promise<Fornecedor>;
   listarPorEmpresa(empresaId: string, apenasAtivos?: boolean): Promise<Fornecedor[]>;
   obterPorId(id: string): Promise<Fornecedor | null>;
+  /** Dedupe por CPF/CNPJ dentro da empresa -- usado na ingestão automática de nota fiscal, pra não duplicar fornecedor já cadastrado. */
+  buscarPorDocumento(empresaId: string, documento: string): Promise<Fornecedor | null>;
   atualizar(id: string, dados: Partial<DadosFornecedor>): Promise<void>;
   marcarAtivo(id: string, ativo: boolean): Promise<void>;
 }

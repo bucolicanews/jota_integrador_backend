@@ -18,6 +18,9 @@ import { ClientesRepositorioSupabase } from './infraestrutura/clientes.repositor
     AtualizarClienteUseCase,
     AlternarAtivoClienteUseCase,
   ],
-  exports: [CLIENTES_REPOSITORIO],
+  // CriarClienteUseCase exportado pro módulo de Notas Fiscais reaproveitar o dedupe/
+  // validação de documento em vez de duplicar (mesmo motivo de CriarFornecedorUseCase
+  // em fornecedores.module.ts).
+  exports: [CLIENTES_REPOSITORIO, CriarClienteUseCase],
 })
 export class ClientesModule {}

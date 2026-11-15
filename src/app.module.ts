@@ -48,6 +48,7 @@ import { DasModule } from './das/das.module';
 import { CreditosAvulsosModule } from './creditos-avulsos/creditos-avulsos.module';
 import { PlanosRevendaCreditosAvulsosModule } from './planos-revenda-creditos-avulsos/planos-revenda-creditos-avulsos.module';
 import { SupabaseHooksModule } from './supabase-hooks/supabase-hooks.module';
+import { NotasFiscaisModule } from './notas-fiscais/notas-fiscais.module';
 
 @Module({
   imports: [
@@ -108,6 +109,7 @@ import { SupabaseHooksModule } from './supabase-hooks/supabase-hooks.module';
     CreditosAvulsosModule,
     PlanosRevendaCreditosAvulsosModule,
     SupabaseHooksModule,
+    NotasFiscaisModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

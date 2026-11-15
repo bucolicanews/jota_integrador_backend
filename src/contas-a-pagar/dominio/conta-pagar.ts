@@ -1,6 +1,6 @@
 export type StatusContaPagar = 'aberta' | 'parcial' | 'paga' | 'cancelada';
-export type ModoParcelamento = 'unico' | 'parcelar' | 'repetir';
-export const MODOS_PARCELAMENTO: ModoParcelamento[] = ['unico', 'parcelar', 'repetir'];
+export type ModoParcelamento = 'unico' | 'parcelar' | 'repetir' | 'explicito';
+export const MODOS_PARCELAMENTO: ModoParcelamento[] = ['unico', 'parcelar', 'repetir', 'explicito'];
 
 /** status/valor pago nunca são armazenados -- sempre derivados da soma de pagamentos não estornados (mesmo princípio de saldo_conta_contabil). */
 export function calcularStatus(valorTotal: number, valorPago: number, cancelada: boolean): StatusContaPagar {
@@ -10,7 +10,7 @@ export function calcularStatus(valorTotal: number, valorPago: number, cancelada:
   return 'parcial';
 }
 
-interface ParcelaGerada {
+export interface ParcelaGerada {
   numeroParcela: number;
   valorParcela: number;
   dataVencimento: string;
@@ -18,12 +18,15 @@ interface ParcelaGerada {
 
 /**
  * Gera as parcelas conforme o modo escolhido (mesmas 3 opções do FormContasPagar.tsx
- * do jotaCaixa):
+ * do jotaCaixa, mais 'explicito'):
  * - unico: 1 parcela, valor = `valor`.
  * - repetir: `quantidadeParcelas` parcelas, cada uma no valor de `valor` (valor total =
  *   valor * quantidade).
  * - parcelar: `valor` é o TOTAL, dividido em `quantidadeParcelas` -- resto de
  *   arredondamento (centavos) vai inteiro pra última parcela, nunca se perde.
+ * - explicito: devolve `parcelasExplicitas` direto, sem recalcular -- pra duplicatas reais
+ *   de nota fiscal (cobr/dup), cujas datas/valores podem ser irregulares (não um intervalo
+ *   fixo em dias como os outros 3 modos assumem).
  */
 export function gerarParcelas(
   modo: ModoParcelamento,
@@ -31,7 +34,13 @@ export function gerarParcelas(
   quantidadeParcelas: number,
   primeiroVencimento: string,
   intervaloDias: number,
+  parcelasExplicitas?: ParcelaGerada[],
 ): ParcelaGerada[] {
+  if (modo === 'explicito') {
+    if (!parcelasExplicitas?.length) throw new Error('Modo "explicito" precisa de ao menos 1 parcela em parcelasExplicitas');
+    return parcelasExplicitas;
+  }
+
   const quantidade = modo === 'unico' ? 1 : quantidadeParcelas;
   if (quantidade < 1) throw new Error('Quantidade de parcelas precisa ser ao menos 1');
 

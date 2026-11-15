@@ -15,6 +15,7 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "bootstrap:admin": "ts-node -P scripts/tsconfig.json -r tsconfig-paths/register scripts/bootstrap-super-admin.ts",
+    "backfill:cst-pis-cofins": "ts-node -P scripts/tsconfig.json -r tsconfig-paths/register scripts/backfill-cst-pis-cofins.ts",
     "postinstall": "git config core.hooksPath .githooks"
   },
   "dependencies": {
@@ -27,6 +28,7 @@
     "@supabase/supabase-js": "^2.45.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
+    "fast-xml-parser": "^5.12.1",
     "helmet": "^8.0.0",
     "node-forge": "^1.4.0",
     "papaparse": "^5.7.0",

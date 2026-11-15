@@ -18,6 +18,9 @@ import { FornecedoresRepositorioSupabase } from './infraestrutura/fornecedores.r
     AtualizarFornecedorUseCase,
     AlternarAtivoFornecedorUseCase,
   ],
-  exports: [FORNECEDORES_REPOSITORIO],
+  // CriarFornecedorUseCase exportado pro módulo de Notas Fiscais reaproveitar o dedupe/
+  // validação de documento em vez de duplicar (ingestão automática cadastra fornecedor
+  // novo quando a nota de entrada traz um CNPJ ainda não cadastrado).
+  exports: [FORNECEDORES_REPOSITORIO, CriarFornecedorUseCase],
 })
 export class FornecedoresModule {}

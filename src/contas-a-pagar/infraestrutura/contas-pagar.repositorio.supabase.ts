@@ -58,7 +58,14 @@ export class ContasPagarRepositorioSupabase implements ContasPagarRepositorioPor
   constructor(private readonly supabase: SupabaseService) {}
 
   async criarComParcelas(dados: DadosNovaContaPagar): Promise<string> {
-    const parcelas = gerarParcelas(dados.modo, dados.valor, dados.quantidadeParcelas, dados.primeiroVencimento, dados.intervaloDias);
+    const parcelas = gerarParcelas(
+      dados.modo,
+      dados.valor,
+      dados.quantidadeParcelas,
+      dados.primeiroVencimento,
+      dados.intervaloDias,
+      dados.parcelasExplicitas,
+    );
 
     const { data, error } = await this.supabase.admin.rpc('criar_conta_pagar_com_parcelas', {
       p_empresa_id: dados.empresaId,
