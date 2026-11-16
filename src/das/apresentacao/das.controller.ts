@@ -22,6 +22,8 @@ import { ListarDasPendentesBaixaUseCase } from '../aplicacao/casos-de-uso/listar
 import { ResolverBaixaDasUseCase } from '../aplicacao/casos-de-uso/resolver-baixa-das.usecase';
 import { GerarProvisaoManualDasUseCase } from '../aplicacao/casos-de-uso/gerar-provisao-manual-das.usecase';
 import { GerarSegundaViaDasDto } from './dto/gerar-segunda-via-das.dto';
+import { TransmitirDeclaracaoPgdasdDto } from './dto/transmitir-declaracao-pgdasd.dto';
+import { ResultadoTransmissaoPgdasd, TransmitirDeclaracaoPgdasdUseCase } from '../aplicacao/casos-de-uso/transmitir-declaracao-pgdasd.usecase';
 import { SincronizarDasDto } from './dto/sincronizar-das.dto';
 import { SalvarConfiguracaoLancamentosDasDto } from './dto/salvar-configuracao-lancamentos-das.dto';
 import { ResolverBaixaDasDto } from './dto/resolver-baixa-das.dto';
@@ -44,6 +46,7 @@ export class DasController {
     private readonly listarPendentesBaixa: ListarDasPendentesBaixaUseCase,
     private readonly resolverBaixa: ResolverBaixaDasUseCase,
     private readonly gerarProvisaoManual: GerarProvisaoManualDasUseCase,
+    private readonly transmitirDeclaracaoPgdasd: TransmitirDeclaracaoPgdasdUseCase,
   ) {}
 
   @Get()
@@ -100,6 +103,22 @@ export class DasController {
   ): Promise<{ url: string; expiraEmSegundos: number }> {
     await this.exigirPosse(empresaId, usuarioAtual);
     return this.gerarSegundaVia.executar(empresaId, dasId, dto.dataConsolidacao);
+  }
+
+  /**
+   * Transmite a declaração PGDAS-D real pro SERPRO (TRANSDECLARACAO11) e encadeia a
+   * geração do DAS -- ação irreversível (declaração fiscal real, só desfaz com
+   * retificação formal). `competencia` no formato AAAA-MM-01.
+   */
+  @Post(':competencia/transmitir-declaracao')
+  async transmitirDeclaracao(
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @Param('competencia') competencia: string,
+    @Body() dto: TransmitirDeclaracaoPgdasdDto,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<ResultadoTransmissaoPgdasd> {
+    await this.exigirPosse(empresaId, usuarioAtual);
+    return this.transmitirDeclaracaoPgdasd.executar(empresaId, competencia, dto.chaveAtividadeServico, dto.dataConsolidacao);
   }
 
   /** Prévia de custo em créditos ANTES de sincronizar -- nunca chama o SERPRO/debita crédito, só leitura. */

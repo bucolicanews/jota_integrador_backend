@@ -106,6 +106,18 @@ export class RegistrosPontoRepositorioSupabase implements RegistrosPontoReposito
     if (error) throw new InternalServerErrorException(`Falha ao excluir registro de ponto: ${error.message}`);
   }
 
+  async atestadoPertenceAoUsuario(usuarioId: string, atestadoStorageRef: string): Promise<boolean> {
+    const { data, error } = await this.supabase.admin
+      .from('ponto_registros')
+      .select('id')
+      .eq('usuario_id', usuarioId)
+      .eq('atestado_storage_ref', atestadoStorageRef)
+      .limit(1)
+      .maybeSingle();
+    if (error) throw new InternalServerErrorException(`Falha ao validar atestado existente: ${error.message}`);
+    return !!data;
+  }
+
   private mapear(linha: LinhaRegistro): RegistroPonto {
     return {
       id: linha.id,

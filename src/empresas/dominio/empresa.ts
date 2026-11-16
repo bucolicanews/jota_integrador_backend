@@ -26,6 +26,14 @@ export const REGIMES_TRIBUTARIOS: RegimeTributario[] = [
   'lucro_arbitrado',
 ];
 
+// "Simples Híbrido" NÃO é um regime novo -- é uma eleição de empresa que já é
+// regimeTributario='simples_nacional' continuar normal pro DAS/anexos, mas apurar CBS/IBS
+// separadamente (débito das vendas menos crédito das compras, não-cumulativo), igual lucro
+// presumido -- em vez de deixar CBS/IBS embutidos no DAS unificado (regra geral do Simples).
+// Por isso é o campo booleano `apuracaoIbsCbsHibrida` (ver Empresa), não um 6º valor aqui:
+// assim nenhuma das 9+ checagens existentes de "regime !== simples_nacional" no módulo
+// DAS/CCMEI precisa mudar.
+
 /**
  * Validação de CNPJ (dígitos verificadores, algoritmo oficial da Receita Federal) --
  * regra de negócio pura, sem depender de banco/framework. Nunca confiar em CNPJ vindo

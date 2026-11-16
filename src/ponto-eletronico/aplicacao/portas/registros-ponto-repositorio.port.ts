@@ -49,6 +49,10 @@ export interface RegistrosPontoRepositorioPort {
   /** Ajuste manual (delete+insert): remove só entrada/saida do dia, nunca falta/abono/compensacao/extra100 lançados no mesmo dia. */
   excluirBatidasDoDia(usuarioId: string, inicioDia: string, fimDia: string): Promise<void>;
   excluir(id: string): Promise<void>;
+  /** Confirma que essa referência de storage realmente pertence a um registro antigo deste
+   * usuário -- usado ao "preservar" o atestado numa edição (nunca confiar numa ref crua
+   * vinda do client sem checar de quem ela é de verdade). */
+  atestadoPertenceAoUsuario(usuarioId: string, atestadoStorageRef: string): Promise<boolean>;
 }
 
 export const REGISTROS_PONTO_REPOSITORIO = Symbol('REGISTROS_PONTO_REPOSITORIO');

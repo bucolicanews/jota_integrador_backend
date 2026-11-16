@@ -1,4 +1,5 @@
 import { forwardRef, Module } from '@nestjs/common';
+import { ApuracaoSimplesModule } from '../apuracao-simples/apuracao-simples.module';
 import { BancosModule } from '../bancos/bancos.module';
 import { ContasAPagarModule } from '../contas-a-pagar/contas-a-pagar.module';
 import { CreditosModule } from '../creditos/creditos.module';
@@ -22,6 +23,8 @@ import { ListarDasPendentesBaixaUseCase } from './aplicacao/casos-de-uso/listar-
 import { ResolverBaixaDasUseCase } from './aplicacao/casos-de-uso/resolver-baixa-das.usecase';
 import { GerarProvisaoDasUseCase } from './aplicacao/casos-de-uso/gerar-provisao-das.usecase';
 import { GerarProvisaoManualDasUseCase } from './aplicacao/casos-de-uso/gerar-provisao-manual-das.usecase';
+import { ChamarServicoSerproComCreditoService } from './aplicacao/casos-de-uso/chamar-servico-serpro-com-credito.service';
+import { TransmitirDeclaracaoPgdasdUseCase } from './aplicacao/casos-de-uso/transmitir-declaracao-pgdasd.usecase';
 import { DAS_REPOSITORIO } from './aplicacao/portas/das-repositorio.port';
 import { DasController } from './apresentacao/das.controller';
 import { DasSincronizacaoCron } from './infraestrutura/das-sincronizacao.cron';
@@ -46,6 +49,7 @@ import { StorageDasService } from './infraestrutura/storage-das.service';
     forwardRef(() => PlanoDeContasModule),
     forwardRef(() => BancosModule),
     forwardRef(() => ContasAPagarModule),
+    ApuracaoSimplesModule,
   ],
   controllers: [DasController],
   providers: [
@@ -66,6 +70,8 @@ import { StorageDasService } from './infraestrutura/storage-das.service';
     ResolverBaixaDasUseCase,
     GerarProvisaoDasUseCase,
     GerarProvisaoManualDasUseCase,
+    ChamarServicoSerproComCreditoService,
+    TransmitirDeclaracaoPgdasdUseCase,
     DasSincronizacaoCron,
   ],
 })

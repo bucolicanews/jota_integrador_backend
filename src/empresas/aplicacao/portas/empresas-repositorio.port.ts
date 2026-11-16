@@ -12,6 +12,8 @@ export interface Empresa {
   /** Registro no Conselho Regional de Contabilidade -- obrigatório quando tipoPessoa='fisica', senão sempre null. */
   crc: string | null;
   regimeTributario: RegimeTributario | null;
+  /** "Simples Híbrido" -- só tem efeito quando regimeTributario='simples_nacional'. Apura CBS/IBS à parte (débito das vendas menos crédito das compras, não-cumulativo, igual lucro presumido) em vez de deixar embutido no DAS único. Usado pelo painel de Apuração Tributária, nunca pelo módulo DAS (DAS continua igual pro resto). */
+  apuracaoIbsCbsHibrida: boolean;
   modoAcessoSerpro: ModoAcessoSerpro;
   status: StatusEmpresa;
   bloqueado: boolean;
@@ -45,6 +47,7 @@ export interface DadosAtualizacaoEmpresa {
   regimeTributario?: RegimeTributario | null;
   tipoPessoa?: TipoPessoaEmpresa;
   crc?: string | null;
+  apuracaoIbsCbsHibrida?: boolean;
 }
 
 export interface EmpresasRepositorioPort {

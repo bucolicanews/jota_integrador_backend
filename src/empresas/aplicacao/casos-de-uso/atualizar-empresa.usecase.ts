@@ -14,7 +14,7 @@ export class AtualizarEmpresaUseCase {
   // Só campos não-sensíveis (docs/BANCO_DE_DADOS.md) -- contador_id, bloqueado e
   // modo_acesso_serpro têm casos de uso/trigger próprios, nunca passam por aqui.
   async executar(id: string, dados: DadosAtualizacaoEmpresa): Promise<void> {
-    if (dados.tipoPessoa !== undefined || dados.crc !== undefined) {
+    if (dados.tipoPessoa !== undefined || dados.crc !== undefined || dados.apuracaoIbsCbsHibrida === true) {
       const empresa = await this.empresasRepositorio.buscarPorId(id);
       if (!empresa) {
         throw new NotFoundException('Empresa não encontrada');
@@ -28,6 +28,13 @@ export class AtualizarEmpresaUseCase {
       const crcResultante = dados.crc !== undefined ? dados.crc : empresa.crc;
       if (tipoPessoaResultante === 'fisica' && !crcResultante) {
         throw new BadRequestException('CRC é obrigatório pra pessoa física');
+      }
+
+      // Simples Híbrido só existe dentro do Simples Nacional -- fora disso a distinção
+      // não tem sentido (lucro presumido/real já apuram CBS/IBS por fora por definição).
+      const regimeResultante = dados.regimeTributario !== undefined ? dados.regimeTributario : empresa.regimeTributario;
+      if (dados.apuracaoIbsCbsHibrida === true && regimeResultante !== 'simples_nacional') {
+        throw new BadRequestException('Simples Híbrido só se aplica a empresas no regime "simples_nacional"');
       }
     }
 

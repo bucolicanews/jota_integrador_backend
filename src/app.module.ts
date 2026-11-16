@@ -49,6 +49,8 @@ import { CreditosAvulsosModule } from './creditos-avulsos/creditos-avulsos.modul
 import { PlanosRevendaCreditosAvulsosModule } from './planos-revenda-creditos-avulsos/planos-revenda-creditos-avulsos.module';
 import { SupabaseHooksModule } from './supabase-hooks/supabase-hooks.module';
 import { NotasFiscaisModule } from './notas-fiscais/notas-fiscais.module';
+import { ApuracaoSimplesModule } from './apuracao-simples/apuracao-simples.module';
+import { ConsultaCnpjModule } from './consulta-cnpj/consulta-cnpj.module';
 
 @Module({
   imports: [
@@ -110,6 +112,8 @@ import { NotasFiscaisModule } from './notas-fiscais/notas-fiscais.module';
     PlanosRevendaCreditosAvulsosModule,
     SupabaseHooksModule,
     NotasFiscaisModule,
+    ApuracaoSimplesModule,
+    ConsultaCnpjModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

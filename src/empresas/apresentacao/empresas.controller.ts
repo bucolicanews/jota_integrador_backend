@@ -117,6 +117,7 @@ export class EmpresasController {
       regimeTributario: dto.regimeTributario,
       tipoPessoa: dto.tipoPessoa,
       crc: dto.crc,
+      apuracaoIbsCbsHibrida: dto.apuracaoIbsCbsHibrida,
     });
     return { ok: true };
   }

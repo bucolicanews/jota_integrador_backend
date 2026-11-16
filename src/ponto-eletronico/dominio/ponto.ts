@@ -12,9 +12,18 @@ export function proximaAcaoBatida(ultimaBatidaDoDia: TipoBatida | null): TipoBat
   return ultimaBatidaDoDia === 'entrada' ? 'saida' : 'entrada';
 }
 
-/** Falta com atestado só é justificada (não conta como falta injustificada) se soma faltas+abono do dia fechar a jornada diária padrão. */
+/**
+ * Só exige faltas+abono = jornada diária (8h) quando os DOIS vêm juntos (falta parcialmente
+ * abonada por atestado) -- é o caso que precisa fechar a conta do dia. Falta sozinha (8h
+ * injustificada) ou abono manual sozinho (qualquer valor até 8h, sem falta -- ex: folga
+ * paga, consulta médica sem atestado) não exigem essa soma, mesma regra do jotaCaixa (lá o
+ * abono manual não tem relação nenhuma com falta do dia).
+ */
 export function validarSplitFaltaAbono(horasFalta: number, horasAbono: number): boolean {
-  return horasFalta + horasAbono === JORNADA_DIARIA_PADRAO_HORAS;
+  if (horasFalta > 0 && horasAbono > 0) {
+    return horasFalta + horasAbono === JORNADA_DIARIA_PADRAO_HORAS;
+  }
+  return horasFalta >= 0 && horasFalta <= JORNADA_DIARIA_PADRAO_HORAS && horasAbono >= 0 && horasAbono <= JORNADA_DIARIA_PADRAO_HORAS;
 }
 
 export interface RegistroParaResumo {

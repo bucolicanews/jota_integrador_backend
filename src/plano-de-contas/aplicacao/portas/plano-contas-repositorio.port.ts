@@ -15,6 +15,8 @@ export interface PlanoConta {
   tipoCaixaBanco: TipoCaixaBanco | null;
   contaAReceber: boolean;
   contaAPagar: boolean;
+  /** Entra na soma de "folha de pagamento" do Fator R (CalcularFatorRUseCase) -- nunca setado na criação, só via atualizar(). */
+  contaFolhaPagamento: boolean;
   ativa: boolean;
 }
 
@@ -38,6 +40,7 @@ export interface DadosAtualizacaoContaContabil {
   tipoCaixaBanco?: TipoCaixaBanco | null;
   contaAReceber?: boolean;
   contaAPagar?: boolean;
+  contaFolhaPagamento?: boolean;
 }
 
 export interface LinhaImportacaoPlanoConta {

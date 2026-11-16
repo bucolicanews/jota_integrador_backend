@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { REGIMES_TRIBUTARIOS, RegimeTributario, TipoPessoaEmpresa } from '../../dominio/empresa';
 
 export class AtualizarEmpresaDto {
@@ -26,4 +26,10 @@ export class AtualizarEmpresaDto {
   @IsString()
   @MaxLength(20)
   crc?: string | null;
+
+  // "Simples Híbrido" -- só tem efeito quando regimeTributario='simples_nacional'
+  // (validado no usecase, não aqui -- o DTO não sabe o regime atual da empresa).
+  @IsOptional()
+  @IsBoolean()
+  apuracaoIbsCbsHibrida?: boolean;
 }

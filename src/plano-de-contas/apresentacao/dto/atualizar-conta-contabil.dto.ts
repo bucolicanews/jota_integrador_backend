@@ -25,4 +25,8 @@ export class AtualizarContaContabilDto {
   @IsOptional()
   @IsBoolean()
   contaAPagar?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  contaFolhaPagamento?: boolean;
 }

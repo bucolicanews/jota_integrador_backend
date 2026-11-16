@@ -23,11 +23,12 @@ interface LinhaPlanoConta {
   tipo_caixa_banco: TipoCaixaBanco | null;
   conta_a_receber: boolean;
   conta_a_pagar: boolean;
+  conta_folha_pagamento: boolean;
   ativa: boolean;
 }
 
 const COLUNAS_SELECT =
-  'id, empresa_id, codigo, nome, grupo, sintetica, conta_pai_id, conta_caixa_banco, tipo_caixa_banco, conta_a_receber, conta_a_pagar, ativa';
+  'id, empresa_id, codigo, nome, grupo, sintetica, conta_pai_id, conta_caixa_banco, tipo_caixa_banco, conta_a_receber, conta_a_pagar, conta_folha_pagamento, ativa';
 
 @Injectable()
 export class PlanoContasRepositorioSupabase implements PlanoContasRepositorioPort {
@@ -95,6 +96,7 @@ export class PlanoContasRepositorioSupabase implements PlanoContasRepositorioPor
     if (dados.tipoCaixaBanco !== undefined) campos.tipo_caixa_banco = dados.tipoCaixaBanco;
     if (dados.contaAReceber !== undefined) campos.conta_a_receber = dados.contaAReceber;
     if (dados.contaAPagar !== undefined) campos.conta_a_pagar = dados.contaAPagar;
+    if (dados.contaFolhaPagamento !== undefined) campos.conta_folha_pagamento = dados.contaFolhaPagamento;
 
     const { error } = await this.supabase.admin.from('plano_contas').update(campos).eq('id', id);
 
@@ -203,6 +205,7 @@ export class PlanoContasRepositorioSupabase implements PlanoContasRepositorioPor
       tipoCaixaBanco: linha.tipo_caixa_banco,
       contaAReceber: linha.conta_a_receber,
       contaAPagar: linha.conta_a_pagar,
+      contaFolhaPagamento: linha.conta_folha_pagamento,
       ativa: linha.ativa,
     };
   }

@@ -450,13 +450,36 @@ export class AuthController {
     return { ok: true };
   }
 
-  /** Teto do papel (o que pode ser concedido) + o que já foi concedido -- monta a UI de checkboxes de "funcionário com restrição". */
+  /**
+   * Teto do papel (o que pode ser concedido) + o que já foi concedido -- monta a UI de checkboxes de
+   * "funcionário com restrição". OPERADOR_CONTADOR/OPERADOR_EMPRESA entram aqui também: MenuLateral
+   * consulta a PRÓPRIA lista de permissões pra decidir o que mostrar, e `exigirAutoridadeSobre` já
+   * permite auto-consulta -- sem esses dois papéis aqui, o PapeisGuard bloqueava o funcionário com
+   * 403 antes mesmo de chegar nessa checagem (nunca via o próprio "Bater Ponto" no menu, mesmo com
+   * módulo liberado e permissão concedida).
+   */
   @Get('usuarios/:id/permissoes')
-  @Papeis(Papel.SUPER_ADMIN, Papel.ADMIN_FINANCEIRO, Papel.ADMIN_SUPORTE, Papel.CONTADOR_DONO, Papel.EMPRESARIO_DONO)
+  @Papeis(
+    Papel.SUPER_ADMIN,
+    Papel.ADMIN_FINANCEIRO,
+    Papel.ADMIN_SUPORTE,
+    Papel.CONTADOR_DONO,
+    Papel.EMPRESARIO_DONO,
+    Papel.OPERADOR_CONTADOR,
+    Papel.OPERADOR_EMPRESA,
+  )
   async listarPermissoes(
     @Param('id', ParseUUIDPipe) id: string,
     @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
   ): Promise<PermissoesDoUsuario> {
+    // OPERADOR_CONTADOR/OPERADOR_EMPRESA só podem consultar a PRÓPRIA lista -- nunca a de um
+    // colega (`exigirAutoridadeSobre` sozinha deixaria passar via mesmoContador/mesmaEmpresa,
+    // que não distingue dono de operador; aqui é restrito antes de chegar lá).
+    const papeisOperador: Papel[] = [Papel.OPERADOR_CONTADOR, Papel.OPERADOR_EMPRESA];
+    if (papeisOperador.includes(usuarioAtual.papel as Papel) && id !== usuarioAtual.id) {
+      throw new ForbiddenException('Sem autoridade sobre este usuário');
+    }
+
     const alvo = await this.obterPerfil.executar(id);
     await this.exigirAutoridadeSobre(usuarioAtual, alvo);
     return this.listarPermissoesUsuario.executar(alvo);

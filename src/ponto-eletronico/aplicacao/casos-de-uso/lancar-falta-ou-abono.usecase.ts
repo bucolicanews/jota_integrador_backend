@@ -16,6 +16,9 @@ export interface DadosLancarFaltaOuAbono {
   horasFalta: number;
   horasAbono: number;
   atestado: ArquivoAnexoPonto | null;
+  /** Edição de lançamento existente que mantém o atestado antigo (sem novo arquivo) -- validada contra `atestadoPertenceAoUsuario` antes de reaproveitar. */
+  atestadoStorageRefExistente: string | null;
+  observacao: string | null;
   usuarioAtual: UsuarioAutenticado;
 }
 
@@ -42,9 +45,19 @@ export class LancarFaltaOuAbonoUseCase {
     if (!funcionario) throw new NotFoundException('Funcionário não encontrado');
     await exigirGestorSobre(dados.usuarioAtual, funcionario, this.empresasRepositorio);
 
-    const atestadoRef = dados.atestado
-      ? await this.storage.armazenarAtestado(funcionario.id, dados.atestado.nomeOriginal, dados.atestado.buffer, dados.atestado.contentType)
-      : null;
+    let atestadoRef: string | null = null;
+    if (dados.atestado) {
+      atestadoRef = await this.storage.armazenarAtestado(
+        funcionario.id,
+        dados.atestado.nomeOriginal,
+        dados.atestado.buffer,
+        dados.atestado.contentType,
+      );
+    } else if (dados.atestadoStorageRefExistente) {
+      const pertence = await this.registrosRepositorio.atestadoPertenceAoUsuario(funcionario.id, dados.atestadoStorageRefExistente);
+      if (!pertence) throw new BadRequestException('Atestado informado não pertence a este funcionário');
+      atestadoRef = dados.atestadoStorageRefExistente;
+    }
     const horario = horarioMeioDiaUtc(dados.data);
 
     if (dados.horasFalta > 0) {
@@ -56,6 +69,7 @@ export class LancarFaltaOuAbonoUseCase {
         horarioRegistro: horario,
         ajusteManual: true,
         atestadoStorageRef: atestadoRef,
+        observacao: dados.observacao,
         criadoPor: dados.usuarioAtual.id,
       });
     }
@@ -69,6 +83,7 @@ export class LancarFaltaOuAbonoUseCase {
         minutosCredito: Math.round(dados.horasAbono * 60),
         ajusteManual: true,
         atestadoStorageRef: atestadoRef,
+        observacao: dados.observacao,
         criadoPor: dados.usuarioAtual.id,
       });
     }

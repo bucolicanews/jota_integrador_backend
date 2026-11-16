@@ -137,6 +137,8 @@ export class PontoEletronicoController {
       horasFalta: dto.horasFalta,
       horasAbono: dto.horasAbono,
       atestado: atestado ? { nomeOriginal: atestado.originalname, buffer: atestado.buffer, contentType: atestado.mimetype } : null,
+      atestadoStorageRefExistente: dto.atestadoStorageRefExistente ?? null,
+      observacao: dto.observacao ?? null,
       usuarioAtual,
     });
     return { ok: true };

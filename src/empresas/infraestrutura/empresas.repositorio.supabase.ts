@@ -18,6 +18,7 @@ interface LinhaEmpresa {
   cnpj: string;
   crc: string | null;
   regime_tributario: RegimeTributario | null;
+  apuracao_ibs_cbs_hibrida: boolean;
   modo_acesso_serpro: ModoAcessoSerpro;
   status: StatusEmpresa;
   bloqueado: boolean;
@@ -27,7 +28,7 @@ interface LinhaEmpresa {
 }
 
 const COLUNAS_SELECT =
-  'id, contador_id, tipo, tipo_pessoa, razao_social, nome_fantasia, cnpj, crc, regime_tributario, modo_acesso_serpro, status, bloqueado, pagbank_account_id, banco_pagbank_id, conta_contabil_pagbank_id';
+  'id, contador_id, tipo, tipo_pessoa, razao_social, nome_fantasia, cnpj, crc, regime_tributario, apuracao_ibs_cbs_hibrida, modo_acesso_serpro, status, bloqueado, pagbank_account_id, banco_pagbank_id, conta_contabil_pagbank_id';
 
 @Injectable()
 export class EmpresasRepositorioSupabase implements EmpresasRepositorioPort {
@@ -222,7 +223,7 @@ export class EmpresasRepositorioSupabase implements EmpresasRepositorioPort {
   }
 
   async atualizar(id: string, dados: DadosAtualizacaoEmpresa): Promise<void> {
-    // Whitelist explícita -- mesmo se `dados` viesse maior por engano, só estes 5 campos
+    // Whitelist explícita -- mesmo se `dados` viesse maior por engano, só estes campos
     // são enviados ao banco (nunca contador_id/bloqueado/modo_acesso_serpro por aqui).
     const campos: Record<string, unknown> = {};
     if (dados.razaoSocial !== undefined) campos.razao_social = dados.razaoSocial;
@@ -230,6 +231,7 @@ export class EmpresasRepositorioSupabase implements EmpresasRepositorioPort {
     if (dados.regimeTributario !== undefined) campos.regime_tributario = dados.regimeTributario;
     if (dados.tipoPessoa !== undefined) campos.tipo_pessoa = dados.tipoPessoa;
     if (dados.crc !== undefined) campos.crc = dados.crc;
+    if (dados.apuracaoIbsCbsHibrida !== undefined) campos.apuracao_ibs_cbs_hibrida = dados.apuracaoIbsCbsHibrida;
 
     const { error } = await this.supabase.admin.from('empresas').update(campos).eq('id', id);
 
@@ -306,6 +308,7 @@ export class EmpresasRepositorioSupabase implements EmpresasRepositorioPort {
       cnpj: linha.cnpj,
       crc: linha.crc,
       regimeTributario: linha.regime_tributario,
+      apuracaoIbsCbsHibrida: linha.apuracao_ibs_cbs_hibrida,
       modoAcessoSerpro: linha.modo_acesso_serpro,
       status: linha.status,
       bloqueado: linha.bloqueado,
