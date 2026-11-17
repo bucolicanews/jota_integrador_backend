@@ -86,7 +86,9 @@ const COMERCIO: LinhaImportacaoPlanoConta[] = [
   linha({ codigo: '2.2.01', nome: 'Empréstimos e Financiamentos -- Longo Prazo', grupo: 'passivo', sintetica: false, codigoPai: '2.2' }),
 
   linha({ codigo: '3', nome: 'PATRIMÔNIO LÍQUIDO', grupo: 'patrimonio_liquido', sintetica: true, codigoPai: null }),
-  linha({ codigo: '3.1', nome: 'Capital Social', grupo: 'patrimonio_liquido', sintetica: false, codigoPai: '3' }),
+  linha({ codigo: '3.1', nome: 'Capital Social', grupo: 'patrimonio_liquido', sintetica: true, codigoPai: '3' }),
+  linha({ codigo: '3.1.01', nome: 'Capital Social Integralizado', grupo: 'patrimonio_liquido', sintetica: false, codigoPai: '3.1' }),
+  linha({ codigo: '3.1.02', nome: '(-) Capital Social a Integralizar', grupo: 'patrimonio_liquido', sintetica: false, codigoPai: '3.1' }),
   linha({ codigo: '3.2', nome: 'Reservas de Lucros', grupo: 'patrimonio_liquido', sintetica: false, codigoPai: '3' }),
   linha({ codigo: '3.3', nome: 'Lucros/Prejuízos Acumulados', grupo: 'patrimonio_liquido', sintetica: false, codigoPai: '3' }),
 
@@ -182,7 +184,9 @@ const SERVICO: LinhaImportacaoPlanoConta[] = [
   linha({ codigo: '2.2.01', nome: 'Empréstimos e Financiamentos -- Longo Prazo', grupo: 'passivo', sintetica: false, codigoPai: '2.2' }),
 
   linha({ codigo: '3', nome: 'PATRIMÔNIO LÍQUIDO', grupo: 'patrimonio_liquido', sintetica: true, codigoPai: null }),
-  linha({ codigo: '3.1', nome: 'Capital Social', grupo: 'patrimonio_liquido', sintetica: false, codigoPai: '3' }),
+  linha({ codigo: '3.1', nome: 'Capital Social', grupo: 'patrimonio_liquido', sintetica: true, codigoPai: '3' }),
+  linha({ codigo: '3.1.01', nome: 'Capital Social Integralizado', grupo: 'patrimonio_liquido', sintetica: false, codigoPai: '3.1' }),
+  linha({ codigo: '3.1.02', nome: '(-) Capital Social a Integralizar', grupo: 'patrimonio_liquido', sintetica: false, codigoPai: '3.1' }),
   linha({ codigo: '3.2', nome: 'Reservas de Lucros', grupo: 'patrimonio_liquido', sintetica: false, codigoPai: '3' }),
   linha({ codigo: '3.3', nome: 'Lucros/Prejuízos Acumulados', grupo: 'patrimonio_liquido', sintetica: false, codigoPai: '3' }),
 
@@ -285,7 +289,9 @@ const MISTO: LinhaImportacaoPlanoConta[] = [
   linha({ codigo: '2.2.01', nome: 'Empréstimos e Financiamentos -- Longo Prazo', grupo: 'passivo', sintetica: false, codigoPai: '2.2' }),
 
   linha({ codigo: '3', nome: 'PATRIMÔNIO LÍQUIDO', grupo: 'patrimonio_liquido', sintetica: true, codigoPai: null }),
-  linha({ codigo: '3.1', nome: 'Capital Social', grupo: 'patrimonio_liquido', sintetica: false, codigoPai: '3' }),
+  linha({ codigo: '3.1', nome: 'Capital Social', grupo: 'patrimonio_liquido', sintetica: true, codigoPai: '3' }),
+  linha({ codigo: '3.1.01', nome: 'Capital Social Integralizado', grupo: 'patrimonio_liquido', sintetica: false, codigoPai: '3.1' }),
+  linha({ codigo: '3.1.02', nome: '(-) Capital Social a Integralizar', grupo: 'patrimonio_liquido', sintetica: false, codigoPai: '3.1' }),
   linha({ codigo: '3.2', nome: 'Reservas de Lucros', grupo: 'patrimonio_liquido', sintetica: false, codigoPai: '3' }),
   linha({ codigo: '3.3', nome: 'Lucros/Prejuízos Acumulados', grupo: 'patrimonio_liquido', sintetica: false, codigoPai: '3' }),
 
