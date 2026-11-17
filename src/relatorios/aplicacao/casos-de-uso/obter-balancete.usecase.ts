@@ -35,8 +35,9 @@ export class ObterBalanceteUseCase {
     ]);
     const mapaSaldos = new Map(saldos.map((s) => [s.contaId, s]));
 
+    // Nunca filtra por `ativa` -- mesmo motivo do Balanço Patrimonial (bug 2026-11-16):
+    // "inativa" só impede lançamento novo, não apaga saldo/movimento histórico real.
     const linhas: ContaBalancete[] = contas
-      .filter((conta) => conta.ativa)
       .map((conta) => {
         const saldo = mapaSaldos.get(conta.id);
         return {

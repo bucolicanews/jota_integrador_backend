@@ -35,8 +35,11 @@ export class ObterDreUseCase {
     ]);
     const mapaSaldos = new Map(saldos.map((s) => [s.contaId, s]));
 
+    // Nunca filtra por `ativa` -- mesmo motivo do Balanço Patrimonial (bug 2026-11-16):
+    // "inativa" só impede lançamento novo, não apaga saldo/movimento histórico real (e o
+    // resultado daqui precisa bater com o resultadoLiquido do Balanço, que já não filtra).
     const linhas: ContaDre[] = contas
-      .filter((conta) => conta.ativa && (GRUPOS_DRE as readonly string[]).includes(conta.grupo))
+      .filter((conta) => (GRUPOS_DRE as readonly string[]).includes(conta.grupo))
       .map((conta) => {
         const saldo = mapaSaldos.get(conta.id);
         // O movimento do período é exatamente saldoFinal - saldoInicial (saldoInicial já

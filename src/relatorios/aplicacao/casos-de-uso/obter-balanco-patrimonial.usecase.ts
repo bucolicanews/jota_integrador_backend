@@ -36,8 +36,11 @@ export class ObterBalancoPatrimonialUseCase {
     ]);
     const mapaSaldos = new Map(saldos.map((s) => [s.contaId, s]));
 
+    // Nunca filtra por `ativa` aqui -- "inativa" só impede lançamento NOVO naquela conta,
+    // não apaga saldo histórico real. Filtrar isso faria o total ignorar um lado da partida
+    // dobrada sempre que a OUTRA conta do lançamento continuasse ativa, quebrando o
+    // fechamento do balanço por exatamente aquele valor (bug real encontrado 2026-11-16).
     const linhas: ContaBalanco[] = contas
-      .filter((conta) => conta.ativa)
       .map((conta) => ({
         contaId: conta.id,
         codigo: conta.codigo,

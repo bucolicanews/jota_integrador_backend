@@ -6,6 +6,7 @@ export type OrigemLancamento =
   | 'conciliacao_bancaria'
   | 'das'
   | 'notas_fiscais'
+  | 'esocial'
   | 'estorno';
 
 export const ORIGENS_LANCAMENTO: OrigemLancamento[] = [
@@ -16,6 +17,7 @@ export const ORIGENS_LANCAMENTO: OrigemLancamento[] = [
   'conciliacao_bancaria',
   'das',
   'notas_fiscais',
+  'esocial',
   'estorno',
 ];
 

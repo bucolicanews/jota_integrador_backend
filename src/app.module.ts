@@ -51,6 +51,7 @@ import { SupabaseHooksModule } from './supabase-hooks/supabase-hooks.module';
 import { NotasFiscaisModule } from './notas-fiscais/notas-fiscais.module';
 import { ApuracaoSimplesModule } from './apuracao-simples/apuracao-simples.module';
 import { ConsultaCnpjModule } from './consulta-cnpj/consulta-cnpj.module';
+import { EsocialModule } from './esocial/esocial.module';
 
 @Module({
   imports: [
@@ -114,6 +115,7 @@ import { ConsultaCnpjModule } from './consulta-cnpj/consulta-cnpj.module';
     NotasFiscaisModule,
     ApuracaoSimplesModule,
     ConsultaCnpjModule,
+    EsocialModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

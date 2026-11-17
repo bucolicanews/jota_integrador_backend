@@ -44,7 +44,9 @@ export class ObterRazaoUseCase {
       movimentosPorConta.set(movimento.contaId, lista);
     }
 
-    const contasAnaliticas = contas.filter((conta) => conta.ativa && !conta.sintetica && (!contaId || conta.id === contaId));
+    // Nunca filtra por `ativa` -- mesmo motivo do Balanço Patrimonial (bug 2026-11-16):
+    // "inativa" só impede lançamento novo, nunca esconde movimento histórico real.
+    const contasAnaliticas = contas.filter((conta) => !conta.sintetica && (!contaId || conta.id === contaId));
 
     const resultado: ContaRazao[] = [];
     for (const conta of contasAnaliticas) {
