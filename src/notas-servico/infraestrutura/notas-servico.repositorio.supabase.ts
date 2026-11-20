@@ -89,6 +89,18 @@ export class NotasServicoRepositorioSupabase implements NotasServicoRepositorioP
     return (data as LinhaNotaServico[]).map((linha) => this.mapear(linha));
   }
 
+  async listarPorPeriodo(empresaId: string, dataInicio: string, dataFim: string): Promise<NotaServicoResumo[]> {
+    const { data, error } = await this.supabase.admin
+      .from('notas_servico')
+      .select(COLUNAS)
+      .eq('empresa_id', empresaId)
+      .gte('data_emissao_dps', dataInicio)
+      .lte('data_emissao_dps', dataFim)
+      .order('data_emissao_dps', { ascending: false });
+    if (error) throw new InternalServerErrorException(`Falha ao listar NFS-e do período: ${error.message}`);
+    return (data as LinhaNotaServico[]).map((linha) => this.mapear(linha));
+  }
+
   async obterDetalhe(id: string, empresaId: string): Promise<NotaServicoResumo | null> {
     const { data, error } = await this.supabase.admin
       .from('notas_servico')

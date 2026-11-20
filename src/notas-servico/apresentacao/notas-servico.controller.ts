@@ -10,6 +10,7 @@ import { Empresa, EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../../em
 import { AprovarNotaServicoUseCase } from '../aplicacao/casos-de-uso/aprovar-nota-servico.usecase';
 import { GerarDanfsePdfUseCase } from '../aplicacao/casos-de-uso/gerar-danfse-pdf.usecase';
 import { ListarNotasServicoPendentesUseCase } from '../aplicacao/casos-de-uso/listar-notas-servico-pendentes.usecase';
+import { ListarNotasServicoPorPeriodoUseCase } from '../aplicacao/casos-de-uso/listar-notas-servico-por-periodo.usecase';
 import { ObterDetalheNotaServicoUseCase } from '../aplicacao/casos-de-uso/obter-detalhe-nota-servico.usecase';
 import { RejeitarNotaServicoUseCase } from '../aplicacao/casos-de-uso/rejeitar-nota-servico.usecase';
 import { NotaServicoResumo } from '../aplicacao/portas/notas-servico-repositorio.port';
@@ -21,6 +22,7 @@ export class NotasServicoController {
   constructor(
     @Inject(EMPRESAS_REPOSITORIO) private readonly empresasRepositorio: EmpresasRepositorioPort,
     private readonly listarPendentes: ListarNotasServicoPendentesUseCase,
+    private readonly listarPorPeriodo: ListarNotasServicoPorPeriodoUseCase,
     private readonly obterDetalhe: ObterDetalheNotaServicoUseCase,
     private readonly aprovarNotaServico: AprovarNotaServicoUseCase,
     private readonly rejeitarNotaServico: RejeitarNotaServicoUseCase,
@@ -36,6 +38,19 @@ export class NotasServicoController {
     const empresa = await this.buscarEmpresaOuFalhar(empresaId);
     this.exigirPosse(usuarioAtual, empresa);
     return this.listarPendentes.executar(empresaId);
+  }
+
+  @Get('painel')
+  @ExigirPermissao('notas_servico:visualizar')
+  async listarPorPeriodoRota(
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @Query('dataInicio') dataInicio: string,
+    @Query('dataFim') dataFim: string,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<NotaServicoResumo[]> {
+    const empresa = await this.buscarEmpresaOuFalhar(empresaId);
+    this.exigirPosse(usuarioAtual, empresa);
+    return this.listarPorPeriodo.executar(empresaId, dataInicio, dataFim);
   }
 
   @Get(':id')

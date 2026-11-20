@@ -5,6 +5,7 @@ import { AprovarNotaServicoUseCase } from './aplicacao/casos-de-uso/aprovar-nota
 import { GerarDanfsePdfUseCase } from './aplicacao/casos-de-uso/gerar-danfse-pdf.usecase';
 import { IngerirNotaServicoUseCase } from './aplicacao/casos-de-uso/ingerir-nota-servico.usecase';
 import { ListarNotasServicoPendentesUseCase } from './aplicacao/casos-de-uso/listar-notas-servico-pendentes.usecase';
+import { ListarNotasServicoPorPeriodoUseCase } from './aplicacao/casos-de-uso/listar-notas-servico-por-periodo.usecase';
 import { ObterDetalheNotaServicoUseCase } from './aplicacao/casos-de-uso/obter-detalhe-nota-servico.usecase';
 import { RejeitarNotaServicoUseCase } from './aplicacao/casos-de-uso/rejeitar-nota-servico.usecase';
 import { NOTAS_SERVICO_REPOSITORIO } from './aplicacao/portas/notas-servico-repositorio.port';
@@ -24,6 +25,7 @@ import { StorageNotasServicoService } from './infraestrutura/storage-notas-servi
     StorageNotasServicoService,
     IngerirNotaServicoUseCase,
     ListarNotasServicoPendentesUseCase,
+    ListarNotasServicoPorPeriodoUseCase,
     ObterDetalheNotaServicoUseCase,
     AprovarNotaServicoUseCase,
     RejeitarNotaServicoUseCase,

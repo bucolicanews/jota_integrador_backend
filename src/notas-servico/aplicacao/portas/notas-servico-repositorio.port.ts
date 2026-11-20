@@ -42,6 +42,8 @@ export interface NotasServicoRepositorioPort {
   buscarPorChave(empresaId: string, chaveAcesso: string): Promise<NotaServicoResumo | null>;
   /** Fila de revisão -- só status='capturada'. */
   listarPendentes(empresaId: string): Promise<NotaServicoResumo[]>;
+  /** Base do dashboard de acompanhamento (KPIs, tendência) -- qualquer status, filtrado por data de emissão do DPS. Mesmo princípio de NotasFiscaisRepositorioPort.listarPorPeriodo. */
+  listarPorPeriodo(empresaId: string, dataInicio: string, dataFim: string): Promise<NotaServicoResumo[]>;
   obterDetalhe(id: string, empresaId: string): Promise<NotaServicoResumo | null>;
   marcarAprovada(id: string, aprovadoPor: string): Promise<void>;
   marcarRejeitada(id: string, motivoRejeicao: string): Promise<void>;
