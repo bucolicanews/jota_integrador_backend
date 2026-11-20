@@ -35,6 +35,8 @@ export interface NotaFiscalResumo {
   emitenteNome: string;
   destinatarioDocumento: string | null;
   destinatarioNome: string | null;
+  municipioFatoGeradorIBGE: number | null;
+  ufEmitente: string | null;
   valorTotal: number;
   fornecedorId: string | null;
   clienteId: string | null;

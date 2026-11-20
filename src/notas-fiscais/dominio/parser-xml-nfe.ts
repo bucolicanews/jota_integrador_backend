@@ -73,13 +73,23 @@ function extrairPisCofins(imposto: any): { valorPis: number; cstPis: string | nu
  * confirmado contra a NT via pesquisa web em 2026-11-20, não contra o XSD oficial
  * diretamente; CONFERIR antes de usar o resultado em declaração real.
  */
-function extrairIbsCbs(imposto: any): { valorCbs: number; valorIbs: number; cClassTrib: string | null; pIBSSN: string | null; pCBSSN: string | null } {
+function extrairIbsCbs(imposto: any): {
+  valorCbs: number;
+  valorIbs: number;
+  cClassTrib: string | null;
+  cstIbsCbs: string | null;
+  pIBSSN: string | null;
+  pCBSSN: string | null;
+} {
   const ibscbs = imposto?.IBSCBS;
-  if (!ibscbs) return { valorCbs: 0, valorIbs: 0, cClassTrib: null, pIBSSN: null, pCBSSN: null };
+  if (!ibscbs) return { valorCbs: 0, valorIbs: 0, cClassTrib: null, cstIbsCbs: null, pIBSSN: null, pCBSSN: null };
   return {
     valorCbs: paraNumero(ibscbs.gCBS?.vCBS ?? ibscbs.vCBS),
     valorIbs: paraNumero(ibscbs.gIBSUF?.vIBSUF ?? ibscbs.gIBS?.vIBS ?? ibscbs.vIBS),
     cClassTrib: ibscbs.cClassTrib ?? null,
+    // CST-IBS/CBS -- par obrigatório do cClassTrib no mesmo Grupo UB, confirmado via
+    // pesquisa web em 2026-11-20 (não contra o XSD oficial diretamente).
+    cstIbsCbs: ibscbs.CST ?? null,
     pIBSSN: ibscbs.gTribSN?.gIBSSN?.pIBSSN ?? null,
     pCBSSN: ibscbs.gTribSN?.gCBSSN?.pCBSSN ?? null,
   };
@@ -113,6 +123,7 @@ function extrairItem(det: any): ItemNotaFiscalExtraido {
     valorCbs: ibscbs.valorCbs,
     valorIbs: ibscbs.valorIbs,
     cClassTrib: ibscbs.cClassTrib,
+    cstIbsCbs: ibscbs.cstIbsCbs,
     pIBSSN: ibscbs.pIBSSN,
     pCBSSN: ibscbs.pCBSSN,
     impostoBruto: imposto,
@@ -170,6 +181,8 @@ export function parseXmlNfe(xmlBruto: string): NotaFiscalExtraida {
     emitenteNome: emit.xNome,
     destinatarioDocumento: dest?.CNPJ ?? dest?.CPF ?? null,
     destinatarioNome: dest?.xNome ?? null,
+    municipioFatoGeradorIBGE: ide.cMunFG ? Number(ide.cMunFG) : null,
+    ufEmitente: emit.enderEmit?.UF ?? null,
     valorTotal: paraNumero(infNFe.total?.ICMSTot?.vNF),
     itens: paraArray(infNFe.det).map(extrairItem),
     parcelas: extrairParcelas(infNFe),

@@ -27,6 +27,8 @@ interface LinhaNota {
   emitente_nome: string;
   destinatario_documento: string | null;
   destinatario_nome: string | null;
+  municipio_fato_gerador_ibge: number | null;
+  uf_emitente: string | null;
   valor_total: number;
   fornecedor_id: string | null;
   cliente_id: string | null;
@@ -65,6 +67,7 @@ interface LinhaItem {
   c_ativ_sn: string | null;
   p_ibs_sn: string | null;
   p_cbs_sn: string | null;
+  cst_ibs_cbs: string | null;
   imposto_bruto: unknown;
 }
 
@@ -92,10 +95,10 @@ interface LinhaConfig {
 }
 
 const COLUNAS_NOTA =
-  'id, empresa_id, chave_acesso, modelo, direcao, numero, serie, data_emissao, c_stat, emitente_cnpj, emitente_nome, destinatario_documento, destinatario_nome, valor_total, fornecedor_id, cliente_id, conta_pagar_id, conta_receber_id, status, xml_storage_ref, motivo_rejeicao, aprovado_por, aprovado_em, criado_em';
+  'id, empresa_id, chave_acesso, modelo, direcao, numero, serie, data_emissao, c_stat, emitente_cnpj, emitente_nome, destinatario_documento, destinatario_nome, municipio_fato_gerador_ibge, uf_emitente, valor_total, fornecedor_id, cliente_id, conta_pagar_id, conta_receber_id, status, xml_storage_ref, motivo_rejeicao, aprovado_por, aprovado_em, criado_em';
 
 const COLUNAS_ITEM =
-  'id, nota_fiscal_id, numero_item, codigo_produto, descricao, ncm, cest, cfop, quantidade, valor_unitario, valor_total, cst_csosn, valor_icms, valor_icms_st, valor_pis, cst_pis, valor_cofins, cst_cofins, valor_cbs, valor_ibs, c_class_trib, c_ativ_sn, p_ibs_sn, p_cbs_sn, imposto_bruto';
+  'id, nota_fiscal_id, numero_item, codigo_produto, descricao, ncm, cest, cfop, quantidade, valor_unitario, valor_total, cst_csosn, valor_icms, valor_icms_st, valor_pis, cst_pis, valor_cofins, cst_cofins, valor_cbs, valor_ibs, c_class_trib, c_ativ_sn, p_ibs_sn, p_cbs_sn, cst_ibs_cbs, imposto_bruto';
 
 const COLUNAS_PARCELA = 'id, numero_duplicata, data_vencimento, valor';
 
@@ -120,6 +123,8 @@ export class NotasFiscaisRepositorioSupabase implements NotasFiscaisRepositorioP
       p_emitente_nome: extraida.emitenteNome,
       p_destinatario_documento: extraida.destinatarioDocumento,
       p_destinatario_nome: extraida.destinatarioNome,
+      p_municipio_fato_gerador_ibge: extraida.municipioFatoGeradorIBGE,
+      p_uf_emitente: extraida.ufEmitente,
       p_valor_total: extraida.valorTotal,
       p_fornecedor_id: dados.fornecedorId,
       p_cliente_id: dados.clienteId,
@@ -148,6 +153,7 @@ export class NotasFiscaisRepositorioSupabase implements NotasFiscaisRepositorioP
         c_ativ_sn: item.cAtivSN,
         p_ibs_sn: item.pIBSSN,
         p_cbs_sn: item.pCBSSN,
+        cst_ibs_cbs: item.cstIbsCbs,
         imposto_bruto: item.impostoBruto,
       })),
       p_parcelas: extraida.parcelas.map((parcela) => ({
@@ -297,6 +303,8 @@ export class NotasFiscaisRepositorioSupabase implements NotasFiscaisRepositorioP
       emitenteNome: linha.emitente_nome,
       destinatarioDocumento: linha.destinatario_documento,
       destinatarioNome: linha.destinatario_nome,
+      municipioFatoGeradorIBGE: linha.municipio_fato_gerador_ibge,
+      ufEmitente: linha.uf_emitente,
       valorTotal: linha.valor_total,
       fornecedorId: linha.fornecedor_id,
       clienteId: linha.cliente_id,
@@ -337,6 +345,7 @@ export class NotasFiscaisRepositorioSupabase implements NotasFiscaisRepositorioP
       cAtivSN: linha.c_ativ_sn,
       pIBSSN: linha.p_ibs_sn,
       pCBSSN: linha.p_cbs_sn,
+      cstIbsCbs: linha.cst_ibs_cbs,
       impostoBruto: linha.imposto_bruto,
     };
   }

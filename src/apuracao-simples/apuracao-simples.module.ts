@@ -6,10 +6,13 @@ import { PlanoDeContasModule } from '../plano-de-contas/plano-de-contas.module';
 import { CalcularApuracaoSimplesUseCase } from './aplicacao/casos-de-uso/calcular-apuracao-simples.usecase';
 import { CalcularFatorRUseCase } from './aplicacao/casos-de-uso/calcular-fator-r.usecase';
 import { CalcularRbt12UseCase } from './aplicacao/casos-de-uso/calcular-rbt12.usecase';
+import { ConsultarApuracaoRtcUseCase } from './aplicacao/casos-de-uso/consultar-apuracao-rtc.usecase';
+import { ConsultarRtcRegimeRegularUseCase } from './aplicacao/casos-de-uso/consultar-rtc-regime-regular.usecase';
 import { ConsultarRtcSimplesNacionalUseCase } from './aplicacao/casos-de-uso/consultar-rtc-simples-nacional.usecase';
 import { DefinirReceitaMensalUseCase } from './aplicacao/casos-de-uso/definir-receita-mensal.usecase';
 import { RECEITAS_MENSAIS_REPOSITORIO } from './aplicacao/portas/receitas-mensais-repositorio.port';
 import { ApuracaoSimplesController } from './apresentacao/apuracao-simples.controller';
+import { CalculadoraRtcRegimeRegularClient } from './infraestrutura/calculadora-rtc-regime-regular.client';
 import { CalculadoraRtcSimplesNacionalClient } from './infraestrutura/calculadora-rtc-simples-nacional.client';
 import { ReceitasMensaisRepositorioSupabase } from './infraestrutura/receitas-mensais.repositorio.supabase';
 
@@ -26,6 +29,9 @@ import { ReceitasMensaisRepositorioSupabase } from './infraestrutura/receitas-me
     DefinirReceitaMensalUseCase,
     CalculadoraRtcSimplesNacionalClient,
     ConsultarRtcSimplesNacionalUseCase,
+    CalculadoraRtcRegimeRegularClient,
+    ConsultarRtcRegimeRegularUseCase,
+    ConsultarApuracaoRtcUseCase,
   ],
   // CalcularApuracaoSimplesUseCase/RECEITAS_MENSAIS_REPOSITORIO -- usados por
   // TransmitirDeclaracaoPgdasdUseCase (src/das) pra montar o payload da declaração real

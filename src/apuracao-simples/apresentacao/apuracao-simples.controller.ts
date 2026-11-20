@@ -10,6 +10,8 @@ import { Empresa, EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../../em
 import { CalcularApuracaoSimplesUseCase, ResultadoApuracaoSimples } from '../aplicacao/casos-de-uso/calcular-apuracao-simples.usecase';
 import { CalcularFatorRUseCase, ResultadoFatorR } from '../aplicacao/casos-de-uso/calcular-fator-r.usecase';
 import { CalcularRbt12UseCase, ResultadoRbt12 } from '../aplicacao/casos-de-uso/calcular-rbt12.usecase';
+import { ConsultarApuracaoRtcUseCase, ResultadoApuracaoRtc } from '../aplicacao/casos-de-uso/consultar-apuracao-rtc.usecase';
+import { ConsultarRtcRegimeRegularUseCase, ResultadoRtcRegimeRegular } from '../aplicacao/casos-de-uso/consultar-rtc-regime-regular.usecase';
 import { ConsultarRtcSimplesNacionalUseCase, ResultadoRtcSimplesNacional } from '../aplicacao/casos-de-uso/consultar-rtc-simples-nacional.usecase';
 import { DefinirReceitaMensalUseCase } from '../aplicacao/casos-de-uso/definir-receita-mensal.usecase';
 import { CATALOGO_ATIVIDADES_SERVICO, ChaveAtividadeServico } from '../dominio/catalogo-anexos-simples';
@@ -28,6 +30,8 @@ export class ApuracaoSimplesController {
     private readonly calcularApuracaoSimples: CalcularApuracaoSimplesUseCase,
     private readonly definirReceitaMensal: DefinirReceitaMensalUseCase,
     private readonly consultarRtcSimplesNacional: ConsultarRtcSimplesNacionalUseCase,
+    private readonly consultarRtcRegimeRegular: ConsultarRtcRegimeRegularUseCase,
+    private readonly consultarApuracaoRtc: ConsultarApuracaoRtcUseCase,
   ) {}
 
   @Get('catalogo-atividades-servico')
@@ -83,6 +87,31 @@ export class ApuracaoSimplesController {
     const empresa = await this.buscarEmpresaOuFalhar(empresaId);
     this.exigirPosse(usuarioAtual, empresa);
     return this.consultarRtcSimplesNacional.executar(empresaId, competencia);
+  }
+
+  @Get('rtc-regime-regular')
+  @ExigirPermissao('notas_fiscais:visualizar')
+  async consultarRtcRegimeRegularRota(
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @Query('competencia') competencia: string,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<ResultadoRtcRegimeRegular> {
+    const empresa = await this.buscarEmpresaOuFalhar(empresaId);
+    this.exigirPosse(usuarioAtual, empresa);
+    return this.consultarRtcRegimeRegular.executar(empresaId, competencia);
+  }
+
+  /** Ponto de entrada recomendado pro painel -- decide Simples Nacional vs Regime Regular por empresa, ver ConsultarApuracaoRtcUseCase. */
+  @Get('apuracao-rtc')
+  @ExigirPermissao('notas_fiscais:visualizar')
+  async consultarApuracaoRtcRota(
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @Query('competencia') competencia: string,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<ResultadoApuracaoRtc> {
+    const empresa = await this.buscarEmpresaOuFalhar(empresaId);
+    this.exigirPosse(usuarioAtual, empresa);
+    return this.consultarApuracaoRtc.executar(empresaId, competencia);
   }
 
   @Put('receita-mensal')

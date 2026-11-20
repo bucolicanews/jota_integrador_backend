@@ -74,7 +74,8 @@ export class CalculadoraRtcSimplesNacionalClient {
   constructor(private readonly config: ConfigService) {}
 
   async calcular(operacao: OperacaoSimplesNacionalInput): Promise<ObservabilidadeSimplesNacionalOutput> {
-    const resposta = await fetch(`${this.baseUrl()}/calculadora/observabilidade/simples-nacional`, {
+    // context-path /api confirmado em application-offline.yml do serviço -- sem ele dá 404.
+    const resposta = await fetch(`${this.baseUrl()}/api/calculadora/observabilidade/simples-nacional`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(operacao),

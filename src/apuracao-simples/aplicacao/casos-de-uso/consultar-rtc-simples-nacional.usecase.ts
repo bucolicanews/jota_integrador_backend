@@ -54,6 +54,11 @@ export class ConsultarRtcSimplesNacionalUseCase {
     if (empresa.regimeTributario !== 'simples_nacional' && empresa.regimeTributario !== 'mei') {
       throw new BadRequestException('Cálculo RTC Simples Nacional só se aplica a empresas do Simples Nacional/MEI');
     }
+    // apuracaoIbsCbsHibrida apura CBS/IBS por fora do DAS, débito-crédito -- mesmo cálculo
+    // do regime regular (ver ConsultarRtcRegimeRegularUseCase), não deste usecase.
+    if (empresa.apuracaoIbsCbsHibrida) {
+      throw new BadRequestException('Empresa com apuração híbrida usa ConsultarRtcRegimeRegularUseCase, não este');
+    }
 
     const fim = ultimoDiaDoMes(competencia);
     const notasSaidaAprovadas = (await this.notasFiscaisRepositorio.listarPorPeriodo(empresaId, competencia, fim)).filter(
@@ -103,10 +108,9 @@ export class ConsultarRtcSimplesNacionalUseCase {
       data: nota.dataEmissao.slice(0, 10),
       tpDoc: nota.modelo,
       CRT: empresa.regimeTributario === 'mei' ? '4' : '1',
-      // "Apuração por fora" (RFB) == "apuracaoIbsCbsHibrida" (apura CBS/IBS fora do DAS,
-      // débito-crédito) -- mesma expressão nas duas fontes, não confirmado 1:1 contra a NT
-      // oficial ainda. CONFERIR COM CONTADOR antes de usar o resultado em declaração real.
-      tpRegimeIBSCBS: empresa.apuracaoIbsCbsHibrida ? '2' : null,
+      // Sempre embutido no DAS aqui -- híbrida (apuração por fora) vai pro regime regular,
+      // ver executar() acima.
+      tpRegimeIBSCBS: null,
       tpEnteGov: null,
       itens,
     };

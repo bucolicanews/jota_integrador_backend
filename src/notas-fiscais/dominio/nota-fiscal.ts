@@ -31,6 +31,8 @@ export interface ItemNotaFiscalExtraido {
   valorIbs: number;
   /** Grupo UB (imposto/IBSCBS), 6 dígitos -- NT 2026.005/reforma. Ausente na maioria das notas reais em 2026 (fase de transição); sem ele o item não entra em nenhum cálculo RTC (nunca inferido a partir de CST/CSOSN). */
   cClassTrib: string | null;
+  /** imposto/IBSCBS/CST (Grupo UB), 3 dígitos -- Código de Situação Tributária do IBS/CBS, par obrigatório do cClassTrib pro calculador RTC Regime Regular. Nunca confundir com cst_csosn/cst_pis/cst_cofins (grupos diferentes, domínios diferentes). */
+  cstIbsCbs: string | null;
   /** prod/cAtivSN (Grupo I) -- código oficial de atividade do Simples Nacional por item, NT 2026.005. Bruto como veio, nunca normalizado. */
   cAtivSN: string | null;
   /** imposto/IBSCBS/gTribSN/gIBSSN/pIBSSN -- alíquota efetiva do Simples pro IBS (NT 2026.005), como veio (string, não normalizada). */
@@ -72,6 +74,10 @@ export interface NotaFiscalExtraida {
   destinatarioDocumento: string | null;
   destinatarioNome: string | null;
   valorTotal: number;
+  /** ide/cMunFG -- município de ocorrência do fato gerador (tabela IBGE), layout padrão NFe desde a v2.0, não é campo da reforma. */
+  municipioFatoGeradorIBGE: number | null;
+  /** emit/enderEmit/UF -- sigla de 2 letras, layout padrão NFe. */
+  ufEmitente: string | null;
   itens: ItemNotaFiscalExtraido[];
   parcelas: ParcelaNotaFiscalExtraida[];
   /** Grupo pag/detPag -- vazio em XML antigo sem esse grupo (nunca bloqueia ingestão por isso, mesmo princípio de parcelas vazio). */
