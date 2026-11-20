@@ -65,13 +65,23 @@ function extrairPisCofins(imposto: any): { valorPis: number; cstPis: string | nu
   };
 }
 
-/** IBSCBS (reforma tributária) não é polimórfico como ICMS/PIS/COFINS -- é um grupo de nome fixo, com vIBS/vCBS quase sempre ausentes ou zerados nos XML reais de 2026 (fase de teste). */
-function extrairIbsCbs(imposto: any): { valorCbs: number; valorIbs: number } {
+/**
+ * IBSCBS (reforma tributária) não é polimórfico como ICMS/PIS/COFINS -- é um grupo de nome
+ * fixo, com vIBS/vCBS quase sempre ausentes ou zerados nos XML reais de 2026 (fase de
+ * teste). cClassTrib é direto em IBSCBS (Grupo UB); pIBSSN/pCBSSN (NT 2026.005, Simples
+ * Nacional) vêm 1 nível mais profundo, no subgrupo gTribSN/gIBSSN e gTribSN/gCBSSN --
+ * confirmado contra a NT via pesquisa web em 2026-11-20, não contra o XSD oficial
+ * diretamente; CONFERIR antes de usar o resultado em declaração real.
+ */
+function extrairIbsCbs(imposto: any): { valorCbs: number; valorIbs: number; cClassTrib: string | null; pIBSSN: string | null; pCBSSN: string | null } {
   const ibscbs = imposto?.IBSCBS;
-  if (!ibscbs) return { valorCbs: 0, valorIbs: 0 };
+  if (!ibscbs) return { valorCbs: 0, valorIbs: 0, cClassTrib: null, pIBSSN: null, pCBSSN: null };
   return {
     valorCbs: paraNumero(ibscbs.gCBS?.vCBS ?? ibscbs.vCBS),
     valorIbs: paraNumero(ibscbs.gIBSUF?.vIBSUF ?? ibscbs.gIBS?.vIBS ?? ibscbs.vIBS),
+    cClassTrib: ibscbs.cClassTrib ?? null,
+    pIBSSN: ibscbs.gTribSN?.gIBSSN?.pIBSSN ?? null,
+    pCBSSN: ibscbs.gTribSN?.gCBSSN?.pCBSSN ?? null,
   };
 }
 
@@ -89,6 +99,7 @@ function extrairItem(det: any): ItemNotaFiscalExtraido {
     ncm: prod.NCM ?? null,
     cest: prod.CEST ?? null,
     cfop: prod.CFOP,
+    cAtivSN: prod.cAtivSN ?? null,
     quantidade: paraNumero(prod.qCom),
     valorUnitario: paraNumero(prod.vUnCom),
     valorTotal: paraNumero(prod.vProd),
@@ -101,6 +112,9 @@ function extrairItem(det: any): ItemNotaFiscalExtraido {
     cstCofins: pisCofins.cstCofins,
     valorCbs: ibscbs.valorCbs,
     valorIbs: ibscbs.valorIbs,
+    cClassTrib: ibscbs.cClassTrib,
+    pIBSSN: ibscbs.pIBSSN,
+    pCBSSN: ibscbs.pCBSSN,
     impostoBruto: imposto,
   };
 }

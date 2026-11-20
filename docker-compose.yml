@@ -1,0 +1,9 @@
+# Serviços auxiliares que não fazem parte do app NestJS (`npm run start:dev`) nem do
+# Supabase local (`npx supabase start`, stack própria). Hoje só o calculador RTC da RFB --
+# ver docker/rtc-simples-nacional/README.md pra buildar a imagem antes do primeiro `up`.
+services:
+  rtc-simples-nacional:
+    image: jota-rtc-simples-nacional:latest
+    ports:
+      - '8082:8082'
+    restart: unless-stopped

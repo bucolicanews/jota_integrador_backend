@@ -61,6 +61,10 @@ interface LinhaItem {
   cst_cofins: string | null;
   valor_cbs: number;
   valor_ibs: number;
+  c_class_trib: string | null;
+  c_ativ_sn: string | null;
+  p_ibs_sn: string | null;
+  p_cbs_sn: string | null;
   imposto_bruto: unknown;
 }
 
@@ -91,7 +95,7 @@ const COLUNAS_NOTA =
   'id, empresa_id, chave_acesso, modelo, direcao, numero, serie, data_emissao, c_stat, emitente_cnpj, emitente_nome, destinatario_documento, destinatario_nome, valor_total, fornecedor_id, cliente_id, conta_pagar_id, conta_receber_id, status, xml_storage_ref, motivo_rejeicao, aprovado_por, aprovado_em, criado_em';
 
 const COLUNAS_ITEM =
-  'id, nota_fiscal_id, numero_item, codigo_produto, descricao, ncm, cest, cfop, quantidade, valor_unitario, valor_total, cst_csosn, valor_icms, valor_icms_st, valor_pis, cst_pis, valor_cofins, cst_cofins, valor_cbs, valor_ibs, imposto_bruto';
+  'id, nota_fiscal_id, numero_item, codigo_produto, descricao, ncm, cest, cfop, quantidade, valor_unitario, valor_total, cst_csosn, valor_icms, valor_icms_st, valor_pis, cst_pis, valor_cofins, cst_cofins, valor_cbs, valor_ibs, c_class_trib, c_ativ_sn, p_ibs_sn, p_cbs_sn, imposto_bruto';
 
 const COLUNAS_PARCELA = 'id, numero_duplicata, data_vencimento, valor';
 
@@ -140,6 +144,10 @@ export class NotasFiscaisRepositorioSupabase implements NotasFiscaisRepositorioP
         cst_cofins: item.cstCofins,
         valor_cbs: item.valorCbs,
         valor_ibs: item.valorIbs,
+        c_class_trib: item.cClassTrib,
+        c_ativ_sn: item.cAtivSN,
+        p_ibs_sn: item.pIBSSN,
+        p_cbs_sn: item.pCBSSN,
         imposto_bruto: item.impostoBruto,
       })),
       p_parcelas: extraida.parcelas.map((parcela) => ({
@@ -325,6 +333,10 @@ export class NotasFiscaisRepositorioSupabase implements NotasFiscaisRepositorioP
       cstCofins: linha.cst_cofins,
       valorCbs: linha.valor_cbs,
       valorIbs: linha.valor_ibs,
+      cClassTrib: linha.c_class_trib,
+      cAtivSN: linha.c_ativ_sn,
+      pIBSSN: linha.p_ibs_sn,
+      pCBSSN: linha.p_cbs_sn,
       impostoBruto: linha.imposto_bruto,
     };
   }

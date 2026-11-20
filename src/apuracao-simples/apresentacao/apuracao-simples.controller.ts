@@ -10,6 +10,7 @@ import { Empresa, EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../../em
 import { CalcularApuracaoSimplesUseCase, ResultadoApuracaoSimples } from '../aplicacao/casos-de-uso/calcular-apuracao-simples.usecase';
 import { CalcularFatorRUseCase, ResultadoFatorR } from '../aplicacao/casos-de-uso/calcular-fator-r.usecase';
 import { CalcularRbt12UseCase, ResultadoRbt12 } from '../aplicacao/casos-de-uso/calcular-rbt12.usecase';
+import { ConsultarRtcSimplesNacionalUseCase, ResultadoRtcSimplesNacional } from '../aplicacao/casos-de-uso/consultar-rtc-simples-nacional.usecase';
 import { DefinirReceitaMensalUseCase } from '../aplicacao/casos-de-uso/definir-receita-mensal.usecase';
 import { CATALOGO_ATIVIDADES_SERVICO, ChaveAtividadeServico } from '../dominio/catalogo-anexos-simples';
 import { ReceitaMensal } from '../dominio/receita-mensal';
@@ -26,6 +27,7 @@ export class ApuracaoSimplesController {
     private readonly calcularFatorR: CalcularFatorRUseCase,
     private readonly calcularApuracaoSimples: CalcularApuracaoSimplesUseCase,
     private readonly definirReceitaMensal: DefinirReceitaMensalUseCase,
+    private readonly consultarRtcSimplesNacional: ConsultarRtcSimplesNacionalUseCase,
   ) {}
 
   @Get('catalogo-atividades-servico')
@@ -69,6 +71,18 @@ export class ApuracaoSimplesController {
     const empresa = await this.buscarEmpresaOuFalhar(empresaId);
     this.exigirPosse(usuarioAtual, empresa);
     return this.calcularApuracaoSimples.executar(empresaId, competencia, chaveAtividadeServico);
+  }
+
+  @Get('rtc-simples-nacional')
+  @ExigirPermissao('notas_fiscais:visualizar')
+  async consultarRtcSimplesNacionalRota(
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @Query('competencia') competencia: string,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<ResultadoRtcSimplesNacional> {
+    const empresa = await this.buscarEmpresaOuFalhar(empresaId);
+    this.exigirPosse(usuarioAtual, empresa);
+    return this.consultarRtcSimplesNacional.executar(empresaId, competencia);
   }
 
   @Put('receita-mensal')

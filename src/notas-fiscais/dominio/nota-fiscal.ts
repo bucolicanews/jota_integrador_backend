@@ -29,6 +29,14 @@ export interface ItemNotaFiscalExtraido {
   /** Reforma tributária -- quase sempre 0 em 2026 (fase de teste), capturado pra quando vier preenchido. */
   valorCbs: number;
   valorIbs: number;
+  /** Grupo UB (imposto/IBSCBS), 6 dígitos -- NT 2026.005/reforma. Ausente na maioria das notas reais em 2026 (fase de transição); sem ele o item não entra em nenhum cálculo RTC (nunca inferido a partir de CST/CSOSN). */
+  cClassTrib: string | null;
+  /** prod/cAtivSN (Grupo I) -- código oficial de atividade do Simples Nacional por item, NT 2026.005. Bruto como veio, nunca normalizado. */
+  cAtivSN: string | null;
+  /** imposto/IBSCBS/gTribSN/gIBSSN/pIBSSN -- alíquota efetiva do Simples pro IBS (NT 2026.005), como veio (string, não normalizada). */
+  pIBSSN: string | null;
+  /** imposto/IBSCBS/gTribSN/gCBSSN/pCBSSN -- mesma lógica do pIBSSN, pra CBS. */
+  pCBSSN: string | null;
   /** Grupo de imposto inteiro do item (ICMS/IPI/PIS/COFINS/IBSCBS), cru, como veio no XML. */
   impostoBruto: unknown;
 }
