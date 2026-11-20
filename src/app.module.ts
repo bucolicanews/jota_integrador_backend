@@ -49,6 +49,7 @@ import { CreditosAvulsosModule } from './creditos-avulsos/creditos-avulsos.modul
 import { PlanosRevendaCreditosAvulsosModule } from './planos-revenda-creditos-avulsos/planos-revenda-creditos-avulsos.module';
 import { SupabaseHooksModule } from './supabase-hooks/supabase-hooks.module';
 import { NotasFiscaisModule } from './notas-fiscais/notas-fiscais.module';
+import { NotasServicoModule } from './notas-servico/notas-servico.module';
 import { ApuracaoSimplesModule } from './apuracao-simples/apuracao-simples.module';
 import { ConsultaCnpjModule } from './consulta-cnpj/consulta-cnpj.module';
 import { EsocialModule } from './esocial/esocial.module';
@@ -113,6 +114,7 @@ import { EsocialModule } from './esocial/esocial.module';
     PlanosRevendaCreditosAvulsosModule,
     SupabaseHooksModule,
     NotasFiscaisModule,
+    NotasServicoModule,
     ApuracaoSimplesModule,
     ConsultaCnpjModule,
     EsocialModule,

@@ -59,9 +59,11 @@ import { StorageNotasFiscaisService } from './infraestrutura/storage-notas-fisca
     ObterUrlDownloadAgenteUseCase,
     ListarItensApuracaoTributariaUseCase,
   ],
-  // NOTAS_FISCAIS_REPOSITORIO exportado pro módulo novo apuracao-simples reaproveitar
+  // NOTAS_FISCAIS_REPOSITORIO exportado pro módulo apuracao-simples reaproveitar
   // listarPorPeriodo (RBT12 deriva receita de comercio_industria das notas de saída
-  // aprovadas) em vez de duplicar a query.
-  exports: [NOTAS_FISCAIS_REPOSITORIO],
+  // aprovadas) em vez de duplicar a query. TokenAgenteGuard/AGENTES_NOTAS_FISCAIS_REPOSITORIO
+  // exportados pro módulo notas-servico reaproveitar o mesmo agente local/token -- NFS-e não
+  // é um tipo de credencial novo, é só mais um endpoint de upload da mesma máquina.
+  exports: [NOTAS_FISCAIS_REPOSITORIO, TokenAgenteGuard, AGENTES_NOTAS_FISCAIS_REPOSITORIO],
 })
 export class NotasFiscaisModule {}
