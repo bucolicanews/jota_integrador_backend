@@ -13,3 +13,9 @@ services:
     ports:
       - '8080:8080'
     restart: unless-stopped
+
+  rtc-gerador-danfse:
+    image: jota-rtc-gerador-danfse:latest
+    ports:
+      - '8081:8080'
+    restart: unless-stopped

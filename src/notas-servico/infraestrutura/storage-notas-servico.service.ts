@@ -19,6 +19,15 @@ export class StorageNotasServicoService {
     return ref;
   }
 
+  /** Leitura direta do conteúdo (não URL assinada) -- usado pelo backend pra repassar o XML ao gerador DANFSe, nunca pelo frontend. */
+  async baixar(ref: string): Promise<string> {
+    const { data, error } = await this.supabase.admin.storage.from(BUCKET).download(ref);
+    if (error || !data) {
+      throw new InternalServerErrorException(`Falha ao ler XML da NFS-e: ${error?.message}`);
+    }
+    return Buffer.from(await data.arrayBuffer()).toString('utf-8');
+  }
+
   async gerarUrlAssinada(ref: string): Promise<{ url: string; expiraEmSegundos: number }> {
     const { data, error } = await this.supabase.admin.storage.from(BUCKET).createSignedUrl(ref, EXPIRACAO_SIGNED_URL_SEGUNDOS);
     if (error || !data) {

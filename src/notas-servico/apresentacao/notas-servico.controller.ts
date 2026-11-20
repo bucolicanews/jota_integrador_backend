@@ -1,4 +1,4 @@
-import { Body, Controller, ForbiddenException, Get, Inject, NotFoundException, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Header, Inject, NotFoundException, Param, ParseUUIDPipe, Post, Query, StreamableFile, UseGuards } from '@nestjs/common';
 import { ExigirPermissao } from '../../auth/apresentacao/decorators/exigir-permissao.decorator';
 import { UsuarioAtual } from '../../auth/apresentacao/decorators/usuario-atual.decorator';
 import { PapeisGuard } from '../../auth/apresentacao/guards/papeis.guard';
@@ -8,6 +8,7 @@ import { UsuarioAutenticado } from '../../auth/apresentacao/tipos/requisicao-aut
 import { Papel } from '../../auth/dominio/papel';
 import { Empresa, EMPRESAS_REPOSITORIO, EmpresasRepositorioPort } from '../../empresas/aplicacao/portas/empresas-repositorio.port';
 import { AprovarNotaServicoUseCase } from '../aplicacao/casos-de-uso/aprovar-nota-servico.usecase';
+import { GerarDanfsePdfUseCase } from '../aplicacao/casos-de-uso/gerar-danfse-pdf.usecase';
 import { ListarNotasServicoPendentesUseCase } from '../aplicacao/casos-de-uso/listar-notas-servico-pendentes.usecase';
 import { ObterDetalheNotaServicoUseCase } from '../aplicacao/casos-de-uso/obter-detalhe-nota-servico.usecase';
 import { RejeitarNotaServicoUseCase } from '../aplicacao/casos-de-uso/rejeitar-nota-servico.usecase';
@@ -23,6 +24,7 @@ export class NotasServicoController {
     private readonly obterDetalhe: ObterDetalheNotaServicoUseCase,
     private readonly aprovarNotaServico: AprovarNotaServicoUseCase,
     private readonly rejeitarNotaServico: RejeitarNotaServicoUseCase,
+    private readonly gerarDanfsePdf: GerarDanfsePdfUseCase,
   ) {}
 
   @Get('pendentes')
@@ -46,6 +48,26 @@ export class NotasServicoController {
     const empresa = await this.buscarEmpresaOuFalhar(empresaId);
     this.exigirPosse(usuarioAtual, empresa);
     return this.obterDetalhe.executar(id, empresaId);
+  }
+
+  @Get(':id/danfse')
+  @ExigirPermissao('notas_servico:visualizar')
+  @Header('Content-Type', 'application/pdf')
+  async gerarDanfseRota(
+    @Param('empresaId', ParseUUIDPipe) empresaId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('situacao') situacao: string | undefined,
+    @Query('canhoto') canhoto: string | undefined,
+    @UsuarioAtual() usuarioAtual: UsuarioAutenticado,
+  ): Promise<StreamableFile> {
+    const empresa = await this.buscarEmpresaOuFalhar(empresaId);
+    this.exigirPosse(usuarioAtual, empresa);
+    const situacaoNumerica = situacao !== undefined ? (Number(situacao) as 0 | 1 | 2) : undefined;
+    const pdf = await this.gerarDanfsePdf.executar(id, empresaId, {
+      situacao: situacaoNumerica,
+      canhoto: canhoto !== undefined ? canhoto === 'true' : undefined,
+    });
+    return new StreamableFile(pdf);
   }
 
   @Post(':id/aprovar')
